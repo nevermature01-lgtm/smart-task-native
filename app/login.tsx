@@ -41,7 +41,10 @@ const LogIn = ({ onBack, onSignUp, onLogin }) => {
                     <TouchableOpacity onPress={onBack}>
                         <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textDark} />
                     </TouchableOpacity>
-                    <Text style={[styles.logoText, { color: colors.textDark }]}>Smart Task</Text>
+                    <View style={styles.logoContainer}>
+                        <Text style={[styles.logoText, { color: colors.textDark }]}>Smart Task</Text>
+                        <Text style={[styles.logoSubText, { color: colors.textMuted }]}>Powered by Smart Decor</Text>
+                    </View>
                     <View style={{ width: 24 }} />
                 </View>
 
@@ -124,10 +127,17 @@ const styles = StyleSheet.create({
         paddingTop: 16,
         paddingBottom: 16,
     },
+    logoContainer: {
+        alignItems: 'center',
+    },
     logoText: {
         fontSize: 20,
         fontWeight: 'bold',
         letterSpacing: -0.5,
+    },
+    logoSubText: {
+        fontSize: 12,
+        fontWeight: '600',
     },
     headerSection: {
         alignItems: 'center',
