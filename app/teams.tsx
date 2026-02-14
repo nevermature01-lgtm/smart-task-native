@@ -37,7 +37,7 @@ const TeamsScreen = () => {
 
                 const { data: teamsData, error: teamsError } = await supabase
                     .from('teams')
-                    .select('*, profiles(full_name)')
+                    .select('*, profiles!creator_id(full_name)')
                     .in('id', teamIds);
 
                 if (teamsError) {
