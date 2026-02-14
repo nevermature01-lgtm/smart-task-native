@@ -52,11 +52,31 @@ const TeamsScreen = () => {
                     return;
                 }
 
-                // FEATURE REMOVED: The database permissions are too restrictive to fetch creator names.
-                // We will now display 'Unknown' for all creators.
+                // Get a list of unique creator IDs from the teams
+                const creatorIds = [...new Set(teamsData.map(team => team.creator_id))];
+
+                // Fetch the profiles of the creators
+                const { data: profiles, error: profilesError } = await supabase
+                    .from('profiles')
+                    .select('id, full_name')
+                    .in('id', creatorIds);
+
+                if (profilesError) {
+                    console.error('Error fetching profiles:', profilesError);
+                    setTeams(teamsData.map(team => ({ ...team, creator_name: 'Unknown' })));
+                    return;
+                }
+
+                // Create a map of creator IDs to names
+                const creatorNames = profiles.reduce((acc, profile) => {
+                    acc[profile.id] = profile.full_name;
+                    return acc;
+                }, {});
+
+                // Enrich teams data with creator name
                 const enrichedTeams = teamsData.map(team => ({
                     ...team,
-                    creator_name: 'Unknown'
+                    creator_name: creatorNames[team.creator_id] || 'Unknown'
                 }));
 
                 setTeams(enrichedTeams);
