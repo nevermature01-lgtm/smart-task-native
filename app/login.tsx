@@ -1,15 +1,35 @@
 
-import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, StatusBar, TextInput } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, StatusBar, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { supabase } from '../utils/supabase';
 
 const LogIn = ({ onBack, onSignUp, onLogin }) => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+
     const colors = {
         primary: "#ec5b13",
         backgroundLight: "#f8f6f6",
         textDark: "#221610",
         textMuted: "rgba(34, 22, 16, 0.6)",
+    };
+
+    const handleSignIn = async () => {
+        setLoading(true);
+        const { error } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password,
+        });
+
+        if (error) {
+            Alert.alert('Error', error.message);
+        } else {
+            onLogin();
+        }
+        setLoading(false);
     };
 
     return (
@@ -45,6 +65,9 @@ const LogIn = ({ onBack, onSignUp, onLogin }) => {
                                 placeholder="name@example.com"
                                 placeholderTextColor={colors.textMuted}
                                 keyboardType="email-address"
+                                value={email}
+                                onChangeText={setEmail}
+                                autoCapitalize="none"
                             />
                         </View>
                     </View>
@@ -57,14 +80,16 @@ const LogIn = ({ onBack, onSignUp, onLogin }) => {
                                 placeholder="Your password"
                                 placeholderTextColor={colors.textMuted}
                                 secureTextEntry
+                                value={password}
+                                onChangeText={setPassword}
                             />
                             <TouchableOpacity>
                                 <MaterialCommunityIcons name="eye-outline" size={20} color={colors.textMuted} />
                             </TouchableOpacity>
                         </View>
                     </View>
-                    <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.primary }]} onPress={onLogin}>
-                        <Text style={styles.primaryButtonText}>Log In</Text>
+                    <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.primary }]} onPress={handleSignIn} disabled={loading}>
+                        <Text style={styles.primaryButtonText}>{loading ? 'Logging In...' : 'Log In'}</Text>
                     </TouchableOpacity>
                 </View>
 
