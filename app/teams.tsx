@@ -22,6 +22,9 @@ const TeamsScreen = () => {
         { name: 'Product Design', members: 12, priority: false },
         { name: 'Sales West', members: 8, priority: false },
         { name: 'Q3 Project', members: 5, priority: true },
+        { name: 'Mobile App', members: 7, priority: false },
+        { name: 'Marketing', members: 10, priority: false },
+        { name: 'Engineering', members: 15, priority: true },
     ];
 
     const handleCreateTeam = async () => {
@@ -123,18 +126,12 @@ const TeamsScreen = () => {
                 {/* Teams List */}
                 <View style={styles.teamsList}>
                     {teams.map((team, index) => (
-                        <View key={index} style={[styles.teamCard, team.priority && styles.priorityTeamCard]}>
-                            <View style={styles.teamInfo}>
-                                <View>
-                                    <Text style={styles.teamName}>{team.name}</Text>
-                                    <Text style={styles.teamMembers}>{team.members} Members</Text>
-                                </View>
-                                {team.priority && <Text style={styles.priorityLabel}>Priority</Text>}
-                            </View>
-                            <TouchableOpacity style={styles.chevronButton}>
-                                <MaterialCommunityIcons name="chevron-right" size={24} color={colors.textMuted} />
-                            </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity key={index} style={[styles.teamCard, team.priority && styles.priorityTeamCard]}>
+                            <MaterialCommunityIcons name="account-group" size={32} color={colors.primary} />
+                            <Text style={styles.teamName}>{team.name}</Text>
+                            <Text style={styles.teamMembers}>{team.members} Members</Text>
+                            {team.priority && <Text style={styles.priorityLabel}>Priority</Text>}
+                        </TouchableOpacity>
                     ))}
                 </View>
 
@@ -268,45 +265,48 @@ const styles = StyleSheet.create({
         color: '#6b7280',
     },
     teamsList: {
-        padding: 16,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 16,
     },
     teamCard: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 16,
-        borderRadius: 16,
+        width: '30%', 
+        aspectRatio: 1, 
         backgroundColor: 'white',
+        borderRadius: 16,
         marginBottom: 16,
+        padding: 12, 
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     priorityTeamCard: {
         borderLeftWidth: 4,
         borderLeftColor: '#ec5b13',
     },
-    teamInfo: {
-        flex: 1,
-    },
     teamName: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
+        textAlign: 'center',
+        marginTop: 8,
     },
     teamMembers: {
-        fontSize: 14,
+        fontSize: 12,
         color: '#ec5b13',
+        textAlign: 'center',
+        marginTop: 4,
     },
     priorityLabel: {
-        marginTop: 4,
+        marginTop: 8,
         paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 16,
+        paddingVertical: 2,
+        borderRadius: 12,
         backgroundColor: '#ec5b13',
         color: 'white',
         fontSize: 10,
         fontWeight: 'bold',
-        alignSelf: 'flex-start',
-    },
-    chevronButton: {
-        padding: 8,
+        overflow: 'hidden',
     },
     emptyState: {
         alignItems: 'center',
