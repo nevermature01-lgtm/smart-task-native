@@ -23,6 +23,7 @@ const TeamsScreen = () => {
         const fetchTeams = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
+                // Fetch teams the user is a member of
                 const { data: teamMembers, error: teamMembersError } = await supabase
                     .from('team_members')
                     .select('team_id')
@@ -40,6 +41,7 @@ const TeamsScreen = () => {
 
                 const teamIds = teamMembers.map(member => member.team_id);
 
+                // Fetch the actual team data
                 const { data: teamsData, error: teamsError } = await supabase
                     .from('teams')
                     .select('*')
@@ -50,28 +52,25 @@ const TeamsScreen = () => {
                     return;
                 }
 
-                const creatorIds = [...new Set(teamsData.map(team => team.creator_id))];
-
-                const { data: profilesData, error: profilesError } = await supabase
+                // WORKAROUND: To avoid the RLS error, we will only fetch the current user's profile
+                const { data: currentUserProfile, error: profileError } = await supabase
                     .from('profiles')
-                    .select('id, full_name')
-                    .in('id', creatorIds);
+                    .select('full_name')
+                    .eq('id', user.id)
+                    .single();
 
-                if (profilesError) {
-                    console.error('Error fetching profiles:', profilesError);
-                    setTeams(teamsData.map(team => ({ ...team, creator_name: 'Unknown' })));
-                    return;
+                if (profileError) {
+                    console.error("Error fetching current user's profile:", profileError);
                 }
 
-                const profilesMap = profilesData.reduce((acc, profile) => {
-                    acc[profile.id] = profile.full_name;
-                    return acc;
-                }, {});
-
-                const enrichedTeams = teamsData.map(team => ({
-                    ...team,
-                    creator_name: profilesMap[team.creator_id] || 'Unknown',
-                }));
+                // Enrich teams data with creator name if it's the current user
+                const enrichedTeams = teamsData.map(team => {
+                    const isCreator = team.creator_id === user.id;
+                    return {
+                        ...team,
+                        creator_name: isCreator && currentUserProfile ? currentUserProfile.full_name : 'Unknown'
+                    };
+                });
 
                 setTeams(enrichedTeams);
             }
