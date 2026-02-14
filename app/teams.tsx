@@ -33,54 +33,33 @@ const TeamsScreen = () => {
         const { data: { user } } = await supabase.auth.getUser();
 
         if (user) {
-            let newTeam = null;
-            let attempts = 0;
-            const maxAttempts = 5;
+            const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-            while (attempts < maxAttempts) {
-                const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
-                
-                const { data, error } = await supabase
-                    .from('teams')
-                    .insert([{ name: teamName, code: generatedCode, creator_id: user.id }])
-                    .select()
-                    .single();
+            const { data: newTeam, error } = await supabase
+                .from('teams')
+                .insert([{ name: teamName, code: generatedCode, creator_id: user.id }])
+                .select();
 
-                if (error) {
-                    if (error.code === '23505') { // Unique violation
-                        attempts++;
-                        continue; // Try again
-                    }
-                    // For other errors, show a message and exit
-                    console.error('Error creating team:', error);
-                    Alert.alert('Error', 'Failed to create team. Please try again.');
-                    return;
-                }
-
-                if (data) {
-                    newTeam = data;
-                    break; // Success!
-                }
-            }
-
-            if (!newTeam) {
-                Alert.alert('Error', 'Could not create a unique team code. Please try again later.');
+            if (error) {
+                console.error('Error creating team:', error);
+                Alert.alert('Error', 'Failed to create team. The code might already exist. Please try again.');
                 return;
             }
 
-            const { error: memberError } = await supabase
-                .from('team_members')
-                .insert([{ team_id: newTeam.id, user_id: user.id }]);
+            if (newTeam) {
+                const { error: memberError } = await supabase
+                    .from('team_members')
+                    .insert([{ team_id: newTeam[0].id, user_id: user.id }]);
 
-            if (memberError) {
-                console.error('Error adding team member:', memberError);
-                Alert.alert('Error', 'Team created, but failed to add you as a member.');
-            } else {
-                Alert.alert('Success', `Team "${teamName}" created successfully! Your team code is ${newTeam.code}`);
-                setTeamName('');
-                setCreateModalVisible(false);
+                if (memberError) {
+                    console.error('Error adding team member:', memberError);
+                    Alert.alert('Error', 'Team created, but failed to add you as a member.');
+                } else {
+                    Alert.alert('Success', `Team "${teamName}" created successfully! Your team code is ${generatedCode}`);
+                    setTeamName('');
+                    setCreateModalVisible(false);
+                }
             }
-
         } else {
             Alert.alert('Error', 'You must be logged in to create a team.');
         }
