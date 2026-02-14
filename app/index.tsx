@@ -52,7 +52,10 @@ const App = () => {
                         <View style={[styles.logoIconBg, { backgroundColor: 'rgba(236, 91, 19, 0.1)' }]}>
                             <MaterialCommunityIcons name="check-circle-outline" size={24} color={colors.primary} />
                         </View>
-                        <Text style={[styles.logoText, { color: colors.textDark }]}>Smart Task</Text>
+                        <View>
+                            <Text style={[styles.logoText, { color: colors.textDark }]}>Smart Task</Text>
+                            <Text style={[styles.logoSubText, { color: colors.textMuted }]}>Powered by Smart Decor</Text>
+                        </View>
                     </View>
                     <TouchableOpacity>
                         <MaterialCommunityIcons name="help-circle-outline" size={24} color={colors.textMuted} />
@@ -135,6 +138,10 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
         letterSpacing: -0.5,
+    },
+    logoSubText: {
+        fontSize: 12,
+        fontWeight: '600',
     },
     heroSection: {
         flex: 1,
