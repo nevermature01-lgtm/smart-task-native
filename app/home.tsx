@@ -7,6 +7,7 @@ import { supabase } from '../utils/supabase';
 
 const HomeScreen = () => {
     const [loading, setLoading] = useState(false);
+    const [drawerOpen, setDrawerOpen] = useState(false);
 
     const colors = {
         primary: "#ec5b13",
@@ -33,19 +34,21 @@ const HomeScreen = () => {
         { icon: 'calendar-outline', label: 'Event', color: '#fb923c' },
     ];
 
+    const HamburgerIcon = () => (
+        <TouchableOpacity onPress={() => setDrawerOpen(!drawerOpen)} style={styles.hamburgerContainer}>
+            <View style={[styles.hamburgerLine, drawerOpen && styles.hamburgerLine1Open]} />
+            <View style={[styles.hamburgerLine, drawerOpen && styles.hamburgerLine2Open]} />
+            <View style={[styles.hamburgerLine, drawerOpen && styles.hamburgerLine3Open]} />
+        </TouchableOpacity>
+    );
+
     return (
         <SafeAreaView style={[styles.body, { backgroundColor: colors.backgroundLight }]}>
             <StatusBar hidden />
             <ScrollView style={styles.mainContainer}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <View style={styles.userInfo}>
-                        <Image
-                            source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC5A3URbIJLEYBeOdR9z3daN5LHcGFUOdOctaMnRS6QXwlgBFF-lryuPoHHxdd63J-7afJxwedFTRF2nTloTy-6djWgGa8bF1i17MV8KJtUSejkoOJzTrnmbI2_U0s8xf84RuFiRxHmm8eGOy0glcsAz78GbwvIbMcvtv2LMCmOnnWzRT58MveeC8Qd0T2dj0ASO1Dg1GtWRR0eL0AF7dKjyQKqZ61sU8T2JH6HDO-k7YyGg2IqV3WY9zmutQ---ifc3Kd7jjm86Gw' }}
-                            style={styles.avatar}
-                        />
-                        <Text style={styles.userName}>Hi, J.Snow 👋</Text>
-                    </View>
+                    <HamburgerIcon />
                     <View style={styles.headerActions}>
                         <TouchableOpacity style={styles.actionButton}>
                             <MaterialCommunityIcons name="magnify" size={24} color={colors.textDark} />
@@ -164,19 +167,30 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 16,
     },
-    userInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    avatar: {
+    hamburgerContainer: {
         width: 48,
         height: 48,
-        borderRadius: 24,
-        marginRight: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    userName: {
-        fontSize: 16,
-        fontWeight: 'bold',
+    hamburgerLine: {
+        width: 24,
+        height: 2,
+        backgroundColor: '#221610',
+        borderRadius: 1,
+        marginVertical: 3,
+        transition: 'transform 0.3s',
+    },
+    hamburgerLine1Open: {
+        transform: 'rotate(45deg)',
+        top: 5,
+    },
+    hamburgerLine2Open: {
+        opacity: 0,
+    },
+    hamburgerLine3Open: {
+        transform: 'rotate(-45deg)',
+        bottom: 5,
     },
     headerActions: {
         flexDirection: 'row',
