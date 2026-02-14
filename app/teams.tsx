@@ -33,18 +33,47 @@ const TeamsScreen = () => {
                     return;
                 }
 
+                if (!teamMembers || teamMembers.length === 0) {
+                    setTeams([]);
+                    return;
+                }
+
                 const teamIds = teamMembers.map(member => member.team_id);
 
                 const { data: teamsData, error: teamsError } = await supabase
                     .from('teams')
-                    .select('*, profiles!creator_id(full_name)')
+                    .select('*')
                     .in('id', teamIds);
 
                 if (teamsError) {
                     console.error('Error fetching teams:', teamsError);
-                } else {
-                    setTeams(teamsData);
+                    return;
                 }
+
+                const creatorIds = [...new Set(teamsData.map(team => team.creator_id))];
+
+                const { data: profilesData, error: profilesError } = await supabase
+                    .from('profiles')
+                    .select('id, full_name')
+                    .in('id', creatorIds);
+
+                if (profilesError) {
+                    console.error('Error fetching profiles:', profilesError);
+                    setTeams(teamsData.map(team => ({ ...team, creator_name: 'Unknown' })));
+                    return;
+                }
+
+                const profilesMap = profilesData.reduce((acc, profile) => {
+                    acc[profile.id] = profile.full_name;
+                    return acc;
+                }, {});
+
+                const enrichedTeams = teamsData.map(team => ({
+                    ...team,
+                    creator_name: profilesMap[team.creator_id] || 'Unknown',
+                }));
+
+                setTeams(enrichedTeams);
             }
         };
 
@@ -133,7 +162,7 @@ const TeamsScreen = () => {
                             <View style={styles.teamInfo}>
                                 <View>
                                     <Text style={styles.teamName}>{team.name}</Text>
-                                    <Text style={styles.teamMembers}>Created by {team.profiles.full_name}</Text>
+                                    <Text style={styles.teamMembers}>Created by {team.creator_name}</Text>
                                 </View>
                                 <Text style={styles.priorityLabel}>Team Code: {team.code}</Text>
                             </View>
