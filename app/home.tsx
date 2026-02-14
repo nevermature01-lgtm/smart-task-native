@@ -185,21 +185,22 @@ const HomeScreen = () => {
             onRequestClose={handleCloseModal}>
             <View style={styles.modalOverlay}>
                 <View style={styles.modalContent}>
-                    <Text style={styles.modalTitle}>Create a New Team</Text>
+                    <View style={styles.handleBar} />
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Create a New Team</Text>
+                        <TouchableOpacity onPress={handleCloseModal}>
+                            <MaterialCommunityIcons name="close" size={24} color="#555" />
+                        </TouchableOpacity>
+                    </View>
                     <TextInput
                         style={styles.input}
                         placeholder="Team name"
                         value={teamName}
                         onChangeText={setTeamName}
                     />
-                    <View style={styles.modalButtons}>
-                        <TouchableOpacity onPress={handleCloseModal} style={[styles.button, styles.cancelButton]}>
-                            <Text style={styles.buttonText}>Cancel</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={handleCreateTeam} style={[styles.button, styles.submitButton]} disabled={loading}>
-                            <Text style={styles.buttonText}>{loading ? 'Creating...' : 'Submit'}</Text>
-                        </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity onPress={handleCreateTeam} style={[styles.button, styles.submitButton]} disabled={loading}>
+                        <Text style={styles.buttonText}>{loading ? 'Creating...' : 'Create Team'}</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
         </Modal>
@@ -630,53 +631,59 @@ const styles = StyleSheet.create({
     },
     modalOverlay: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: 'flex-end',
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     modalContent: {
-        width: '80%',
+        width: '100%',
         backgroundColor: 'white',
-        borderRadius: 20,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
         padding: 20,
-        alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: {
             width: 0,
-            height: 2,
+            height: -3,
         },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+        elevation: 10,
+    },
+    handleBar: {
+        width: 40,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: '#ccc',
+        alignSelf: 'center',
+        marginBottom: 10,
+    },
+    modalHeader: {
+        width: '100%',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
     },
     modalTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        marginBottom: 20,
     },
     input: {
         width: '100%',
-        height: 40,
-        borderColor: '#ccc',
+        height: 50,
+        borderColor: '#eee',
         borderWidth: 1,
         borderRadius: 10,
-        padding: 10,
+        padding: 15,
         marginBottom: 20,
-    },
-    modalButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        width: '100%',
+        backgroundColor: '#f8f8f8',
     },
     button: {
         borderRadius: 10,
-        padding: 10,
+        padding: 15,
         elevation: 2,
-        width: '48%',
+        width: '100%',
         alignItems: 'center',
-    },
-    cancelButton: {
-        backgroundColor: '#f44336',
     },
     submitButton: {
         backgroundColor: '#4CAF50',
@@ -685,6 +692,7 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
         textAlign: 'center',
+        fontSize: 16,
     },
 });
 
