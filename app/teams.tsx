@@ -19,8 +19,6 @@ const TeamsScreen = () => {
     };
 
     const teams = [
-        { name: 'Product Design', members: 12, priority: false },
-        { name: 'Sales West', members: 8, priority: false },
         { name: 'Q3 Project', members: 5, priority: true },
     ];
 
