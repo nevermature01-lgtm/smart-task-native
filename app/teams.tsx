@@ -90,23 +90,24 @@ const TeamsScreen = () => {
                 }}
             >
                 <View style={styles.centeredView}>
-                    <View style={styles.modalView}>
+                    <View style={[styles.modalView, {backgroundColor: colors.primary}]}>
                         <TouchableOpacity
                             style={styles.closeButton}
                             onPress={() => setCreateModalVisible(!createModalVisible)}
                         >
-                            <MaterialCommunityIcons name="close" size={24} color="black" />
+                            <MaterialCommunityIcons name="close" size={24} color="white" />
                         </TouchableOpacity>
-                        <Text style={styles.modalText}>Create a Team</Text>
+                        <Text style={[styles.modalText, {color: 'white'}]}>Create a Team</Text>
                         <TextInput
                             style={styles.input}
                             placeholder="Enter Team Name"
+                            placeholderTextColor="white"
                         />
                         <TouchableOpacity
-                            style={[styles.button, styles.buttonClose]}
+                            style={[styles.button, styles.buttonClose, {backgroundColor: 'white'}]}
                             onPress={() => setCreateModalVisible(!createModalVisible)}
                         >
-                            <Text style={styles.textStyle}>Submit</Text>
+                            <Text style={[styles.textStyle, {color: colors.primary}]}>Submit</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -122,23 +123,24 @@ const TeamsScreen = () => {
                 }}
             >
                 <View style={styles.centeredView}>
-                    <View style={styles.modalView}>
+                    <View style={[styles.modalView, {backgroundColor: colors.primary}]}>
                         <TouchableOpacity
                             style={styles.closeButton}
                             onPress={() => setJoinModalVisible(!joinModalVisible)}
                         >
-                            <MaterialCommunityIcons name="close" size={24} color="black" />
+                            <MaterialCommunityIcons name="close" size={24} color="white" />
                         </TouchableOpacity>
-                        <Text style={styles.modalText}>Join a Team</Text>
+                        <Text style={[styles.modalText, {color: 'white'}]}>Join a Team</Text>
                         <TextInput
                             style={styles.input}
                             placeholder="Enter Team Code"
+                            placeholderTextColor="white"
                         />
                         <TouchableOpacity
-                            style={[styles.button, styles.buttonClose]}
+                            style={[styles.button, styles.buttonClose, {backgroundColor: 'white'}]}
                             onPress={() => setJoinModalVisible(!joinModalVisible)}
                         >
-                            <Text style={styles.textStyle}>Submit</Text>
+                            <Text style={[styles.textStyle, {color: colors.primary}]}>Submit</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -257,7 +259,6 @@ const styles = StyleSheet.create({
     },
     modalView: {
         margin: 20,
-        backgroundColor: "white",
         borderRadius: 20,
         padding: 35,
         alignItems: "center",
@@ -275,11 +276,8 @@ const styles = StyleSheet.create({
         padding: 10,
         elevation: 2
     },
-    buttonClose: {
-        backgroundColor: "#ec5b13",
-    },
+    buttonClose: {},
     textStyle: {
-        color: "white",
         fontWeight: "bold",
         textAlign: "center"
     },
@@ -294,9 +292,11 @@ const styles = StyleSheet.create({
         height: 40,
         margin: 12,
         borderWidth: 1,
+        borderColor: 'white',
         padding: 10,
         width: 200,
         borderRadius: 5,
+        color: 'white',
     },
     closeButton: {
         position: 'absolute',
