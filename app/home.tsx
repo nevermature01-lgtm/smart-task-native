@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Image, Animated, Pressable, Modal, TextInput, Alert } from 'react-native';
+import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Image, Animated, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../utils/supabase';
@@ -11,10 +11,7 @@ const HomeScreen = () => {
     const [userName, setUserName] = useState('');
     const [userEmail, setUserEmail] = useState('');
     const [teamsSubMenu, setTeamsSubMenu] = useState(false);
-    const [modalVisible, setModalVisible] = useState(false);
-    const [teamName, setTeamName] = useState('');
     const slideAnim = useRef(new Animated.Value(-300)).current;
-    const modalSlideAnim = useRef(new Animated.Value(300)).current;
 
     const colors = {
         primary: "#ec5b13",
@@ -50,22 +47,6 @@ const HomeScreen = () => {
         }).start();
     }, [drawerOpen]);
 
-    useEffect(() => {
-        if (modalVisible) {
-            Animated.timing(modalSlideAnim, {
-                toValue: 0,
-                duration: 300,
-                useNativeDriver: true,
-            }).start();
-        } else {
-            Animated.timing(modalSlideAnim, {
-                toValue: 300,
-                duration: 300,
-                useNativeDriver: true,
-            }).start();
-        }
-    }, [modalVisible]);
-
     const handleLogout = useCallback(async () => {
         setLoading(true);
         const { error } = await supabase.auth.signOut();
@@ -74,45 +55,6 @@ const HomeScreen = () => {
         }
         setLoading(false);
     }, [setLoading]);
-
-    const handleCreateTeam = useCallback(async () => {
-        if (!teamName.trim()) {
-            Alert.alert("Error", "Team name cannot be empty.");
-            return;
-        }
-
-        setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (user) {
-            const { data: teamData, error: teamError } = await supabase
-                .from('teams')
-                .insert([{ team_name: teamName, created_by: user.id }])
-                .select()
-                .single();
-
-            if (teamError || !teamData) {
-                console.error('Error creating team:', teamError?.message);
-                Alert.alert("Error", "Could not create the team. Please try again.");
-                setLoading(false);
-                return;
-            }
-
-            const { error: memberError } = await supabase
-                .from('team_members')
-                .insert([{ team_id: teamData.id, user_id: user.id, role: 'admin' }]);
-
-            if (memberError) {
-                console.error('Error adding team member:', memberError.message);
-                Alert.alert("Error", "Team created, but failed to add you as a member.");
-            } else {
-                Alert.alert("Success", `Team '${teamName}' created successfully!`);
-                setTeamName('');
-                setModalVisible(false);
-            }
-        }
-        setLoading(false);
-    }, [teamName, setLoading, setTeamName, setModalVisible]);
 
     const actions = [
         { icon: 'notebook-outline', label: 'Notebook', color: '#f472b6' },
@@ -138,11 +80,6 @@ const HomeScreen = () => {
         </TouchableOpacity>
     );
 
-    const handleOpenModal = () => {
-        setDrawerOpen(false);
-        setModalVisible(true);
-    };
-
     const Drawer = useMemo(() => (
         <Animated.View style={[styles.drawerContainer, { transform: [{ translateX: slideAnim }] }]}>
             <View style={styles.drawerHeader}>
@@ -165,10 +102,6 @@ const HomeScreen = () => {
                 </TouchableOpacity>
                 {teamsSubMenu && (
                     <View style={styles.subMenu}>
-                        <TouchableOpacity style={styles.menuItem} onPress={handleOpenModal}>
-                            <MaterialCommunityIcons name="account-multiple-plus-outline" size={24} color="white" />
-                            <Text style={styles.menuItemText}>Create Team</Text>
-                        </TouchableOpacity>
                         <TouchableOpacity style={styles.menuItem}>
                             <MaterialCommunityIcons name="login" size={24} color="white" />
                             <Text style={styles.menuItemText}>Join Team</Text>
@@ -193,52 +126,11 @@ const HomeScreen = () => {
                 <Text style={styles.logoutButtonText}>Logout</Text>
             </TouchableOpacity>
         </Animated.View>
-    ), [userName, userEmail, teamsSubMenu, slideAnim, handleLogout, handleOpenModal]);
-
-    const handleCloseModal = useCallback(() => {
-        Animated.timing(modalSlideAnim, {
-            toValue: 300,
-            duration: 300,
-            useNativeDriver: true,
-        }).start(() => setModalVisible(false));
-    }, [modalSlideAnim, setModalVisible]);
-
-    const CreateTeamModal = React.memo(() => (
-        <Modal
-            animationType="fade"
-            transparent={true}
-            visible={modalVisible}
-            onRequestClose={handleCloseModal}>
-            <View style={styles.modalOverlay}>
-                <Animated.View style={[styles.modalContent, { transform: [{ translateY: modalSlideAnim }] }]}>
-                    <View style={styles.handleBar} />
-                    <View style={styles.modalHeader}>
-                        <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                            <MaterialCommunityIcons name="account-group-outline" size={24} color={colors.primary} />
-                            <Text style={styles.modalTitle}>Create a New Team</Text>
-                        </View>
-                        <TouchableOpacity onPress={handleCloseModal} style={styles.closeButton}>
-                            <MaterialCommunityIcons name="close" size={20} color="#fff" />
-                        </TouchableOpacity>
-                    </View>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Team name"
-                        value={teamName}
-                        onChangeText={setTeamName}
-                    />
-                    <TouchableOpacity onPress={handleCreateTeam} style={[styles.button, styles.submitButton]} disabled={loading}>
-                        <Text style={styles.buttonText}>{loading ? 'Creating...' : 'Create Team'}</Text>
-                    </TouchableOpacity>
-                </Animated.View>
-            </View>
-        </Modal>
-    ));
+    ), [userName, userEmail, teamsSubMenu, slideAnim, handleLogout]);
 
     return (
         <SafeAreaView style={[styles.body, { backgroundColor: colors.backgroundLight }]}>
             <StatusBar hidden />
-            <CreateTeamModal />
             {drawerOpen && <Pressable style={styles.overlay} onPress={() => setDrawerOpen(false)} />}
             {Drawer}
             <ScrollView style={styles.mainContainer}>
@@ -658,80 +550,6 @@ const styles = StyleSheet.create({
     subMenu: {
         paddingLeft: 20,
     },
-    modalOverlay: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    },
-    modalContent: {
-        width: '100%',
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: -3,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 5,
-        elevation: 10,
-    },
-    handleBar: {
-        width: 40,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: '#ddd',
-        alignSelf: 'center',
-        marginBottom: 15,
-    },
-    modalHeader: {
-        width: '100%',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginLeft: 10
-    },
-    input: {
-        width: '100%',
-        height: 50,
-        borderColor: '#eee',
-        borderWidth: 1,
-        borderRadius: 10,
-        padding: 15,
-        marginBottom: 20,
-        backgroundColor: '#f8f8f8',
-    },
-    button: {
-        borderRadius: 10,
-        padding: 15,
-        elevation: 2,
-        width: '100%',
-        alignItems: 'center',
-    },
-    submitButton: {
-        backgroundColor: "#ec5b13",
-    },
-    buttonText: {
-        color: 'white',
-        fontWeight: 'bold',
-        textAlign: 'center',
-        fontSize: 16,
-    },
-    closeButton: {
-        backgroundColor: '#333',
-        borderRadius: 15,
-        width: 30,
-        height: 30,
-        justifyContent: 'center',
-        alignItems: 'center'
-    }
 });
 
 export default HomeScreen;
