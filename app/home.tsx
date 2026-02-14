@@ -121,12 +121,6 @@ const HomeScreen = () => {
                     </View>
                 </View>
 
-                {/* Greeting */}
-                <View style={styles.greetingSection}>
-                    <Text style={styles.greetingTitle}>My Evernote</Text>
-                    <Text style={styles.greetingDate}>Today January 11, 2027</Text>
-                </View>
-
                 {/* Quick Actions */}
                 <View style={styles.quickActions}>
                     <TouchableOpacity style={[styles.quickActionCard, { backgroundColor: colors.purple }]}>
@@ -350,23 +344,10 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'white',
     },
-    greetingSection: {
-        paddingTop: 16,
-        paddingBottom: 24,
-    },
-    greetingTitle: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#1e293b',
-    },
-    greetingDate: {
-        fontSize: 14,
-        color: '#64748b',
-        marginTop: 4,
-    },
     quickActions: {
         flexDirection: 'row',
         gap: 16,
+        marginTop: 16,
     },
     quickActionCard: {
         flex: 1,
