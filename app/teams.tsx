@@ -1,13 +1,16 @@
 
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Modal, TextInput } from 'react-native';
+import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Modal, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { supabase } from '../utils/supabase';
 
 const TeamsScreen = () => {
     const [createModalVisible, setCreateModalVisible] = useState(false);
     const [joinModalVisible, setJoinModalVisible] = useState(false);
+    const [teamName, setTeamName] = useState('');
+
     const colors = {
         primary: "#ec5b13",
         backgroundLight: "#f8f6f6",
@@ -20,6 +23,47 @@ const TeamsScreen = () => {
         { name: 'Sales West', members: 8, priority: false },
         { name: 'Q3 Project', members: 5, priority: true },
     ];
+
+    const handleCreateTeam = async () => {
+        if (!teamName.trim()) {
+            Alert.alert('Error', 'Please enter a team name.');
+            return;
+        }
+
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+            const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+            const { data: newTeam, error } = await supabase
+                .from('teams')
+                .insert([{ name: teamName, code: generatedCode, creator_id: user.id }])
+                .select();
+
+            if (error) {
+                console.error('Error creating team:', error);
+                Alert.alert('Error', 'Failed to create team. The code might already exist. Please try again.');
+                return;
+            }
+
+            if (newTeam) {
+                const { error: memberError } = await supabase
+                    .from('team_members')
+                    .insert([{ team_id: newTeam[0].id, user_id: user.id }]);
+
+                if (memberError) {
+                    console.error('Error adding team member:', memberError);
+                    Alert.alert('Error', 'Team created, but failed to add you as a member.');
+                } else {
+                    Alert.alert('Success', `Team "${teamName}" created successfully! Your team code is ${generatedCode}`);
+                    setTeamName('');
+                    setCreateModalVisible(false);
+                }
+            }
+        } else {
+            Alert.alert('Error', 'You must be logged in to create a team.');
+        }
+    };
 
     return (
         <SafeAreaView style={[styles.body, { backgroundColor: colors.backgroundLight }]}>
@@ -102,10 +146,12 @@ const TeamsScreen = () => {
                             style={styles.input}
                             placeholder="Enter Team Name"
                             placeholderTextColor="white"
+                            value={teamName}
+                            onChangeText={setTeamName}
                         />
                         <TouchableOpacity
                             style={[styles.button, styles.buttonClose, {backgroundColor: 'white'}]}
-                            onPress={() => setCreateModalVisible(!createModalVisible)}
+                            onPress={handleCreateTeam}
                         >
                             <Text style={[styles.textStyle, {color: colors.primary}]}>Submit</Text>
                         </TouchableOpacity>
