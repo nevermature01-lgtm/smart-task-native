@@ -4,13 +4,13 @@ import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Image,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../utils/supabase';
+import { router } from 'expo-router';
 
 const HomeScreen = () => {
     const [loading, setLoading] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [userName, setUserName] = useState('');
     const [userEmail, setUserEmail] = useState('');
-    const [teamsSubMenu, setTeamsSubMenu] = useState(false);
     const slideAnim = useRef(new Animated.Value(-300)).current;
 
     const colors = {
@@ -91,19 +91,14 @@ const HomeScreen = () => {
                 <Text style={styles.drawerUserEmail}>{userEmail}</Text>
             </View>
             <View style={styles.menuContainer}>
-                <TouchableOpacity style={styles.menuItem}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/')}>
                     <MaterialCommunityIcons name="home-outline" size={24} color="white" />
                     <Text style={styles.menuItemText}>Home</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuItem} onPress={() => setTeamsSubMenu(!teamsSubMenu)}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/teams')}>
                     <MaterialCommunityIcons name="account-group-outline" size={24} color="white" />
                     <Text style={styles.menuItemText}>Teams</Text>
-                    <MaterialCommunityIcons name={teamsSubMenu ? 'chevron-up' : 'chevron-down'} size={24} color="white" />
                 </TouchableOpacity>
-                {teamsSubMenu && (
-                    <View style={styles.subMenu}>
-                    </View>
-                )}
                 <TouchableOpacity style={styles.menuItem}>
                     <MaterialCommunityIcons name="account-circle-outline" size={24} color="white" />
                     <Text style={styles.menuItemText}>Profile</Text>
@@ -122,7 +117,7 @@ const HomeScreen = () => {
                 <Text style={styles.logoutButtonText}>Logout</Text>
             </TouchableOpacity>
         </Animated.View>
-    ), [userName, userEmail, teamsSubMenu, slideAnim, handleLogout]);
+    ), [userName, userEmail, slideAnim, handleLogout]);
 
     return (
         <SafeAreaView style={[styles.body, { backgroundColor: colors.backgroundLight }]}>
