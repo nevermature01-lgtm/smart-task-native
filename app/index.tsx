@@ -1,14 +1,27 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import SignUp from './signup';
 import LogIn from './login';
 import HomeScreen from './home';
+import { supabase } from '../utils/supabase';
+import { Session } from '@supabase/supabase-js';
 
 const App = () => {
     const [screen, setScreen] = useState('welcome'); // welcome, signup, login, or home
+    const [session, setSession] = useState<Session | null>(null);
+
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session);
+        });
+
+        supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+        });
+    }, []);
 
     const colors = {
         primary: "#ec5b13",
@@ -17,16 +30,16 @@ const App = () => {
         textMuted: "rgba(34, 22, 16, 0.6)",
     };
 
+    if (session && session.user) {
+        return <HomeScreen />;
+    }
+
     if (screen === 'signup') {
         return <SignUp onBack={() => setScreen('welcome')} onLogIn={() => setScreen('login')} />;
     }
 
     if (screen === 'login') {
         return <LogIn onBack={() => setScreen('welcome')} onSignUp={() => setScreen('signup')} onLogin={() => setScreen('home')} />;
-    }
-
-    if (screen === 'home') {
-        return <HomeScreen />;
     }
 
     return (
