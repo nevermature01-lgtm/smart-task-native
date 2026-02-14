@@ -68,7 +68,7 @@ const HomeScreen = () => {
         <Animated.View style={[styles.drawerContainer, { transform: [{ translateX: slideAnim }] }]}>
             <View style={styles.drawerHeader}>
                 <Image
-                    source={{ uri: `https://api.dicebear.com/7.x/miniavs/png?seed=${userName}` }}
+                    source={{ uri: `https://api.dicebear.com/7.x/micah/png?seed=${userName}` }}
                     style={styles.drawerAvatar}
                 />
                 <Text style={styles.drawerUserName}>{userName}</Text>
