@@ -187,9 +187,12 @@ const HomeScreen = () => {
                 <View style={styles.modalContent}>
                     <View style={styles.handleBar} />
                     <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Create a New Team</Text>
-                        <TouchableOpacity onPress={handleCloseModal}>
-                            <MaterialCommunityIcons name="close" size={24} color="#555" />
+                        <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                            <MaterialCommunityIcons name="account-group-outline" size={24} color={colors.primary} />
+                            <Text style={styles.modalTitle}>Create a New Team</Text>
+                        </View>
+                        <TouchableOpacity onPress={handleCloseModal} style={styles.closeButton}>
+                            <MaterialCommunityIcons name="close" size={20} color="#fff" />
                         </TouchableOpacity>
                     </View>
                     <TextInput
@@ -636,7 +639,7 @@ const styles = StyleSheet.create({
     },
     modalContent: {
         width: '100%',
-        backgroundColor: 'white',
+        backgroundColor: '#fff',
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         padding: 20,
@@ -653,9 +656,9 @@ const styles = StyleSheet.create({
         width: 40,
         height: 4,
         borderRadius: 2,
-        backgroundColor: '#ccc',
+        backgroundColor: '#ddd',
         alignSelf: 'center',
-        marginBottom: 10,
+        marginBottom: 15,
     },
     modalHeader: {
         width: '100%',
@@ -665,8 +668,9 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: 'bold',
+        marginLeft: 10
     },
     input: {
         width: '100%',
@@ -686,7 +690,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     submitButton: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: "#ec5b13",
     },
     buttonText: {
         color: 'white',
@@ -694,6 +698,14 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 16,
     },
+    closeButton: {
+        backgroundColor: '#333',
+        borderRadius: 15,
+        width: 30,
+        height: 30,
+        justifyContent: 'center',
+        alignItems: 'center'
+    }
 });
 
 export default HomeScreen;
