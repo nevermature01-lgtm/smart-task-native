@@ -52,25 +52,12 @@ const TeamsScreen = () => {
                     return;
                 }
 
-                // WORKAROUND: To avoid the RLS error, we will only fetch the current user's profile
-                const { data: currentUserProfile, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('full_name')
-                    .eq('id', user.id)
-                    .single();
-
-                if (profileError) {
-                    console.error("Error fetching current user's profile:", profileError);
-                }
-
-                // Enrich teams data with creator name if it's the current user
-                const enrichedTeams = teamsData.map(team => {
-                    const isCreator = team.creator_id === user.id;
-                    return {
-                        ...team,
-                        creator_name: isCreator && currentUserProfile ? currentUserProfile.full_name : 'Unknown'
-                    };
-                });
+                // FEATURE REMOVED: The database permissions are too restrictive to fetch creator names.
+                // We will now display 'Unknown' for all creators.
+                const enrichedTeams = teamsData.map(team => ({
+                    ...team,
+                    creator_name: 'Unknown'
+                }));
 
                 setTeams(enrichedTeams);
             }
