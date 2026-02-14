@@ -27,9 +27,8 @@ const TeamsScreen = () => {
                 <TouchableOpacity onPress={() => router.back()} style={styles.navButton}>
                     <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
                 </TouchableOpacity>
-                <Text style={styles.navTitle}>My Teams</Text>
+                <Text style={styles.navTitle}>Switch Account</Text>
             </View>
-
             {/* Scrollable Content */}
             <ScrollView style={styles.scrollableContent}>
                 {/* Quick Actions */}
@@ -52,12 +51,6 @@ const TeamsScreen = () => {
                             <Text style={styles.quickActionSubtitle}>Enter a team code</Text>
                         </View>
                     </TouchableOpacity>
-                </View>
-
-                {/* Section Title */}
-                <View style={styles.sectionTitle}>
-                    <Text style={styles.sectionTitleText}>Your Teams</Text>
-                    <Text style={styles.sectionSubtitleText}>Active projects and departments</Text>
                 </View>
 
                 {/* Teams List */}
@@ -137,17 +130,6 @@ const styles = StyleSheet.create({
     },
     quickActionSubtitle: {
         fontSize: 12,
-        color: '#6b7280',
-    },
-    sectionTitle: {
-        padding: 16,
-    },
-    sectionTitleText: {
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    sectionSubtitleText: {
-        fontSize: 14,
         color: '#6b7280',
     },
     teamsList: {
