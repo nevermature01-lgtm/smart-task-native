@@ -169,10 +169,6 @@ const HomeScreen = () => {
                             <MaterialCommunityIcons name="account-multiple-plus-outline" size={24} color="white" />
                             <Text style={styles.menuItemText}>Create Team</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.menuItem}>
-                            <MaterialCommunityIcons name="login" size={24} color="white" />
-                            <Text style={styles.menuItemText}>Join Team</Text>
-                        </TouchableOpacity>
                     </View>
                 )}
                 <TouchableOpacity style={styles.menuItem}>
