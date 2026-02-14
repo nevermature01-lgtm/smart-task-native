@@ -21,7 +21,7 @@ const SignUp = ({ onBack, onLogIn }) => {
 
     const handleSignUp = async () => {
         setLoading(true);
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
             email: email,
             password: password,
             options: {
@@ -32,9 +32,18 @@ const SignUp = ({ onBack, onLogIn }) => {
         });
 
         if (error) {
-            Alert.alert('Error', error.message);
+            if (error.message === "User already registered") {
+                Alert.alert('Error', "Email already exists, try a different one");
+            } else {
+                Alert.alert('Error', error.message);
+            }
         } else {
-            onLogIn();
+            if (data.user && data.user.identities && data.user.identities.length === 0) {
+                Alert.alert('Error', "Email already exists, try a different one");
+            } else {
+                Alert.alert('Success', 'Verification mail sent');
+                onLogIn();
+            }
         }
         setLoading(false);
     };
