@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import { supabase } from '../utils/supabase';
 const HomeScreen = () => {
     const [loading, setLoading] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(false);
+    const [userName, setUserName] = useState('');
 
     const colors = {
         primary: "#ec5b13",
@@ -17,6 +18,18 @@ const HomeScreen = () => {
         purple: "#b794f4",
         orange: "#fbd38d",
     };
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const { data, error } = await supabase.auth.getUser();
+            if (error) {
+                console.error('Error fetching user:', error.message);
+            } else {
+                setUserName(data.user?.user_metadata.full_name || 'J.Snow');
+            }
+        };
+        fetchUser();
+    }, []);
 
     const handleLogout = async () => {
         setLoading(true);
@@ -48,7 +61,10 @@ const HomeScreen = () => {
             <ScrollView style={styles.mainContainer}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <HamburgerIcon />
+                    <View style={styles.headerLeft}>
+                        <HamburgerIcon />
+                        <Text style={styles.userName}>Hi, {userName} 👋</Text>
+                    </View>
                     <View style={styles.headerActions}>
                         <TouchableOpacity style={styles.actionButton}>
                             <MaterialCommunityIcons name="magnify" size={24} color={colors.textDark} />
@@ -167,6 +183,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 16,
     },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     hamburgerContainer: {
         width: 48,
         height: 48,
@@ -191,6 +211,11 @@ const styles = StyleSheet.create({
     hamburgerLine3Open: {
         transform: 'rotate(-45deg)',
         bottom: 5,
+    },
+    userName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginLeft: 8,
     },
     headerActions: {
         flexDirection: 'row',
