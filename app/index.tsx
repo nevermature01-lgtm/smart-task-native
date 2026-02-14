@@ -75,7 +75,7 @@ const App = () => {
 
                     <View style={styles.textContent}>
                         <Text style={[styles.title, { color: colors.textDark }]}>
-                            Master Your Day<Text style={{ color: colors.primary }}>.</Text>
+                            Design Your Day<Text style={{ color: colors.primary }}>.</Text>
                         </Text>
                         <Text style={[styles.subtitle, { color: colors.textMuted }]}>
                             Organize tasks, set priorities, and achieve your goals with ease in one minimalist workspace.
@@ -89,7 +89,7 @@ const App = () => {
                         style={[styles.primaryButton, { backgroundColor: colors.primary }]}
                         onPress={() => setScreen('signup')}
                     >
-                        <Text style={styles.primaryButtonText}>Start Planning</Text>
+                        <Text style={styles.primaryButtonText}>Create account</Text>
                         <MaterialCommunityIcons name="arrow-right" size={20} color="white" />
                     </TouchableOpacity>
                     <TouchableOpacity 
