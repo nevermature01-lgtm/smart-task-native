@@ -10,6 +10,7 @@ const HomeScreen = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [userName, setUserName] = useState('');
     const [userEmail, setUserEmail] = useState('');
+    const [teamsSubMenu, setTeamsSubMenu] = useState(false);
     const slideAnim = useRef(new Animated.Value(-300)).current;
 
     const colors = {
@@ -94,10 +95,23 @@ const HomeScreen = () => {
                     <MaterialCommunityIcons name="home-outline" size={24} color="white" />
                     <Text style={styles.menuItemText}>Home</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuItem}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => setTeamsSubMenu(!teamsSubMenu)}>
                     <MaterialCommunityIcons name="account-group-outline" size={24} color="white" />
                     <Text style={styles.menuItemText}>Teams</Text>
+                    <MaterialCommunityIcons name={teamsSubMenu ? 'chevron-up' : 'chevron-down'} size={24} color="white" />
                 </TouchableOpacity>
+                {teamsSubMenu && (
+                    <View style={styles.subMenu}>
+                        <TouchableOpacity style={styles.menuItem}>
+                            <MaterialCommunityIcons name="account-multiple-plus-outline" size={24} color="white" />
+                            <Text style={styles.menuItemText}>Create Team</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.menuItem}>
+                            <MaterialCommunityIcons name="login" size={24} color="white" />
+                            <Text style={styles.menuItemText}>Join Team</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
                 <TouchableOpacity style={styles.menuItem}>
                     <MaterialCommunityIcons name="account-circle-outline" size={24} color="white" />
                     <Text style={styles.menuItemText}>Profile</Text>
@@ -536,6 +550,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 16,
         paddingRight: 16,
+    },
+    subMenu: {
+        paddingLeft: 20,
     },
 });
 
