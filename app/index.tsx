@@ -57,9 +57,6 @@ const App = () => {
                             <Text style={[styles.logoSubText, { color: colors.textMuted }]}>Powered by Smart Decor</Text>
                         </View>
                     </View>
-                    <TouchableOpacity>
-                        <MaterialCommunityIcons name="help-circle-outline" size={24} color={colors.textMuted} />
-                    </TouchableOpacity>
                 </View>
 
                 {/* Hero Content */}
