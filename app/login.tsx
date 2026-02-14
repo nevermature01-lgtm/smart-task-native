@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, StatusBar, TextInput, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, StatusBar, TextInput, Alert, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../utils/supabase';
@@ -8,6 +8,7 @@ import { supabase } from '../utils/supabase';
 const LogIn = ({ onBack, onSignUp, onLogin }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
     const colors = {
@@ -35,79 +36,83 @@ const LogIn = ({ onBack, onSignUp, onLogin }) => {
     return (
         <SafeAreaView style={[styles.body, { backgroundColor: colors.backgroundLight }]}>
             <StatusBar hidden />
-            <View style={styles.mainContainer}>
-                {/* Navigation */}
-                <View style={styles.nav}>
-                    <TouchableOpacity onPress={onBack}>
-                        <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textDark} />
-                    </TouchableOpacity>
-                    <View style={styles.logoContainer}>
-                        <Text style={[styles.logoText, { color: colors.textDark }]}>Smart Task</Text>
-                        <Text style={[styles.logoSubText, { color: colors.textMuted }]}>Powered by Smart Decor</Text>
-                    </View>
-                    <View style={{ width: 24 }} />
-                </View>
-
-                {/* Header Section */}
-                <View style={styles.headerSection}>
-                    <View style={styles.headerIconContainer}>
-                        <MaterialCommunityIcons name="key-variant" size={40} color={colors.primary} />
-                    </View>
-                    <Text style={[styles.title, { color: colors.textDark }]}>Welcome Back</Text>
-                    <Text style={[styles.subtitle, { color: colors.textMuted }]}>Log in to continue your journey</Text>
-                </View>
-
-                {/* Log In Form */}
-                <View style={styles.form}>
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Email Address</Text>
-                        <View style={styles.inputContainer}>
-                            <MaterialCommunityIcons name="email-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="name@example.com"
-                                placeholderTextColor={colors.textMuted}
-                                keyboardType="email-address"
-                                value={email}
-                                onChangeText={setEmail}
-                                autoCapitalize="none"
-                            />
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" enabled>
+                <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+                    <View style={styles.mainContainer}>
+                        {/* Navigation */}
+                        <View style={styles.nav}>
+                            <TouchableOpacity onPress={onBack}>
+                                <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textDark} />
+                            </TouchableOpacity>
+                            <View style={styles.logoContainer}>
+                                <Text style={[styles.logoText, { color: colors.textDark }]}>Smart Task</Text>
+                                <Text style={[styles.logoSubText, { color: colors.textMuted }]}>Powered by Smart Decor</Text>
+                            </View>
+                            <View style={{ width: 24 }} />
                         </View>
-                    </View>
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Password</Text>
-                        <View style={styles.inputContainer}>
-                            <MaterialCommunityIcons name="lock-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Your password"
-                                placeholderTextColor={colors.textMuted}
-                                secureTextEntry
-                                value={password}
-                                onChangeText={setPassword}
-                            />
-                            <TouchableOpacity>
-                                <MaterialCommunityIcons name="eye-outline" size={20} color={colors.textMuted} />
+
+                        {/* Header Section */}
+                        <View style={styles.headerSection}>
+                            <View style={styles.headerIconContainer}>
+                                <MaterialCommunityIcons name="key-variant" size={40} color={colors.primary} />
+                            </View>
+                            <Text style={[styles.title, { color: colors.textDark }]}>Welcome Back</Text>
+                            <Text style={[styles.subtitle, { color: colors.textMuted }]}>Log in to continue your journey</Text>
+                        </View>
+
+                        {/* Log In Form */}
+                        <View style={styles.form}>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Email Address</Text>
+                                <View style={styles.inputContainer}>
+                                    <MaterialCommunityIcons name="email-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="name@example.com"
+                                        placeholderTextColor={colors.textMuted}
+                                        keyboardType="email-address"
+                                        value={email}
+                                        onChangeText={setEmail}
+                                        autoCapitalize="none"
+                                    />
+                                </View>
+                            </View>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Password</Text>
+                                <View style={styles.inputContainer}>
+                                    <MaterialCommunityIcons name="lock-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Your password"
+                                        placeholderTextColor={colors.textMuted}
+                                        secureTextEntry={!showPassword}
+                                        value={password}
+                                        onChangeText={setPassword}
+                                    />
+                                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                        <MaterialCommunityIcons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={colors.textMuted} />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.primary }]} onPress={handleSignIn} disabled={loading}>
+                                <Text style={styles.primaryButtonText}>{loading ? 'Logging In...' : 'Log In'}</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Footer Link */}
+                        <View style={styles.footer}>
+                            <TouchableOpacity onPress={onSignUp}>
+                                <Text style={{ color: colors.textMuted }}>
+                                    Don\'t have an account?{' '}
+                                    <Text style={{ color: colors.primary, fontWeight: 'bold' }}>
+                                        Sign Up
+                                    </Text>
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     </View>
-                    <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.primary }]} onPress={handleSignIn} disabled={loading}>
-                        <Text style={styles.primaryButtonText}>{loading ? 'Logging In...' : 'Log In'}</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Footer Link */}
-                <View style={styles.footer}>
-                    <TouchableOpacity onPress={onSignUp}>
-                        <Text style={{ color: colors.textMuted }}>
-                            Don\'t have an account?{' '}
-                            <Text style={{ color: colors.primary, fontWeight: 'bold' }}>
-                                Sign Up
-                            </Text>
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 };
