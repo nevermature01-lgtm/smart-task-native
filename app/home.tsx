@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Image, Animated, Pressable, Modal, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -66,14 +66,14 @@ const HomeScreen = () => {
         }
     }, [modalVisible]);
 
-    const handleLogout = async () => {
+    const handleLogout = useCallback(async () => {
         setLoading(true);
         const { error } = await supabase.auth.signOut();
         if (error) {
             console.error('Error logging out:', error.message);
         }
         setLoading(false);
-    };
+    }, [setLoading]);
 
     const handleCreateTeam = useCallback(async () => {
         if (!teamName.trim()) {
@@ -138,7 +138,12 @@ const HomeScreen = () => {
         </TouchableOpacity>
     );
 
-    const Drawer = React.memo(() => (
+    const handleOpenModal = () => {
+        setDrawerOpen(false);
+        setModalVisible(true);
+    };
+
+    const Drawer = useMemo(() => (
         <Animated.View style={[styles.drawerContainer, { transform: [{ translateX: slideAnim }] }]}>
             <View style={styles.drawerHeader}>
                 <Image
@@ -160,7 +165,7 @@ const HomeScreen = () => {
                 </TouchableOpacity>
                 {teamsSubMenu && (
                     <View style={styles.subMenu}>
-                        <TouchableOpacity style={styles.menuItem} onPress={() => setModalVisible(true)}>
+                        <TouchableOpacity style={styles.menuItem} onPress={handleOpenModal}>
                             <MaterialCommunityIcons name="account-multiple-plus-outline" size={24} color="white" />
                             <Text style={styles.menuItemText}>Create Team</Text>
                         </TouchableOpacity>
@@ -188,7 +193,7 @@ const HomeScreen = () => {
                 <Text style={styles.logoutButtonText}>Logout</Text>
             </TouchableOpacity>
         </Animated.View>
-    ));
+    ), [userName, userEmail, teamsSubMenu, slideAnim, handleLogout, handleOpenModal]);
 
     const handleCloseModal = useCallback(() => {
         Animated.timing(modalSlideAnim, {
@@ -235,7 +240,7 @@ const HomeScreen = () => {
             <StatusBar hidden />
             <CreateTeamModal />
             {drawerOpen && <Pressable style={styles.overlay} onPress={() => setDrawerOpen(false)} />}
-            <Drawer />
+            {Drawer}
             <ScrollView style={styles.mainContainer}>
                 {/* Header */}
                 <View style={styles.header}>
