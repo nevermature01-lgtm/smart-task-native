@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Image, Animated, Pressable, Modal, TextInput } from 'react-native';
+import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Image, Animated, Pressable, Modal, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../utils/supabase';
@@ -58,9 +58,43 @@ const HomeScreen = () => {
         setLoading(false);
     };
 
-    const handleCreateTeam = () => {
-        console.log('Team Name:', teamName);
-        setModalVisible(false);
+    const handleCreateTeam = async () => {
+        if (!teamName.trim()) {
+            Alert.alert("Error", "Team name cannot be empty.");
+            return;
+        }
+
+        setLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+            const { data: teamData, error: teamError } = await supabase
+                .from('teams')
+                .insert([{ team_name: teamName, created_by: user.id }])
+                .select()
+                .single();
+
+            if (teamError || !teamData) {
+                console.error('Error creating team:', teamError?.message);
+                Alert.alert("Error", "Could not create the team. Please try again.");
+                setLoading(false);
+                return;
+            }
+
+            const { error: memberError } = await supabase
+                .from('team_members')
+                .insert([{ team_id: teamData.id, user_id: user.id, role: 'admin' }]);
+
+            if (memberError) {
+                console.error('Error adding team member:', memberError.message);
+                Alert.alert("Error", "Team created, but failed to add you as a member.");
+            } else {
+                Alert.alert("Success", `Team '${teamName}' created successfully!`);
+                setTeamName('');
+                setModalVisible(false);
+            }
+        }
+        setLoading(false);
     };
 
     const actions = [
@@ -160,8 +194,8 @@ const HomeScreen = () => {
                         <TouchableOpacity onPress={() => setModalVisible(false)} style={[styles.button, styles.cancelButton]}>
                             <Text style={styles.buttonText}>Cancel</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={handleCreateTeam} style={[styles.button, styles.submitButton]}>
-                            <Text style={styles.buttonText}>Submit</Text>
+                        <TouchableOpacity onPress={handleCreateTeam} style={[styles.button, styles.submitButton]} disabled={loading}>
+                            <Text style={styles.buttonText}>{loading ? 'Creating...' : 'Submit'}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
