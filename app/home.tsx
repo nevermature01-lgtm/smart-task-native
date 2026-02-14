@@ -61,12 +61,12 @@ const HomeScreen = () => {
     ];
 
     const quickActions = [
-        { title: 'New Note', subtitle: 'Create', icon: 'plus', color: colors.purple },
-        { title: 'New Task', subtitle: 'Create', icon: 'plus', color: colors.orange },
-        { title: 'New Photo', subtitle: 'Create', icon: 'camera', color: colors.green },
-        { title: 'New Event', subtitle: 'Create', icon: 'calendar', color: colors.blue },
-        { title: 'New Audio', subtitle: 'Create', icon: 'microphone', color: colors.pink },
-        { title: 'New Document', subtitle: 'Create', icon: 'file-document', color: colors.yellow },
+        { title: 'Total Tasks', subtitle: '9', icon: 'clipboard-check-outline', color: colors.purple },
+        { title: 'Total Leads', subtitle: '6', icon: 'account-group-outline', color: colors.orange },
+        { title: 'All Projects', subtitle: '4', icon: 'briefcase-outline', color: colors.green },
+        { title: 'Finance', subtitle: '1', icon: 'cash-multiple', color: colors.blue },
+        { title: 'QR', subtitle: '2', icon: 'qrcode-scan', color: colors.pink },
+        { title: 'Chat', subtitle: '5', icon: 'chat-processing-outline', color: colors.yellow },
     ];
 
     const HamburgerIcon = () => (
