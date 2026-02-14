@@ -95,6 +95,10 @@ const HomeScreen = () => {
                     <Text style={styles.menuItemText}>Home</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.menuItem}>
+                    <MaterialCommunityIcons name="account-group-outline" size={24} color="white" />
+                    <Text style={styles.menuItemText}>Teams</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.menuItem}>
                     <MaterialCommunityIcons name="account-circle-outline" size={24} color="white" />
                     <Text style={styles.menuItemText}>Profile</Text>
                 </TouchableOpacity>
