@@ -18,6 +18,10 @@ const HomeScreen = () => {
         textMuted: "rgba(34, 22, 16, 0.6)",
         purple: "#b794f4",
         orange: "#fbd38d",
+        green: "#9ae6b4",
+        blue: "#63b3ed",
+        pink: "#fbb6ce",
+        yellow: "#faf089",
     };
 
     useEffect(() => {
@@ -54,6 +58,15 @@ const HomeScreen = () => {
         { icon: 'camera-outline', label: 'Camera', color: '#a78bfa' },
         { icon: 'microphone-outline', label: 'Audio', color: '#60a5fa' },
         { icon: 'calendar-outline', label: 'Event', color: '#fb923c' },
+    ];
+
+    const quickActions = [
+        { title: 'New Note', subtitle: 'Create', icon: 'plus', color: colors.purple },
+        { title: 'New Task', subtitle: 'Create', icon: 'plus', color: colors.orange },
+        { title: 'New Photo', subtitle: 'Create', icon: 'camera', color: colors.green },
+        { title: 'New Event', subtitle: 'Create', icon: 'calendar', color: colors.blue },
+        { title: 'New Audio', subtitle: 'Create', icon: 'microphone', color: colors.pink },
+        { title: 'New Document', subtitle: 'Create', icon: 'file-document', color: colors.yellow },
     ];
 
     const HamburgerIcon = () => (
@@ -123,24 +136,17 @@ const HomeScreen = () => {
 
                 {/* Quick Actions */}
                 <View style={styles.quickActions}>
-                    <TouchableOpacity style={[styles.quickActionCard, { backgroundColor: colors.purple }]}>
-                        <View style={styles.quickActionIcon}>
-                            <MaterialCommunityIcons name="plus" size={24} color="white" />
-                        </View>
-                        <View>
-                            <Text style={styles.quickActionText}>Create</Text>
-                            <Text style={styles.quickActionTitle}>New Note</Text>
-                        </View>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.quickActionCard, { backgroundColor: colors.orange }]}>
-                        <View style={styles.quickActionIcon}>
-                            <MaterialCommunityIcons name="plus" size={24} color="white" />
-                        </View>
-                        <View>
-                            <Text style={styles.quickActionText}>Create</Text>
-                            <Text style={styles.quickActionTitle}>New Task</Text>
-                        </View>
-                    </TouchableOpacity>
+                    {quickActions.map((action, index) => (
+                        <TouchableOpacity key={index} style={[styles.quickActionCard, { backgroundColor: action.color }]}>
+                            <View style={styles.quickActionIcon}>
+                                <MaterialCommunityIcons name={action.icon} size={24} color="white" />
+                            </View>
+                            <View>
+                                <Text style={styles.quickActionText}>{action.subtitle}</Text>
+                                <Text style={styles.quickActionTitle}>{action.title}</Text>
+                            </View>
+                        </TouchableOpacity>
+                    ))}
                 </View>
 
                 {/* Progress */}
@@ -346,11 +352,12 @@ const styles = StyleSheet.create({
     },
     quickActions: {
         flexDirection: 'row',
-        gap: 16,
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
         marginTop: 16,
     },
     quickActionCard: {
-        width: 96,
+        width: '30%',
         height: 120,
         borderRadius: 24,
         padding: 12,
@@ -359,6 +366,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 10,
+        marginBottom: 16,
     },
     quickActionIcon: {
         width: 32,
@@ -379,7 +387,7 @@ const styles = StyleSheet.create({
         color: 'white',
     },
     progressSection: {
-        marginTop: 32,
+        marginTop: 16,
     },
     progressCard: {
         backgroundColor: 'white',
