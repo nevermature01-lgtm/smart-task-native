@@ -4,7 +4,7 @@ import { StyleSheet, Text, View, TouchableOpacity, StatusBar, TextInput } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-const LogIn = ({ onBack, onSignUp }) => {
+const LogIn = ({ onBack, onSignUp, onLogin }) => {
     const colors = {
         primary: "#ec5b13",
         backgroundLight: "#f8f6f6",
@@ -63,7 +63,7 @@ const LogIn = ({ onBack, onSignUp }) => {
                             </TouchableOpacity>
                         </View>
                     </View>
-                    <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.primary }]}>
+                    <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.primary }]} onPress={onLogin}>
                         <Text style={styles.primaryButtonText}>Log In</Text>
                     </TouchableOpacity>
                 </View>
@@ -72,7 +72,7 @@ const LogIn = ({ onBack, onSignUp }) => {
                 <View style={styles.footer}>
                     <TouchableOpacity onPress={onSignUp}>
                         <Text style={{ color: colors.textMuted }}>
-                            Don't have an account?{' '}
+                            Don\'t have an account?{' '}
                             <Text style={{ color: colors.primary, fontWeight: 'bold' }}>
                                 Sign Up
                             </Text>

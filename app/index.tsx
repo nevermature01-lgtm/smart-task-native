@@ -5,9 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import SignUp from './signup';
 import LogIn from './login';
+import HomeScreen from './home';
 
 const App = () => {
-    const [screen, setScreen] = useState('welcome'); // welcome, signup, or login
+    const [screen, setScreen] = useState('welcome'); // welcome, signup, login, or home
 
     const colors = {
         primary: "#ec5b13",
@@ -21,7 +22,11 @@ const App = () => {
     }
 
     if (screen === 'login') {
-        return <LogIn onBack={() => setScreen('welcome')} onSignUp={() => setScreen('signup')} />;
+        return <LogIn onBack={() => setScreen('welcome')} onSignUp={() => setScreen('signup')} onLogin={() => setScreen('home')} />;
+    }
+
+    if (screen === 'home') {
+        return <HomeScreen />;
     }
 
     return (
