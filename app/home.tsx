@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Image } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Image, Animated, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../utils/supabase';
@@ -9,6 +9,7 @@ const HomeScreen = () => {
     const [loading, setLoading] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [userName, setUserName] = useState('');
+    const slideAnim = useRef(new Animated.Value(-300)).current;
 
     const colors = {
         primary: "#ec5b13",
@@ -30,6 +31,14 @@ const HomeScreen = () => {
         };
         fetchUser();
     }, []);
+
+    useEffect(() => {
+        Animated.timing(slideAnim, {
+            toValue: drawerOpen ? 0 : -300,
+            duration: 300,
+            useNativeDriver: true,
+        }).start();
+    }, [drawerOpen]);
 
     const handleLogout = async () => {
         setLoading(true);
@@ -55,9 +64,45 @@ const HomeScreen = () => {
         </TouchableOpacity>
     );
 
+    const Drawer = () => (
+        <Animated.View style={[styles.drawerContainer, { transform: [{ translateX: slideAnim }] }]}>
+            <View style={styles.drawerHeader}>
+                <Image
+                    source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC5A3URbIJLEYBeOdR9z3daN5LHcGFUOdOctaMnRS6QXwlgBFF-lryuPoHHxdd63J-7afJxwedFTRF2nTloTy-6djWgGa8bF1i17MV8KJtUSejkoOJzTrnmbI2_U0s8xf84RuFiRxHmm8eGOy0glcsAz78GbwvIbMcvtv2LMCmOnnWzRT58MveeC8Qd0T2dj0ASO1Dg1GtWRR0eL0AF7dKjyQKqZ61sU8T2JH6HDO-k7YyGg2IqV3WY9zmutQ---ifc3Kd7jjm86Gw' }}
+                    style={styles.drawerAvatar}
+                />
+                <Text style={styles.drawerUserName}>{userName}</Text>
+            </View>
+            <View style={styles.menuContainer}>
+                <TouchableOpacity style={styles.menuItem}>
+                    <MaterialCommunityIcons name="home-outline" size={24} color="white" />
+                    <Text style={styles.menuItemText}>Home</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.menuItem}>
+                    <MaterialCommunityIcons name="account-circle-outline" size={24} color="white" />
+                    <Text style={styles.menuItemText}>Profile</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.menuItem}>
+                    <MaterialCommunityIcons name="cog-outline" size={24} color="white" />
+                    <Text style={styles.menuItemText}>Settings</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.menuItem}>
+                    <MaterialCommunityIcons name="help-circle-outline" size={24} color="white" />
+                    <Text style={styles.menuItemText}>Help</Text>
+                </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                <MaterialCommunityIcons name="logout" size={24} color="white" />
+                <Text style={styles.logoutButtonText}>Logout</Text>
+            </TouchableOpacity>
+        </Animated.View>
+    );
+
     return (
         <SafeAreaView style={[styles.body, { backgroundColor: colors.backgroundLight }]}>
             <StatusBar hidden />
+            {drawerOpen && <Pressable style={styles.overlay} onPress={() => setDrawerOpen(false)} />}
+            <Drawer />
             <ScrollView style={styles.mainContainer}>
                 {/* Header */}
                 <View style={styles.header}>
@@ -173,6 +218,66 @@ const styles = StyleSheet.create({
     body: {
         flex: 1,
     },
+    overlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        zIndex: 1,
+    },
+    drawerContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        bottom: 0,
+        width: 300,
+        backgroundColor: '#1a1a1a',
+        zIndex: 2,
+        padding: 20,
+        justifyContent: 'space-between',
+    },
+    drawerHeader: {
+        alignItems: 'center',
+        marginBottom: 40,
+    },
+    drawerAvatar: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        marginBottom: 10,
+    },
+    drawerUserName: {
+        color: 'white',
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    menuContainer: {
+        flex: 1,
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 15,
+    },
+    menuItemText: {
+        color: 'white',
+        fontSize: 16,
+        marginLeft: 15,
+    },
+    logoutButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 15,
+        backgroundColor: '#333',
+        borderRadius: 10,
+    },
+    logoutButtonText: {
+        color: 'white',
+        fontSize: 16,
+        marginLeft: 15,
+    },
     mainContainer: {
         flex: 1,
         paddingHorizontal: 24,
@@ -199,18 +304,15 @@ const styles = StyleSheet.create({
         backgroundColor: '#221610',
         borderRadius: 1,
         marginVertical: 3,
-        transition: 'transform 0.3s',
     },
     hamburgerLine1Open: {
-        transform: 'rotate(45deg)',
-        top: 5,
+        transform: [{ rotate: '45deg' }, { translateY: 8 }],
     },
     hamburgerLine2Open: {
         opacity: 0,
     },
     hamburgerLine3Open: {
-        transform: 'rotate(-45deg)',
-        bottom: 5,
+        transform: [{ rotate: '-45deg' }, { translateY: -8 }],
     },
     userName: {
         fontSize: 16,
