@@ -1,24 +1,34 @@
 
-import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import SignUp from './signup';
+import LogIn from './login';
 
 const App = () => {
-    // Define colors based on the HTML
+    const [screen, setScreen] = useState('welcome'); // welcome, signup, or login
+
     const colors = {
         primary: "#ec5b13",
         backgroundLight: "#f8f6f6",
-        backgroundDark: "#221610",
-        textLight: "#f8f6f6",
         textDark: "#221610",
         textMuted: "rgba(34, 22, 16, 0.6)",
     };
+
+    if (screen === 'signup') {
+        return <SignUp onBack={() => setScreen('welcome')} onLogIn={() => setScreen('login')} />;
+    }
+
+    if (screen === 'login') {
+        return <LogIn onBack={() => setScreen('welcome')} onSignUp={() => setScreen('signup')} />;
+    }
 
     return (
         <SafeAreaView style={[styles.body, { backgroundColor: colors.backgroundLight }]}>
             <StatusBar hidden />
             <View style={styles.mainContainer}>
-                {/* Navigation / Logo Area */}
+                {/* Navigation */}
                 <View style={styles.nav}>
                     <View style={styles.logoContainer}>
                         <View style={[styles.logoIconBg, { backgroundColor: 'rgba(236, 91, 19, 0.1)' }]}>
@@ -31,9 +41,8 @@ const App = () => {
                     </TouchableOpacity>
                 </View>
 
-                {/* Hero Content Section */}
+                {/* Hero Content */}
                 <View style={styles.heroSection}>
-                    {/* Abstract Productivity Icon */}
                     <View style={styles.iconWrapper}>
                         <View style={[styles.mainIconContainer, { backgroundColor: 'white', borderColor: 'rgba(236, 91, 19, 0.2)' }]}>
                             <MaterialCommunityIcons name="layers-outline" size={60} color={colors.primary} />
@@ -46,7 +55,6 @@ const App = () => {
                         </View>
                     </View>
 
-                    {/* Text Content */}
                     <View style={styles.textContent}>
                         <Text style={[styles.title, { color: colors.textDark }]}>
                             Master Your Day<Text style={{ color: colors.primary }}>.</Text>
@@ -57,13 +65,19 @@ const App = () => {
                     </View>
                 </View>
 
-                {/* Action Button Group */}
+                {/* Action Buttons */}
                 <View style={styles.actionGroup}>
-                    <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.primary }]}>
+                    <TouchableOpacity 
+                        style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+                        onPress={() => setScreen('signup')}
+                    >
                         <Text style={styles.primaryButtonText}>Start Planning</Text>
                         <MaterialCommunityIcons name="arrow-right" size={20} color="white" />
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.secondaryButton, { borderColor: 'rgba(236, 91, 19, 0.2)' }]}>
+                    <TouchableOpacity 
+                        style={[styles.secondaryButton, { borderColor: 'rgba(236, 91, 19, 0.2)' }]}
+                        onPress={() => setScreen('login')}
+                    >
                         <Text style={[styles.secondaryButtonText, { color: colors.textDark }]}>Log In</Text>
                     </TouchableOpacity>
                     <Text style={[styles.footerText, { color: 'rgba(34, 22, 16, 0.4)'}]}>
