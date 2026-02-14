@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Image, Animated, Pressable, Modal, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -58,7 +58,7 @@ const HomeScreen = () => {
         setLoading(false);
     };
 
-    const handleCreateTeam = async () => {
+    const handleCreateTeam = useCallback(async () => {
         if (!teamName.trim()) {
             Alert.alert("Error", "Team name cannot be empty.");
             return;
@@ -95,7 +95,7 @@ const HomeScreen = () => {
             }
         }
         setLoading(false);
-    };
+    }, [teamName, setLoading, setTeamName, setModalVisible]);
 
     const actions = [
         { icon: 'notebook-outline', label: 'Notebook', color: '#f472b6' },
@@ -121,7 +121,7 @@ const HomeScreen = () => {
         </TouchableOpacity>
     );
 
-    const Drawer = () => (
+    const Drawer = React.memo(() => (
         <Animated.View style={[styles.drawerContainer, { transform: [{ translateX: slideAnim }] }]}>
             <View style={styles.drawerHeader}>
                 <Image
@@ -171,16 +171,18 @@ const HomeScreen = () => {
                 <Text style={styles.logoutButtonText}>Logout</Text>
             </TouchableOpacity>
         </Animated.View>
-    );
+    ));
 
-    const CreateTeamModal = () => (
+    const handleCloseModal = useCallback(() => {
+        setModalVisible(false);
+    }, [setModalVisible]);
+
+    const CreateTeamModal = React.memo(() => (
         <Modal
             animationType="slide"
             transparent={true}
             visible={modalVisible}
-            onRequestClose={() => {
-                setModalVisible(!modalVisible);
-            }}>
+            onRequestClose={handleCloseModal}>
             <View style={styles.modalOverlay}>
                 <View style={styles.modalContent}>
                     <Text style={styles.modalTitle}>Create a New Team</Text>
@@ -191,7 +193,7 @@ const HomeScreen = () => {
                         onChangeText={setTeamName}
                     />
                     <View style={styles.modalButtons}>
-                        <TouchableOpacity onPress={() => setModalVisible(false)} style={[styles.button, styles.cancelButton]}>
+                        <TouchableOpacity onPress={handleCloseModal} style={[styles.button, styles.cancelButton]}>
                             <Text style={styles.buttonText}>Cancel</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={handleCreateTeam} style={[styles.button, styles.submitButton]} disabled={loading}>
@@ -201,7 +203,7 @@ const HomeScreen = () => {
                 </View>
             </View>
         </Modal>
-    );
+    ));
 
     return (
         <SafeAreaView style={[styles.body, { backgroundColor: colors.backgroundLight }]}>
