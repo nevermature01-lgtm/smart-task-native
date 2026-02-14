@@ -6,7 +6,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 const TeamsScreen = () => {
-    const [modalVisible, setModalVisible] = useState(false);
+    const [createModalVisible, setCreateModalVisible] = useState(false);
+    const [joinModalVisible, setJoinModalVisible] = useState(false);
     const colors = {
         primary: "#ec5b13",
         backgroundLight: "#f8f6f6",
@@ -34,7 +35,7 @@ const TeamsScreen = () => {
             <ScrollView style={styles.scrollableContent}>
                 {/* Quick Actions */}
                 <View style={styles.quickActions}>
-                    <TouchableOpacity style={styles.quickActionCard} onPress={() => setModalVisible(true)}>
+                    <TouchableOpacity style={styles.quickActionCard} onPress={() => setCreateModalVisible(true)}>
                         <View style={[styles.quickActionIconContainer, { backgroundColor: colors.primary }]}>
                             <MaterialCommunityIcons name="plus-circle-outline" size={24} color="white" />
                         </View>
@@ -43,7 +44,7 @@ const TeamsScreen = () => {
                             <Text style={styles.quickActionSubtitle}>Start a workspace</Text>
                         </View>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.quickActionCard}>
+                    <TouchableOpacity style={styles.quickActionCard} onPress={() => setJoinModalVisible(true)}>
                         <View style={[styles.quickActionIconContainer, { backgroundColor: '#e5e7eb'}]}>
                             <MaterialCommunityIcons name="account-group-outline" size={24} color={colors.primary} />
                         </View>
@@ -83,9 +84,9 @@ const TeamsScreen = () => {
             <Modal
                 animationType="slide"
                 transparent={true}
-                visible={modalVisible}
+                visible={createModalVisible}
                 onRequestClose={() => {
-                    setModalVisible(!modalVisible);
+                    setCreateModalVisible(!createModalVisible);
                 }}
             >
                 <View style={styles.centeredView}>
@@ -97,7 +98,33 @@ const TeamsScreen = () => {
                         />
                         <TouchableOpacity
                             style={[styles.button, styles.buttonClose]}
-                            onPress={() => setModalVisible(!modalVisible)}
+                            onPress={() => setCreateModalVisible(!createModalVisible)}
+                        >
+                            <Text style={styles.textStyle}>Submit</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Join Team Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={joinModalVisible}
+                onRequestClose={() => {
+                    setJoinModalVisible(!joinModalVisible);
+                }}
+            >
+                <View style={styles.centeredView}>
+                    <View style={styles.modalView}>
+                        <Text style={styles.modalText}>Join a Team</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Enter Team Code"
+                        />
+                        <TouchableOpacity
+                            style={[styles.button, styles.buttonClose]}
+                            onPress={() => setJoinModalVisible(!joinModalVisible)}
                         >
                             <Text style={styles.textStyle}>Submit</Text>
                         </TouchableOpacity>
