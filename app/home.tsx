@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Image, Animated, Pressable } from 'react-native';
+import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Image, Animated, Pressable, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../utils/supabase';
@@ -11,6 +11,8 @@ const HomeScreen = () => {
     const [userName, setUserName] = useState('');
     const [userEmail, setUserEmail] = useState('');
     const [teamsSubMenu, setTeamsSubMenu] = useState(false);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [teamName, setTeamName] = useState('');
     const slideAnim = useRef(new Animated.Value(-300)).current;
 
     const colors = {
@@ -54,6 +56,11 @@ const HomeScreen = () => {
             console.error('Error logging out:', error.message);
         }
         setLoading(false);
+    };
+
+    const handleCreateTeam = () => {
+        console.log('Team Name:', teamName);
+        setModalVisible(false);
     };
 
     const actions = [
@@ -102,7 +109,7 @@ const HomeScreen = () => {
                 </TouchableOpacity>
                 {teamsSubMenu && (
                     <View style={styles.subMenu}>
-                        <TouchableOpacity style={styles.menuItem}>
+                        <TouchableOpacity style={styles.menuItem} onPress={() => setModalVisible(true)}>
                             <MaterialCommunityIcons name="account-multiple-plus-outline" size={24} color="white" />
                             <Text style={styles.menuItemText}>Create Team</Text>
                         </TouchableOpacity>
@@ -132,9 +139,40 @@ const HomeScreen = () => {
         </Animated.View>
     );
 
+    const CreateTeamModal = () => (
+        <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => {
+                setModalVisible(!modalVisible);
+            }}>
+            <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Create a New Team</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Team name"
+                        value={teamName}
+                        onChangeText={setTeamName}
+                    />
+                    <View style={styles.modalButtons}>
+                        <TouchableOpacity onPress={() => setModalVisible(false)} style={[styles.button, styles.cancelButton]}>
+                            <Text style={styles.buttonText}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleCreateTeam} style={[styles.button, styles.submitButton]}>
+                            <Text style={styles.buttonText}>Submit</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+        </Modal>
+    );
+
     return (
         <SafeAreaView style={[styles.body, { backgroundColor: colors.backgroundLight }]}>
             <StatusBar hidden />
+            <CreateTeamModal />
             {drawerOpen && <Pressable style={styles.overlay} onPress={() => setDrawerOpen(false)} />}
             <Drawer />
             <ScrollView style={styles.mainContainer}>
@@ -553,6 +591,64 @@ const styles = StyleSheet.create({
     },
     subMenu: {
         paddingLeft: 20,
+    },
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContent: {
+        width: '80%',
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 20,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 20,
+    },
+    input: {
+        width: '100%',
+        height: 40,
+        borderColor: '#ccc',
+        borderWidth: 1,
+        borderRadius: 10,
+        padding: 10,
+        marginBottom: 20,
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+    },
+    button: {
+        borderRadius: 10,
+        padding: 10,
+        elevation: 2,
+        width: '48%',
+        alignItems: 'center',
+    },
+    cancelButton: {
+        backgroundColor: '#f44336',
+    },
+    submitButton: {
+        backgroundColor: '#4CAF50',
+    },
+    buttonText: {
+        color: 'white',
+        fontWeight: 'bold',
+        textAlign: 'center',
     },
 });
 
