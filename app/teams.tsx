@@ -1,11 +1,12 @@
 
-import React from 'react';
-import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Image } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 const TeamsScreen = () => {
+    const [modalVisible, setModalVisible] = useState(false);
     const colors = {
         primary: "#ec5b13",
         backgroundLight: "#f8f6f6",
@@ -33,7 +34,7 @@ const TeamsScreen = () => {
             <ScrollView style={styles.scrollableContent}>
                 {/* Quick Actions */}
                 <View style={styles.quickActions}>
-                    <TouchableOpacity style={styles.quickActionCard}>
+                    <TouchableOpacity style={styles.quickActionCard} onPress={() => setModalVisible(true)}>
                         <View style={[styles.quickActionIconContainer, { backgroundColor: colors.primary }]}>
                             <MaterialCommunityIcons name="plus-circle-outline" size={24} color="white" />
                         </View>
@@ -77,6 +78,32 @@ const TeamsScreen = () => {
                     <Text style={styles.emptyStateText}>Looking for more teams?</Text>
                 </View>
             </ScrollView>
+
+            {/* Create Team Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => {
+                    setModalVisible(!modalVisible);
+                }}
+            >
+                <View style={styles.centeredView}>
+                    <View style={styles.modalView}>
+                        <Text style={styles.modalText}>Create a Team</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Enter Team Name"
+                        />
+                        <TouchableOpacity
+                            style={[styles.button, styles.buttonClose]}
+                            onPress={() => setModalVisible(!modalVisible)}
+                        >
+                            <Text style={styles.textStyle}>Submit</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -182,6 +209,55 @@ const styles = StyleSheet.create({
         marginTop: 8,
         fontSize: 14,
         color: '#9ca3af',
+    },
+    centeredView: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        marginTop: 22
+    },
+    modalView: {
+        margin: 20,
+        backgroundColor: "white",
+        borderRadius: 20,
+        padding: 35,
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5
+    },
+    button: {
+        borderRadius: 20,
+        padding: 10,
+        elevation: 2
+    },
+    buttonClose: {
+        backgroundColor: "#ec5b13",
+    },
+    textStyle: {
+        color: "white",
+        fontWeight: "bold",
+        textAlign: "center"
+    },
+    modalText: {
+        marginBottom: 15,
+        textAlign: "center",
+        fontWeight: 'bold',
+        fontSize: 18,
+
+    },
+    input: {
+        height: 40,
+        margin: 12,
+        borderWidth: 1,
+        padding: 10,
+        width: 200,
+        borderRadius: 5,
     },
 });
 
