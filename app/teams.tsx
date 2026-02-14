@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Modal, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ const TeamsScreen = () => {
     const [createModalVisible, setCreateModalVisible] = useState(false);
     const [joinModalVisible, setJoinModalVisible] = useState(false);
     const [teamName, setTeamName] = useState('');
+    const [teams, setTeams] = useState([]);
 
     const colors = {
         primary: "#6F8FAF",
@@ -18,9 +19,37 @@ const TeamsScreen = () => {
         textMuted: "rgba(34, 22, 16, 0.6)",
     };
 
-    const teams = [
-        { name: 'Q3 Project', members: 5, priority: true },
-    ];
+    useEffect(() => {
+        const fetchTeams = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: teamMembers, error: teamMembersError } = await supabase
+                    .from('team_members')
+                    .select('team_id')
+                    .eq('user_id', user.id);
+
+                if (teamMembersError) {
+                    console.error('Error fetching team members:', teamMembersError);
+                    return;
+                }
+
+                const teamIds = teamMembers.map(member => member.team_id);
+
+                const { data: teamsData, error: teamsError } = await supabase
+                    .from('teams')
+                    .select('*, profiles(full_name)')
+                    .in('id', teamIds);
+
+                if (teamsError) {
+                    console.error('Error fetching teams:', teamsError);
+                } else {
+                    setTeams(teamsData);
+                }
+            }
+        };
+
+        fetchTeams();
+    }, []);
 
     const handleCreateTeam = async () => {
         if (!teamName.trim()) {
@@ -100,13 +129,13 @@ const TeamsScreen = () => {
                 {/* Teams List */}
                 <View style={styles.teamsList}>
                     {teams.map((team, index) => (
-                        <View key={index} style={[styles.teamCard, team.priority && styles.priorityTeamCard]}>
+                        <View key={index} style={[styles.teamCard]}>
                             <View style={styles.teamInfo}>
                                 <View>
                                     <Text style={styles.teamName}>{team.name}</Text>
-                                    <Text style={styles.teamMembers}>{team.members} Members</Text>
+                                    <Text style={styles.teamMembers}>Created by {team.profiles.full_name}</Text>
                                 </View>
-                                {team.priority && <Text style={styles.priorityLabel}>Priority</Text>}
+                                <Text style={styles.priorityLabel}>Team Code: {team.code}</Text>
                             </View>
                             <TouchableOpacity style={styles.chevronButton}>
                                 <MaterialCommunityIcons name="chevron-right" size={24} color={colors.textMuted} />
@@ -255,8 +284,6 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         backgroundColor: 'white',
         marginBottom: 16,
-    },
-    priorityTeamCard: {
         borderLeftWidth: 4,
         borderLeftColor: '#6F8FAF',
     },
