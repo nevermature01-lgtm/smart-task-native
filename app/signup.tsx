@@ -15,7 +15,7 @@ const SignUp = ({ onBack, onLogIn }) => {
     const [notification, setNotification] = useState({ visible: false, message: '', type: '' });
 
     const colors = {
-        primary: "#ec5b13",
+        primary: "#6F8FAF",
         backgroundLight: "#f8f6f6",
         textDark: "#221610",
         textMuted: "rgba(34, 22, 16, 0.6)",
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
         marginVertical: 24,
     },
     headerIconContainer: {
-        backgroundColor: 'rgba(236, 91, 19, 0.1)',
+        backgroundColor: 'rgba(111, 143, 175, 0.1)',
         padding: 16,
         borderRadius: 16,
         marginBottom: 16,

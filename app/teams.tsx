@@ -12,7 +12,7 @@ const TeamsScreen = () => {
     const [teamName, setTeamName] = useState('');
 
     const colors = {
-        primary: "#ec5b13",
+        primary: "#6F8FAF",
         backgroundLight: "#f8f6f6",
         textDark: "#221610",
         textMuted: "rgba(34, 22, 16, 0.6)",
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     },
     priorityTeamCard: {
         borderLeftWidth: 4,
-        borderLeftColor: '#ec5b13',
+        borderLeftColor: '#6F8FAF',
     },
     teamInfo: {
         flex: 1,
@@ -269,14 +269,14 @@ const styles = StyleSheet.create({
     },
     teamMembers: {
         fontSize: 14,
-        color: '#ec5b13',
+        color: '#6F8FAF',
     },
     priorityLabel: {
         marginTop: 4,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 16,
-        backgroundColor: '#ec5b13',
+        backgroundColor: '#6F8FAF',
         color: 'white',
         fontSize: 10,
         fontWeight: 'bold',

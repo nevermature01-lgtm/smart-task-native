@@ -24,7 +24,7 @@ const App = () => {
     }, []);
 
     const colors = {
-        primary: "#ec5b13",
+        primary: "#6F8FAF",
         backgroundLight: "#f8f6f6",
         textDark: "#221610",
         textMuted: "rgba(34, 22, 16, 0.6)",
@@ -49,7 +49,7 @@ const App = () => {
                 {/* Navigation */}
                 <View style={styles.nav}>
                     <View style={styles.logoContainer}>
-                        <View style={[styles.logoIconBg, { backgroundColor: 'rgba(236, 91, 19, 0.1)' }]}>
+                        <View style={[styles.logoIconBg, { backgroundColor: 'rgba(111, 143, 175, 0.1)' }]}>
                             <MaterialCommunityIcons name="check-circle-outline" size={24} color={colors.primary} />
                         </View>
                         <View>
@@ -62,13 +62,13 @@ const App = () => {
                 {/* Hero Content */}
                 <View style={styles.heroSection}>
                     <View style={styles.iconWrapper}>
-                        <View style={[styles.mainIconContainer, { backgroundColor: 'white', borderColor: 'rgba(236, 91, 19, 0.2)' }]}>
+                        <View style={[styles.mainIconContainer, { backgroundColor: 'white', borderColor: 'rgba(111, 143, 175, 0.2)' }]}>
                             <MaterialCommunityIcons name="layers-outline" size={60} color={colors.primary} />
                         </View>
                         <View style={[styles.accentIcon1, { backgroundColor: colors.primary }]}>
                             <MaterialCommunityIcons name="check-all" size={16} color="white" />
                         </View>
-                        <View style={[styles.accentIcon2, { backgroundColor: colors.backgroundLight, borderColor: 'rgba(236, 91, 19, 0.2)' }]}>
+                        <View style={[styles.accentIcon2, { backgroundColor: colors.backgroundLight, borderColor: 'rgba(111, 143, 175, 0.2)' }]}>
                             <MaterialIcons name="priority-high" size={12} color={colors.primary} />
                         </View>
                     </View>
@@ -93,7 +93,7 @@ const App = () => {
                         <MaterialCommunityIcons name="arrow-right" size={20} color="white" />
                     </TouchableOpacity>
                     <TouchableOpacity 
-                        style={[styles.secondaryButton, { borderColor: 'rgba(236, 91, 19, 0.2)' }]}
+                        style={[styles.secondaryButton, { borderColor: 'rgba(111, 143, 175, 0.2)' }]}
                         onPress={() => setScreen('login')}
                     >
                         <Text style={[styles.secondaryButtonText, { color: colors.textDark }]}>Log In</Text>
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        shadowColor: "#ec5b13",
+        shadowColor: "#6F8FAF",
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.3,
         shadowRadius: 30,

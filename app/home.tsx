@@ -14,7 +14,7 @@ const HomeScreen = () => {
     const slideAnim = useRef(new Animated.Value(-300)).current;
 
     const colors = {
-        primary: "#ec5b13",
+        primary: "#6F8FAF",
         backgroundLight: "#f8f6f6",
         textDark: "#221610",
         textMuted: "rgba(34, 22, 16, 0.6)",
