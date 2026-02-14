@@ -14,6 +14,7 @@ const HomeScreen = () => {
     const [modalVisible, setModalVisible] = useState(false);
     const [teamName, setTeamName] = useState('');
     const slideAnim = useRef(new Animated.Value(-300)).current;
+    const modalSlideAnim = useRef(new Animated.Value(300)).current;
 
     const colors = {
         primary: "#ec5b13",
@@ -48,6 +49,22 @@ const HomeScreen = () => {
             useNativeDriver: true,
         }).start();
     }, [drawerOpen]);
+
+    useEffect(() => {
+        if (modalVisible) {
+            Animated.timing(modalSlideAnim, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        } else {
+            Animated.timing(modalSlideAnim, {
+                toValue: 300,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [modalVisible]);
 
     const handleLogout = async () => {
         setLoading(true);
@@ -174,17 +191,21 @@ const HomeScreen = () => {
     ));
 
     const handleCloseModal = useCallback(() => {
-        setModalVisible(false);
-    }, [setModalVisible]);
+        Animated.timing(modalSlideAnim, {
+            toValue: 300,
+            duration: 300,
+            useNativeDriver: true,
+        }).start(() => setModalVisible(false));
+    }, [modalSlideAnim, setModalVisible]);
 
     const CreateTeamModal = React.memo(() => (
         <Modal
-            animationType="slide"
+            animationType="fade"
             transparent={true}
             visible={modalVisible}
             onRequestClose={handleCloseModal}>
             <View style={styles.modalOverlay}>
-                <View style={styles.modalContent}>
+                <Animated.View style={[styles.modalContent, { transform: [{ translateY: modalSlideAnim }] }]}>
                     <View style={styles.handleBar} />
                     <View style={styles.modalHeader}>
                         <View style={{flexDirection: 'row', alignItems: 'center'}}>
@@ -204,7 +225,7 @@ const HomeScreen = () => {
                     <TouchableOpacity onPress={handleCreateTeam} style={[styles.button, styles.submitButton]} disabled={loading}>
                         <Text style={styles.buttonText}>{loading ? 'Creating...' : 'Create Team'}</Text>
                     </TouchableOpacity>
-                </View>
+                </Animated.View>
             </View>
         </Modal>
     ));
