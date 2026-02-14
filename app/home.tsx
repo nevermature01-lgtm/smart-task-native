@@ -9,6 +9,7 @@ const HomeScreen = () => {
     const [loading, setLoading] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [userName, setUserName] = useState('');
+    const [userEmail, setUserEmail] = useState('');
     const slideAnim = useRef(new Animated.Value(-300)).current;
 
     const colors = {
@@ -31,6 +32,7 @@ const HomeScreen = () => {
                 console.error('Error fetching user:', error.message);
             } else {
                 setUserName(data.user?.user_metadata.full_name || 'J.Snow');
+                setUserEmail(data.user?.email || 'Not available');
             }
         };
         fetchUser();
@@ -85,6 +87,7 @@ const HomeScreen = () => {
                     style={styles.drawerAvatar}
                 />
                 <Text style={styles.drawerUserName}>{userName}</Text>
+                <Text style={styles.drawerUserEmail}>{userEmail}</Text>
             </View>
             <View style={styles.menuContainer}>
                 <TouchableOpacity style={styles.menuItem}>
@@ -259,6 +262,10 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    drawerUserEmail: {
+        color: '#ccc',
+        fontSize: 12,
     },
     menuContainer: {},
     menuItem: {
