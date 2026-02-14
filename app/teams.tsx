@@ -91,6 +91,12 @@ const TeamsScreen = () => {
             >
                 <View style={styles.centeredView}>
                     <View style={styles.modalView}>
+                        <TouchableOpacity
+                            style={styles.closeButton}
+                            onPress={() => setCreateModalVisible(!createModalVisible)}
+                        >
+                            <MaterialCommunityIcons name="close" size={24} color="black" />
+                        </TouchableOpacity>
                         <Text style={styles.modalText}>Create a Team</Text>
                         <TextInput
                             style={styles.input}
@@ -117,6 +123,12 @@ const TeamsScreen = () => {
             >
                 <View style={styles.centeredView}>
                     <View style={styles.modalView}>
+                        <TouchableOpacity
+                            style={styles.closeButton}
+                            onPress={() => setJoinModalVisible(!joinModalVisible)}
+                        >
+                            <MaterialCommunityIcons name="close" size={24} color="black" />
+                        </TouchableOpacity>
                         <Text style={styles.modalText}>Join a Team</Text>
                         <TextInput
                             style={styles.input}
@@ -285,6 +297,11 @@ const styles = StyleSheet.create({
         padding: 10,
         width: 200,
         borderRadius: 5,
+    },
+    closeButton: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
     },
 });
 
