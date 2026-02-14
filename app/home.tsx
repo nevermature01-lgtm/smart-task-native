@@ -68,7 +68,7 @@ const HomeScreen = () => {
         <Animated.View style={[styles.drawerContainer, { transform: [{ translateX: slideAnim }] }]}>
             <View style={styles.drawerHeader}>
                 <Image
-                    source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC5A3URbIJLEYBeOdR9z3daN5LHcGFUOdOctaMnRS6QXwlgBFF-lryuPoHHxdd63J-7afJxwedFTRF2nTloTy-6djWgGa8bF1i17MV8KJtUSejkoOJzTrnmbI2_U0s8xf84RuFiRxHmm8eGOy0glcsAz78GbwvIbMcvtv2LMCmOnnWzRT58MveeC8Qd0T2dj0ASO1Dg1GtWRR0eL0AF7dKjyQKqZ61sU8T2JH6HDO-k7YyGg2IqV3WY9zmutQ---ifc3Kd7jjm86Gw' }}
+                    source={{ uri: `https://api.dicebear.com/7.x/miniavs/png?seed=${userName}` }}
                     style={styles.drawerAvatar}
                 />
                 <Text style={styles.drawerUserName}>{userName}</Text>
