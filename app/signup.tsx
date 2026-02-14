@@ -1,9 +1,10 @@
 
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, StatusBar, TextInput, Alert, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, StatusBar, TextInput, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../utils/supabase';
+import Notification from '../components/Notification';
 
 const SignUp = ({ onBack, onLogIn }) => {
     const [name, setName] = useState('');
@@ -11,12 +12,20 @@ const SignUp = ({ onBack, onLogIn }) => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [notification, setNotification] = useState({ visible: false, message: '', type: '' });
 
     const colors = {
         primary: "#ec5b13",
         backgroundLight: "#f8f6f6",
         textDark: "#221610",
         textMuted: "rgba(34, 22, 16, 0.6)",
+    };
+
+    const showNotification = (message, type) => {
+        setNotification({ visible: true, message, type });
+        setTimeout(() => {
+            setNotification({ visible: false, message: '', type: '' });
+        }, 3000);
     };
 
     const handleSignUp = async () => {
@@ -33,16 +42,18 @@ const SignUp = ({ onBack, onLogIn }) => {
 
         if (error) {
             if (error.message === "User already registered") {
-                Alert.alert('Error', "Email already exists, try a different one");
+                showNotification("Email already exists, try a different one", "error");
             } else {
-                Alert.alert('Error', error.message);
+                showNotification(error.message, "error");
             }
         } else {
             if (data.user && data.user.identities && data.user.identities.length === 0) {
-                Alert.alert('Error', "Email already exists, try a different one");
+                showNotification("Email already exists, try a different one", "error");
             } else {
-                Alert.alert('Success', 'Verification mail sent');
-                onLogIn();
+                showNotification('Verification mail sent', 'success');
+                setTimeout(() => {
+                    onLogIn();
+                }, 2000);
             }
         }
         setLoading(false);
@@ -51,6 +62,13 @@ const SignUp = ({ onBack, onLogIn }) => {
     return (
         <SafeAreaView style={[styles.body, { backgroundColor: colors.backgroundLight }]}>
             <StatusBar hidden />
+            {notification.visible && (
+                <Notification
+                    message={notification.message}
+                    type={notification.type}
+                    onHide={() => setNotification({ visible: false, message: '', type: '' })}
+                />
+            )}
             <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" enabled>
                 <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
                     <View style={styles.mainContainer}>
