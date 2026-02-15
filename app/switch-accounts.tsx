@@ -6,8 +6,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 const SwitchAccountsScreen = () => {
-    const [modalVisible, setModalVisible] = useState(false);
+    const [createModalVisible, setCreateModalVisible] = useState(false);
+    const [joinModalVisible, setJoinModalVisible] = useState(false);
     const [teamName, setTeamName] = useState('');
+    const [teamCode, setTeamCode] = useState('');
 
     const colors = {
         primary: "#ec5b13",
@@ -23,7 +25,7 @@ const SwitchAccountsScreen = () => {
             members: 12,
             avatars: [
                 'https://lh3.googleusercontent.com/aida-public/AB6AXuANDOdOIdqAc5ZlDJJtC31HpE3L6z-jGbqQokjrbBTli6TbjB0zkbR7CJS5IQZzrwri6iPFWMyD5Fpbj0jW1IQbONZ1M6cg4bstiF9IAY7UZuVgGQveITYhrvBjKDwpWJnYwXujfw2IZDgNOLlfq0BP18JGn0q7EIdzBEM67WPxgEEnSNMiH4Jd1wd0yhOLH89WaizKmPwISFdp48tPsULAi2OUHNqDge2JIVy1WcmKbcWoHlayR3VR0mLFZHVkabSQrQ40Juo_VNg',
-                'https://lh3.googleusercontent.com/aida-public/AB6AXuAnk-oULyiV4X_RNPQ6Vv77qomLwRUiPeY10Y_-2zUY-Kpl-cHEpIAqpxCEYJiVfGBVIXsQC9z86KJSww16aIat73oXSRjDjbYpPYJl5SU7jvNngeZV0-MZjhAgB65JBsqndqwY43viPpsbaPvaSnnEsFCNiXDuO4QTZcsPMPa_iJq2WEP4PhzayCL8ZbbWzzkf4qE9I24pETdObZ3_JmC2XD-4zVv1gsVFpxiY-BEnqF2Xo6kPZzLilsNFFB0B3AuFPFibhlNWDRg',
+                'https://lh3.googleusercontent.com/aida-public/AB6AXuAnk-oULyiV4X_RNPQ6Vv77qomLwRUiPeY10Y_-2zUY-Kpl-cHEpIAqpxCEYJiVfGBVIXsQC9z86KJSww16aIat73oXSRjDjbYpPYJl5SU7jvNngeZV0-MZjhAgB65JBsqndqwY43viPpsbaPvaSnnEsFCNiXDuO4QTZcsPMPa_iJq2WEP4PhzayCL8ZbbWzzkf4qE9I24pETdObZ3_JmC2XD-4zVvgsVFpxiY-BEnqF2Xo6kPZzLilsNFFB0B3AuFPFibhlNWDRg',
                 'https://lh3.googleusercontent.com/aida-public/AB6AXuBw1Epaq4WbgmtrjfQgnU0bTj3ksLRo2AUvkLkScet2tAZGBs-Ka9flXi3fTCusTIGKo2t36iQgDtl_bCWOeqDQ9M2FE9aRIJWjU1eww_Y0EtrAomv0f8_K_JJz-Xlsn8Ni29ZU06B2j0SRGMcTe9U-9NPmJFiQIWlFK-m4k_A3nPgZE_EFQGXJf_voEMCbMjmBW7TbOKsgEZwFRRQgVAh4Yo6AWKBPHvKjhCKzlBPv3iqlHCQjOzw1KmFLSSzadCMxXBuJhwxaOJY'
             ],
             remaining: 9,
@@ -53,8 +55,14 @@ const SwitchAccountsScreen = () => {
 
     const handleCreateTeam = () => {
         console.log('Team Name:', teamName);
-        setModalVisible(false);
+        setCreateModalVisible(false);
         setTeamName('');
+    };
+
+    const handleJoinTeam = () => {
+        console.log('Team Code:', teamCode);
+        setJoinModalVisible(false);
+        setTeamCode('');
     };
 
     return (
@@ -62,7 +70,7 @@ const SwitchAccountsScreen = () => {
             <StatusBar hidden />
             <ScrollView style={styles.mainContainer}>
                 <View style={styles.grid}>
-                    <TouchableOpacity style={styles.card} onPress={() => setModalVisible(true)}>
+                    <TouchableOpacity style={styles.card} onPress={() => setCreateModalVisible(true)}>
                         <View style={styles.iconContainer}>
                             <MaterialCommunityIcons name="add_circle" size={24} color="white" />
                         </View>
@@ -71,7 +79,7 @@ const SwitchAccountsScreen = () => {
                             <Text style={styles.cardSubtitle}>Start a workspace</Text>
                         </View>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.card, styles.cardSecondary]}>
+                    <TouchableOpacity style={[styles.card, styles.cardSecondary]} onPress={() => setJoinModalVisible(true)}>
                         <View style={[styles.iconContainer, styles.iconContainerSecondary]}>
                             <MaterialCommunityIcons name="group_add" size={24} color={colors.primary} />
                         </View>
@@ -146,9 +154,9 @@ const SwitchAccountsScreen = () => {
             <Modal
                 animationType="slide"
                 transparent={true}
-                visible={modalVisible}
+                visible={createModalVisible}
                 onRequestClose={() => {
-                    setModalVisible(!modalVisible);
+                    setCreateModalVisible(!createModalVisible);
                 }}
             >
                 <View style={styles.centeredView}>
@@ -163,6 +171,33 @@ const SwitchAccountsScreen = () => {
                         <Pressable
                             style={[styles.button, styles.buttonClose]}
                             onPress={handleCreateTeam}
+                        >
+                            <Text style={styles.textStyle}>Submit</Text>
+                        </Pressable>
+                    </View>
+                </View>
+            </Modal>
+
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={joinModalVisible}
+                onRequestClose={() => {
+                    setJoinModalVisible(!joinModalVisible);
+                }}
+            >
+                <View style={styles.centeredView}>
+                    <View style={styles.modalView}>
+                        <Text style={styles.modalText}>Enter your code</Text>
+                        <TextInput
+                            style={styles.input}
+                            onChangeText={setTeamCode}
+                            value={teamCode}
+                            placeholder="Team Code"
+                        />
+                        <Pressable
+                            style={[styles.button, styles.buttonClose]}
+                            onPress={handleJoinTeam}
                         >
                             <Text style={styles.textStyle}>Submit</Text>
                         </Pressable>
