@@ -4,37 +4,36 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   schema-sync:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Setup Supabase CLI (latest)
-        uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v1
         with:
           version: latest
 
-      - name: Link project
+      - name: Link Supabase project
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
 
-      - name: Dump remote schema (force Postgres 17)
+      - name: Dump remote schema (read only)
         env:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          docker pull postgres:17
-          supabase db dump --linked --password $SUPABASE_DB_PASSWORD --schema public --use-docker > supabase/schema.sql
+          supabase db dump --linked --schema public > supabase/schema.sql
 
       - name: Commit schema changes
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
+          git config --global user.name "AI Schema Bot"
+          git config --global user.email "bot@users.noreply.github.com"
           git add supabase/schema.sql
-          git commit -m "auto: sync remote schema" || echo "No changes"
+          git commit -m "auto: update remote schema snapshot" || echo "No changes"
           git push
