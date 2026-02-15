@@ -1,9 +1,10 @@
 
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Image, Modal, TextInput, Pressable } from 'react-native';
+import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Image, Modal, TextInput, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { supabase } from '../utils/supabase';
 
 const SwitchAccountsScreen = () => {
     const [createModalVisible, setCreateModalVisible] = useState(false);
@@ -53,16 +54,82 @@ const SwitchAccountsScreen = () => {
         },
     ];
 
-    const handleCreateTeam = () => {
-        console.log('Team Name:', teamName);
-        setCreateModalVisible(false);
-        setTeamName('');
+    const handleCreateTeam = async () => {
+        if (!teamName.trim()) {
+            Alert.alert('Please enter a team name.');
+            return;
+        }
+
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+            const { data: newTeam, error: teamError } = await supabase
+                .from('teams')
+                .insert({ name: teamName, creator_id: user.id })
+                .select()
+                .single();
+
+            if (teamError || !newTeam) {
+                console.error('Error creating team:', teamError);
+                Alert.alert('Failed to create team. Please try again.');
+                return;
+            }
+
+            const { error: memberError } = await supabase
+                .from('team_members')
+                .insert({ team_id: newTeam.id, user_id: user.id, role: 'owner' });
+
+            if (memberError) {
+                console.error('Error adding owner to team:', memberError);
+                Alert.alert('Team created, but failed to make you an owner. Please contact support.');
+                await supabase.from('teams').delete().eq('id', newTeam.id);
+                return;
+            }
+
+            Alert.alert(`Team "${teamName}" created successfully!`);
+            setCreateModalVisible(false);
+            setTeamName('');
+        }
     };
 
-    const handleJoinTeam = () => {
-        console.log('Team Code:', teamCode);
-        setJoinModalVisible(false);
-        setTeamCode('');
+    const handleJoinTeam = async () => {
+        if (!teamCode.trim()) {
+            Alert.alert('Please enter a team code.');
+            return;
+        }
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const { data: team, error: findError } = await supabase
+                .from('teams')
+                .select('id')
+                .eq('code', teamCode.trim())
+                .single();
+
+            if (findError || !team) {
+                console.error('Error finding team:', findError);
+                Alert.alert('Invalid team code. Please check the code and try again.');
+                return;
+            }
+
+            const { error: memberError } = await supabase
+                .from('team_members')
+                .insert({ team_id: team.id, user_id: user.id });
+
+            if (memberError) {
+                if (memberError.code === '23505') { // unique_violation
+                    Alert.alert("You are already a member of this team.");
+                } else {
+                    console.error('Error joining team:', memberError);
+                    Alert.alert('Failed to join team. Please try again.');
+                }
+                return;
+            }
+
+            Alert.alert('Successfully joined team!');
+            setJoinModalVisible(false);
+            setTeamCode('');
+        }
     };
 
     return (
