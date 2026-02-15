@@ -13,8 +13,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Setup Supabase CLI
+      - name: Setup Supabase CLI (latest)
         uses: supabase/setup-cli@v1
+        with:
+          version: latest
 
       - name: Link project
         env:
@@ -22,11 +24,12 @@ jobs:
         run: |
           supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
 
-      - name: Dump remote schema
+      - name: Dump remote schema (force Postgres 17)
         env:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          supabase db dump --linked --password $SUPABASE_DB_PASSWORD --schema public > supabase/schema.sql
+          docker pull postgres:17
+          supabase db dump --linked --password $SUPABASE_DB_PASSWORD --schema public --use-docker > supabase/schema.sql
 
       - name: Commit schema changes
         run: |
