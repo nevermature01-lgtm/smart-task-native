@@ -1,11 +1,14 @@
 
-import React from 'react';
-import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Image } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, StatusBar, TouchableOpacity, ScrollView, Image, Modal, TextInput, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 const SwitchAccountsScreen = () => {
+    const [modalVisible, setModalVisible] = useState(false);
+    const [teamName, setTeamName] = useState('');
+
     const colors = {
         primary: "#ec5b13",
         backgroundLight: "#f8f6f6",
@@ -48,12 +51,18 @@ const SwitchAccountsScreen = () => {
         },
     ];
 
+    const handleCreateTeam = () => {
+        console.log('Team Name:', teamName);
+        setModalVisible(false);
+        setTeamName('');
+    };
+
     return (
         <SafeAreaView style={[styles.body, { backgroundColor: colors.backgroundLight }]}>
             <StatusBar hidden />
             <ScrollView style={styles.mainContainer}>
                 <View style={styles.grid}>
-                    <TouchableOpacity style={styles.card}>
+                    <TouchableOpacity style={styles.card} onPress={() => setModalVisible(true)}>
                         <View style={styles.iconContainer}>
                             <MaterialCommunityIcons name="add_circle" size={24} color="white" />
                         </View>
@@ -133,6 +142,33 @@ const SwitchAccountsScreen = () => {
                     <Text style={styles.navText}>Settings</Text>
                 </TouchableOpacity>
             </View>
+
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => {
+                    setModalVisible(!modalVisible);
+                }}
+            >
+                <View style={styles.centeredView}>
+                    <View style={styles.modalView}>
+                        <Text style={styles.modalText}>Enter Team name</Text>
+                        <TextInput
+                            style={styles.input}
+                            onChangeText={setTeamName}
+                            value={teamName}
+                            placeholder="Team Name"
+                        />
+                        <Pressable
+                            style={[styles.button, styles.buttonClose]}
+                            onPress={handleCreateTeam}
+                        >
+                            <Text style={styles.textStyle}>Submit</Text>
+                        </Pressable>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -331,7 +367,51 @@ const styles = StyleSheet.create({
         shadowRadius: 20,
         elevation: 10,
     },
+    centeredView: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 22,
+    },
+    modalView: {
+        margin: 20,
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 35,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    button: {
+        borderRadius: 20,
+        padding: 10,
+        elevation: 2,
+    },
+    buttonClose: {
+        backgroundColor: '#2196F3',
+    },
+    textStyle: {
+        color: 'white',
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+    modalText: {
+        marginBottom: 15,
+        textAlign: 'center',
+    },
+    input: {
+        height: 40,
+        margin: 12,
+        borderWidth: 1,
+        padding: 10,
+        width: 200,
+    },
 });
 
 export default SwitchAccountsScreen;
-
