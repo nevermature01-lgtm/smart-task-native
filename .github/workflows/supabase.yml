@@ -22,16 +22,16 @@ jobs:
         run: |
           supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
 
-      - name: Pull latest schema
+      - name: Dump remote schema
         env:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          supabase db pull --linked --password $SUPABASE_DB_PASSWORD
+          supabase db dump --linked --password $SUPABASE_DB_PASSWORD --schema public > supabase/schema.sql
 
       - name: Commit schema changes
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add supabase
+          git add supabase/schema.sql
           git commit -m "auto: sync remote schema" || echo "No changes"
           git push
