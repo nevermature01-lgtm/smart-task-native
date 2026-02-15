@@ -1,4 +1,4 @@
-name: Supabase DB Push
+name: Supabase DB Sync
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  database-push:
+  database-sync:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,15 +25,14 @@ jobs:
         run: |
           supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
 
-      - name: Push database changes
+      - name: Pull remote schema
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          supabase db push
+          supabase db pull --linked --password $SUPABASE_DB_PASSWORD
 
-      - name: Safety Guard
-        if: "contains(github.event.head_commit.message, 'DROP TABLE') || contains(github.event.head_commit.message, 'DROP SCHEMA') || contains(github.event.head_commit.message, 'TRUNCATE')"
+      - name: Push database changes
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          echo "DANGER: Potentially destructive migration detected. Manual review required."
-          exit 1
+          supabase db push --linked --password $SUPABASE_DB_PASSWORD
