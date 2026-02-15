@@ -1,18 +1,1 @@
-# supabase/config.toml
 project_id = "nvbuasitqlsrzjiyzagn"
-
-[api]
-port = 54321
-schemas = ["public", "storage", "graphql"]
-server_url = "http://127.0.0.1:54321"
-
-[db]
-port = 54322
-major_version = 15
-
-[studio]
-port = 54323
-
-# The following settings are for local development and differ from the production environment.
-[auth]
-enable_signup = true
