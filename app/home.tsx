@@ -94,7 +94,7 @@ const HomeScreen = () => {
                     <MaterialCommunityIcons name="home-outline" size={24} color="white" />
                     <Text style={styles.menuItemText}>Home</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/switch-accounts')}>
                     <MaterialCommunityIcons name="account-switch-outline" size={24} color="white" />
                     <Text style={styles.menuItemText}>Switch accounts</Text>
                 </TouchableOpacity>
