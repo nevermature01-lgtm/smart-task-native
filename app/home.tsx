@@ -65,7 +65,6 @@ const HomeScreen = () => {
 
     const quickActions = [
         { title: 'Total Tasks', subtitle: '9', icon: 'clipboard-check-outline', color: colors.purple },
-        { title: 'Total Leads', subtitle: '6', icon: 'account-group-outline', color: colors.orange },
         { title: 'All Projects', subtitle: '4', icon: 'briefcase-outline', color: colors.green },
         { title: 'Finance', subtitle: '1', icon: 'cash-multiple', color: colors.blue },
         { title: 'QR', subtitle: '2', icon: 'qrcode-scan', color: colors.pink },
@@ -95,9 +94,9 @@ const HomeScreen = () => {
                     <MaterialCommunityIcons name="home-outline" size={24} color="white" />
                     <Text style={styles.menuItemText}>Home</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/teams')}>
-                    <MaterialCommunityIcons name="account-group-outline" size={24} color="white" />
-                    <Text style={styles.menuItemText}>Teams</Text>
+                <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+                    <MaterialCommunityIcons name="account-switch-outline" size={24} color="white" />
+                    <Text style={styles.menuItemText}>Switch accounts</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.menuItem}>
                     <MaterialCommunityIcons name="account-circle-outline" size={24} color="white" />
