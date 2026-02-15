@@ -1,0 +1,31 @@
+name: Supabase Push CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  push-to-supabase:
+    runs-on: ubuntu-latest
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase Project
+        run: |
+          supabase link --project-ref $SUPABASE_PROJECT_ID
+
+      - name: Push Database Migrations
+        run: |
+          supabase db push --linked --yes
