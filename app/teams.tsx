@@ -23,7 +23,7 @@ const TeamsScreen = () => {
         const fetchTeams = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-                // Fetch teams the user is a member of
+                // Step 1: Fetch the teams the user is a member of
                 const { data: teamMembers, error: teamMembersError } = await supabase
                     .from('team_members')
                     .select('team_id')
@@ -41,42 +41,33 @@ const TeamsScreen = () => {
 
                 const teamIds = teamMembers.map(member => member.team_id);
 
-                // Fetch the actual team data
+                // Step 2: Fetch team data and join with profiles in a single call
                 const { data: teamsData, error: teamsError } = await supabase
                     .from('teams')
-                    .select('*')
+                    .select(`
+                        id,
+                        name,
+                        code,
+                        creator_id,
+                        profiles (
+                            full_name
+                        )
+                    `)
                     .in('id', teamIds);
 
                 if (teamsError) {
-                    console.error('Error fetching teams:', teamsError);
+                    // If error still happens, it will be caught here.
+                    // The error message will be more specific now.
+                    console.error('Error fetching teams with profiles:', teamsError);
+                    Alert.alert('Error', 'Failed to fetch team details. ' + teamsError.message);
                     return;
                 }
 
-                // Get a list of unique creator IDs from the teams
-                const creatorIds = [...new Set(teamsData.map(team => team.creator_id))];
-
-                // Fetch the profiles of the creators
-                const { data: profiles, error: profilesError } = await supabase
-                    .from('profiles')
-                    .select('id, full_name')
-                    .in('id', creatorIds);
-
-                if (profilesError) {
-                    console.error('Error fetching profiles:', profilesError);
-                    setTeams(teamsData.map(team => ({ ...team, creator_name: 'Unknown' })));
-                    return;
-                }
-
-                // Create a map of creator IDs to names
-                const creatorNames = profiles.reduce((acc, profile) => {
-                    acc[profile.id] = profile.full_name;
-                    return acc;
-                }, {});
-
-                // Enrich teams data with creator name
+                // Step 3: Map the data to the format your component expects
                 const enrichedTeams = teamsData.map(team => ({
                     ...team,
-                    creator_name: creatorNames[team.creator_id] || 'Unknown'
+                    // The creator's name is now inside the 'profiles' object
+                    creator_name: team.profiles ? team.profiles.full_name : 'Unknown'
                 }));
 
                 setTeams(enrichedTeams);
@@ -84,6 +75,20 @@ const TeamsScreen = () => {
         };
 
         fetchTeams();
+
+        // Listen for auth changes to refetch data if needed
+        const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (session?.user) {
+                fetchTeams();
+            } else {
+                setTeams([]);
+            }
+        });
+
+        // Cleanup listener on component unmount
+        return () => {
+            authListener.subscription.unsubscribe();
+        };
     }, []);
 
     const handleCreateTeam = async () => {
