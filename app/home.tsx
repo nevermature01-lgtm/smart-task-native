@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import MenuScreen from './menu';
+import { auth, db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 const HamburgerMenu = ({ onPress }) => (
   <TouchableOpacity onPress={onPress} style={styles.hamburgerContainer}>
@@ -26,7 +28,21 @@ const ActionButton = ({ icon, label, color, bg }) => (
 
 const HomeScreen = () => {
   const [menuVisible, setMenuVisible] = useState(false);
+  const [userName, setUserName] = useState('User');
   const slideAnim = useRef(new Animated.Value(-300)).current;
+
+  useEffect(() => {
+    const fetchUserName = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          setUserName(userDoc.data().firstName);
+        }
+      }
+    };
+    fetchUserName();
+  }, []);
 
   useEffect(() => {
     Animated.timing(slideAnim, {
@@ -44,7 +60,7 @@ const HomeScreen = () => {
           <View style={styles.header}>
             <View style={styles.userInfo}>
               <HamburgerMenu onPress={() => setMenuVisible(true)} />
-              <Text style={styles.userName}>Hi, User 👋</Text>
+              <Text style={styles.userName}>Hi, {userName} 👋</Text>
             </View>
             <View style={styles.headerActions}>
               <TouchableOpacity style={[styles.iconButton, styles.customShadow]}>
