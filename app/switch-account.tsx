@@ -194,23 +194,23 @@ const SwitchAccountScreen = () => {
                         </View>
 
                         {showCreateTeamCard && (
-                            <View style={styles.createTeamContainer}>
-                                <View style={styles.createTeamCard}>
-                                    <Text style={styles.createTeamTitle}>Create a New Team</Text>
-                                    <TouchableOpacity style={styles.closeButton} onPress={() => setShowCreateTeamCard(false)}>
-                                        <MaterialIcons name="close" size={20} color="#6B7280" />
-                                    </TouchableOpacity>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Enter team name"
-                                        placeholderTextColor="#9CA3AF"
-                                        value={newTeamName}
-                                        onChangeText={setNewTeamName}
-                                    />
-                                    <TouchableOpacity style={styles.submitButton} onPress={handleCreateTeam} disabled={isCreatingTeam}>
-                                        {isCreatingTeam ? <ActivityIndicator color="white" /> : <Text style={styles.submitButtonText}>Create Team</Text>}
+                             <View style={styles.card}>
+                                <View style={styles.cardHeader}>
+                                    <Text style={styles.cardTitle}>Create a New Team</Text>
+                                    <TouchableOpacity onPress={() => setShowCreateTeamCard(false)} style={styles.closeButton}>
+                                        <MaterialIcons name="close" size={20} color="#fff" />
                                     </TouchableOpacity>
                                 </View>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Enter team name"
+                                    placeholderTextColor="#9CA3AF"
+                                    value={newTeamName}
+                                    onChangeText={setNewTeamName}
+                                />
+                                <TouchableOpacity style={styles.submitButton} onPress={handleCreateTeam} disabled={isCreatingTeam}>
+                                    {isCreatingTeam ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Create Team</Text>}
+                                </TouchableOpacity>
                             </View>
                         )}
 
@@ -442,24 +442,24 @@ const styles = StyleSheet.create({
     },
     input: {
         height: 44,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         borderRadius: 8,
         paddingHorizontal: 16,
         fontSize: 14,
-        color: '#1F2937',
+        color: '#fff',
         marginBottom: 12,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: 'rgba(255, 255, 255, 0.2)',
     },
     submitButton: {
         height: 44,
-        backgroundColor: '#2563EB',
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
         borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
     },
     submitButtonText: {
-        color: 'white',
+        color: '#1D4ED8',
         fontSize: 14,
         fontWeight: 'bold',
     },
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 8,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -677,6 +677,28 @@ const styles = StyleSheet.create({
         color: '#2563EB',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    card: {
+        backgroundColor: '#1D4ED8',
+        borderRadius: 16,
+        padding: 20,
+        margin: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.2,
+        shadowRadius: 20,
+        elevation: 15,
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    cardTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#fff',
     },
 });
 
