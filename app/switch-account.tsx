@@ -1,9 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { db, auth } from '../firebase';
+import { collection, addDoc, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 
 const TeamListItem = ({ title, creator, avatars, isPriority, onPress, isActive, teamCode, onCopyCode }) => (
     <TouchableOpacity onPress={onPress} style={[styles.teamListItem, isPriority && styles.priorityTeamCard, isActive && styles.activeItem]}>
@@ -69,6 +71,73 @@ const SwitchAccountScreen = () => {
     const [newTeamName, setNewTeamName] = useState('');
     const [user, setUser] = useState({ name: "John Doe" });
     const [activeAccount, setActiveAccount] = useState({ type: 'personal' });
+    const [isCreatingTeam, setIsCreatingTeam] = useState(false);
+
+    useEffect(() => {
+        const fetchUserData = async () => {
+            const currentUser = auth.currentUser;
+            if (currentUser) {
+                const userDocRef = doc(db, 'users', currentUser.uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    setUser({ name: userDoc.data().firstName });
+                }
+            }
+        };
+        fetchUserData();
+    }, []);
+
+    const handleCreateTeam = async () => {
+        if (!newTeamName.trim()) {
+            alert('Please enter a team name.');
+            return;
+        }
+
+        setIsCreatingTeam(true);
+        const teamsRef = collection(db, 'teams');
+        const q = query(teamsRef, where("name", "==", newTeamName.trim()));
+
+        try {
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+                alert('A team with this name already exists.');
+                setIsCreatingTeam(false);
+                return;
+            }
+
+            let teamCode;
+            let isCodeUnique = false;
+            while (!isCodeUnique) {
+                teamCode = Math.floor(1000 + Math.random() * 9000).toString();
+                const codeQuery = query(teamsRef, where("code", "==", teamCode));
+                const codeSnapshot = await getDocs(codeQuery);
+                if (codeSnapshot.empty) {
+                    isCodeUnique = true;
+                }
+            }
+
+            const currentUser = auth.currentUser;
+            if (currentUser) {
+                await addDoc(teamsRef, {
+                    name: newTeamName.trim(),
+                    code: teamCode,
+                    creator: user.name,
+                    creatorId: currentUser.uid,
+                    createdAt: new Date(),
+                });
+
+                setNewTeamName('');
+                setShowCreateTeamCard(false);
+                // Optionally, refresh the list of teams here
+            }
+        } catch (error) {
+            console.error("Error creating team: ", error);
+            alert('Failed to create team. Please try again.');
+        } finally {
+            setIsCreatingTeam(false);
+        }
+    };
+
 
     return (
         <SafeAreaView style={styles.container}>
@@ -120,8 +189,8 @@ const SwitchAccountScreen = () => {
                                         value={newTeamName}
                                         onChangeText={setNewTeamName}
                                     />
-                                    <TouchableOpacity style={styles.submitButton}>
-                                        <Text style={styles.submitButtonText}>Create Team</Text>
+                                    <TouchableOpacity style={styles.submitButton} onPress={handleCreateTeam} disabled={isCreatingTeam}>
+                                        {isCreatingTeam ? <ActivityIndicator color="white" /> : <Text style={styles.submitButtonText}>Create Team</Text>}
                                     </TouchableOpacity>
                                 </View>
                             </View>
