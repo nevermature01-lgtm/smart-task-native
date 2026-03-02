@@ -1,130 +1,187 @@
+
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { Link } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 
-const MenuItem = ({ icon, text, isBottom, ...props }) => {
-  return (
-    <TouchableOpacity 
-      style={[styles.menuItem, isBottom && styles.bottomMenuItem]}
-      {...props}
-    >
-      <Feather name={icon} size={24} color="#4b5563" />
-      <Text style={styles.menuItemText}>{text}</Text>
-    </TouchableOpacity>
-  );
-}
-
-const Avatar = ({ userName }) => {
-  const initial = userName ? userName[0].toUpperCase() : '?';
-  return (
-    <View style={styles.avatar}>
-      <Text style={styles.avatarText}>{initial}</Text>
-    </View>
-  );
+const user = {
+  name: 'Adnan',
+  email: 'adnankhan75e@gmail.com',
+  avatar: null,
 };
 
-const MenuScreen = ({ userName, userEmail, closeMenu }) => {
-  
-  return (
-    <View style={styles.menuContent}>
-      <TouchableOpacity style={styles.closeButton} onPress={closeMenu}>
-        <Feather name="x" size={24} color="#1f2937" />
-      </TouchableOpacity>
+const menuItems = [
+  { href: '/home', icon: 'home', text: 'Home' },
+  { href: '/switch-account', icon: 'shuffle', text: 'Switch Account' },
+  { href: '/storage', icon: 'hard-drive', text: 'Get More Storage' },
+  { href: '/settings', icon: 'settings', text: 'Settings' },
+];
 
+const CustomDrawerContent = ({ closeDrawer }) => {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const handleNavigation = (href) => {
+    router.push(href);
+    if (closeDrawer) {
+      closeDrawer();
+    }
+  };
+
+  const handleLogout = () => {
+    // Perform logout logic here
+    console.log('Logging out...');
+    router.push('/login'); 
+    if (closeDrawer) {
+      closeDrawer();
+    }
+  };
+
+  const initial = user.name ? user.name[0].toUpperCase() : '?';
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.profileSection}>
-        <Avatar userName={userName} />
-        <Text style={styles.userName}>{userName}</Text>
-        <Text style={styles.userEmail}>{userEmail}</Text>
+        <View style={styles.avatar}>
+          {user.avatar ? (
+            <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarInitial}>{initial}</Text>
+          )}
+        </View>
+        <Text style={styles.userName}>{user.name}</Text>
+        <Text style={styles.userEmail}>{user.email}</Text>
       </View>
 
       <View style={styles.menuItemsContainer}>
-        <MenuItem icon="home" text="Home" onPress={closeMenu} />
-        <Link href="/switch-account" asChild>
-          <MenuItem icon="users" text="Switch account" onPress={closeMenu}/>
-        </Link>
-        <MenuItem icon="star" text="Get more storage" onPress={closeMenu}/>
-        <MenuItem icon="settings" text="Settings" onPress={closeMenu}/>
+        {menuItems.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <TouchableOpacity
+              key={item.href}
+              style={[styles.menuItem, isActive && styles.activeMenuItem]}
+              onPress={() => handleNavigation(item.href)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.iconContainer}>
+                <Feather
+                  name={item.icon}
+                  size={22}
+                  color={isActive ? '#0ab99d' : '#333'}
+                />
+              </View>
+              <Text style={[styles.menuItemText, isActive && styles.activeMenuItemText]}>
+                {item.text}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
-      
-      <View style={styles.bottomMenuItemsContainer}>
-        <MenuItem icon="log-out" text="Logout" isBottom />
+
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          activeOpacity={0.7}
+        >
+          <View style={styles.iconContainer}>
+            <Feather name="log-out" size={22} color="#e53935" />
+          </View>
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  menuContent: {
+  container: {
     flex: 1,
-    backgroundColor: '#f3f4f6',
-    paddingTop: 80, 
-    paddingHorizontal: 20,
-    borderTopRightRadius: 20,
-    borderBottomRightRadius: 20,
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 40,
-    right: 20,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#e5e7eb',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
+    backgroundColor: '#ffffff',
   },
   profileSection: {
     alignItems: 'center',
-    marginBottom: 40,
+    paddingHorizontal: 20,
+    paddingVertical: 30,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: '#4f46e5',
-    marginBottom: 12,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#e5e7eb',
+    marginBottom: 12,
   },
-  avatarText: {
-    color: '#1f2937',
-    fontSize: 36,
+  avatarImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+  },
+  avatarInitial: {
+    fontSize: 32,
     fontWeight: 'bold',
+    color: '#0ab99d',
   },
   userName: {
-    color: '#1f2937',
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: 'bold',
+    color: '#1F2937',
   },
   userEmail: {
-    color: '#6b7280',
     fontSize: 14,
+    color: '#6B7280',
     marginTop: 4,
   },
   menuItemsContainer: {
     flex: 1,
+    paddingTop: 10,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    minHeight: 52,
+    paddingHorizontal: 20,
+    marginVertical: 4, // Approx 20px total vertical space
+    borderLeftWidth: 4,
+    borderLeftColor: 'transparent',
   },
-  bottomMenuItemsContainer: {
-    paddingBottom: 20,
+  activeMenuItem: {
+    backgroundColor: 'rgba(10, 185, 157, 0.12)',
+    borderLeftColor: '#0ab99d',
   },
-  bottomMenuItem: {
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+  iconContainer: {
+    width: 24,
+    alignItems: 'center',
+    marginRight: 20,
   },
   menuItemText: {
-    color: '#1f2937',
-    fontSize: 18,
-    marginLeft: 20,
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  activeMenuItemText: {
+    color: '#0ab99d',
+    fontWeight: '600',
+  },
+  footer: {
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 52,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingVertical: 10,
+  },
+  logoutButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#e53935',
   },
 });
 
-export default MenuScreen;
+export default CustomDrawerContent;
