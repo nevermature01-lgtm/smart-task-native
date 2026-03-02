@@ -12,10 +12,10 @@ const user = {
 };
 
 const menuItems = [
-  { href: '/home', icon: 'home', text: 'Home' },
-  { href: '/switch-account', icon: 'users', text: 'Switch Account' },
-  { href: '/storage', icon: 'database', text: 'Get More Storage' },
-  { href: '/settings', icon: 'settings', text: 'Settings' },
+  { href: '/home', icon: 'home', text: 'Home', color: '#2563EB' },
+  { href: '/switch-account', icon: 'users', text: 'Switch Account', color: '#10B981' },
+  { href: '/storage', icon: 'database', text: 'Get More Storage', color: '#F59E0B' },
+  { href: '/settings', icon: 'settings', text: 'Settings', color: '#6366F1' },
 ];
 
 const CustomDrawerContent = ({ closeMenu }) => {
@@ -43,7 +43,7 @@ const CustomDrawerContent = ({ closeMenu }) => {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <TouchableOpacity style={styles.closeButton} onPress={closeMenu}>
-          <Feather name="x" size={24} color="#333" />
+          <Feather name="x" size={24} color="#9CA3AF" />
       </TouchableOpacity>
       <View style={styles.profileSection}>
         <View style={styles.avatar}>
@@ -63,18 +63,18 @@ const CustomDrawerContent = ({ closeMenu }) => {
           return (
             <TouchableOpacity
               key={item.href}
-              style={[styles.menuItem, isActive && styles.activeMenuItem]}
+              style={[styles.menuItem, isActive && styles.activeMenuItem(item.color)]}
               onPress={() => handleNavigation(item.href)}
               activeOpacity={0.7}
             >
-              <View style={styles.iconContainer}>
+              <View style={[styles.iconContainer, isActive && styles.activeIconContainer(item.color)]}>
                 <Feather
                   name={item.icon}
                   size={22}
-                  color={isActive ? '#2563EB' : '#333'}
+                  color={isActive ? '#FFFFFF' : '#4B5563'}
                 />
               </View>
-              <Text style={[styles.menuItemText, isActive && styles.activeMenuItemText]}>
+              <Text style={[styles.menuItemText, isActive && styles.activeMenuItemText(item.color)]}>
                 {item.text}
               </Text>
             </TouchableOpacity>
@@ -89,7 +89,7 @@ const CustomDrawerContent = ({ closeMenu }) => {
           activeOpacity={0.7}
         >
           <View style={styles.iconContainer}>
-            <Feather name="log-out" size={22} color="#e53935" />
+            <Feather name="log-out" size={22} color="#EF4444" />
           </View>
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
@@ -101,41 +101,44 @@ const CustomDrawerContent = ({ closeMenu }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#F9FAFB',
   },
   closeButton: {
     position: 'absolute',
     top: 40,
     right: 20,
-    zIndex: 1
+    zIndex: 1,
+    padding: 10
   },
   profileSection: {
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 30,
-    marginTop: 20
+    marginTop: 40,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB'
   },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#f0f0f0',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#E5E7EB',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   avatarImage: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   avatarInitial: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: 'bold',
-    color: '#2563EB',
+    color: '#4B5563',
   },
   userName: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#1F2937',
   },
@@ -146,51 +149,60 @@ const styles = StyleSheet.create({
   },
   menuItemsContainer: {
     flex: 1,
-    paddingTop: 10,
+    paddingVertical: 20,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 52,
-    paddingHorizontal: 20,
-    marginVertical: 4, // Approx 20px total vertical space
-    borderLeftWidth: 4,
-    borderLeftColor: 'transparent',
+    paddingHorizontal: 25,
+    paddingVertical: 15,
+    marginVertical: 2,
   },
-  activeMenuItem: {
-    backgroundColor: 'rgba(37, 99, 235, 0.1)',
-    borderLeftColor: '#2563EB',
-  },
+  activeMenuItem: (color) => ({
+    backgroundColor: '#F9FAFB',
+  }),
   iconContainer: {
-    width: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
     alignItems: 'center',
     marginRight: 20,
+    backgroundColor: '#F3F4F6'
   },
+  activeIconContainer: (color) => ({
+    backgroundColor: color,
+    shadowColor: color,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5
+  }),
   menuItemText: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-  },
-  activeMenuItemText: {
-    color: '#2563EB',
     fontWeight: '600',
+    color: '#374151',
   },
+  activeMenuItemText: (color) => ({
+    color: color,
+    fontWeight: 'bold',
+  }),
   footer: {
     paddingHorizontal: 20,
-    paddingBottom: 10,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB'
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 52,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingVertical: 10,
+    paddingVertical: 15,
+    paddingHorizontal: 5,
   },
   logoutButtonText: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#e53935',
+    fontWeight: '600',
+    color: '#EF4444',
   },
 });
 
