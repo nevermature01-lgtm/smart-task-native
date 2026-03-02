@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { Link } from 'expo-router';
 
-const MenuItem = ({ icon, text, isBottom }) => {
+const MenuItem = ({ icon, text, isBottom, ...props }) => {
   return (
     <TouchableOpacity 
       style={[styles.menuItem, isBottom && styles.bottomMenuItem]}
+      {...props}
     >
       <Feather name={icon} size={24} color="#4b5563" />
       <Text style={styles.menuItemText}>{text}</Text>
@@ -22,11 +24,11 @@ const Avatar = ({ userName }) => {
   );
 };
 
-const MenuScreen = ({ userName, userEmail }) => {
+const MenuScreen = ({ userName, userEmail, closeMenu }) => {
   
   return (
     <View style={styles.menuContent}>
-      <TouchableOpacity style={styles.closeButton}>
+      <TouchableOpacity style={styles.closeButton} onPress={closeMenu}>
         <Feather name="x" size={24} color="#1f2937" />
       </TouchableOpacity>
 
@@ -37,10 +39,12 @@ const MenuScreen = ({ userName, userEmail }) => {
       </View>
 
       <View style={styles.menuItemsContainer}>
-        <MenuItem icon="home" text="Home"/>
-        <MenuItem icon="users" text="Switch account"/>
-        <MenuItem icon="star" text="Get more storage"/>
-        <MenuItem icon="settings" text="Settings"/>
+        <MenuItem icon="home" text="Home" onPress={closeMenu} />
+        <Link href="/switch-account" asChild>
+          <MenuItem icon="users" text="Switch account" onPress={closeMenu}/>
+        </Link>
+        <MenuItem icon="star" text="Get more storage" onPress={closeMenu}/>
+        <MenuItem icon="settings" text="Settings" onPress={closeMenu}/>
       </View>
       
       <View style={styles.bottomMenuItemsContainer}>

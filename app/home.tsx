@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Animated, Easing } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
@@ -29,29 +29,21 @@ const ActionButton = ({ icon, label, color, bg }) => (
 const HomeScreen = () => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [userName, setUserName] = useState('User');
-  const slideAnim = useRef(new Animated.Value(-300)).current;
+  const [userEmail, setUserEmail] = useState('');
 
   useEffect(() => {
-    const fetchUserName = async () => {
+    const fetchUserData = async () => {
       const user = auth.currentUser;
       if (user) {
+        setUserEmail(user.email);
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
           setUserName(userDoc.data().firstName);
         }
       }
     };
-    fetchUserName();
+    fetchUserData();
   }, []);
-
-  useEffect(() => {
-    Animated.timing(slideAnim, {
-      toValue: menuVisible ? 0 : -300,
-      duration: 300,
-      easing: Easing.inOut(Easing.ease),
-      useNativeDriver: true,
-    }).start();
-  }, [menuVisible]);
 
   return (
     <SafeAreaView style={styles.body} edges={['top']}>
@@ -169,9 +161,9 @@ const HomeScreen = () => {
           onRequestClose={() => setMenuVisible(false)}
         >
           <TouchableOpacity style={styles.menuOverlay} onPress={() => setMenuVisible(false)} activeOpacity={1}>
-            <Animated.View style={[styles.menuContainer, { transform: [{ translateX: slideAnim }] }]}>
-              <MenuScreen />
-            </Animated.View>
+            <View style={styles.menuContainer}>
+              <MenuScreen userName={userName} userEmail={userEmail} closeMenu={() => setMenuVisible(false)} />
+            </View>
           </TouchableOpacity>
         </Modal>
 
@@ -195,6 +187,7 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 20,
     overflow: 'hidden',
+    borderRadius: 30,
   },
   header: {
     paddingHorizontal: 24,
