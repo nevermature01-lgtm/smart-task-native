@@ -29,19 +29,21 @@ const ActionButton = ({ icon, label, color, bg }) => (
 const HomeScreen = () => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [userName, setUserName] = useState('User');
+  const [userEmail, setUserEmail] = useState('');
   const slideAnim = useRef(new Animated.Value(-300)).current;
 
   useEffect(() => {
-    const fetchUserName = async () => {
+    const fetchUserData = async () => {
       const user = auth.currentUser;
       if (user) {
+        setUserEmail(user.email);
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
           setUserName(userDoc.data().firstName);
         }
       }
     };
-    fetchUserName();
+    fetchUserData();
   }, []);
 
   useEffect(() => {
@@ -170,7 +172,7 @@ const HomeScreen = () => {
         >
           <TouchableOpacity style={styles.menuOverlay} onPress={() => setMenuVisible(false)} activeOpacity={1}>
             <Animated.View style={[styles.menuContainer, { transform: [{ translateX: slideAnim }] }]}>
-              <MenuScreen />
+              <MenuScreen userName={userName} userEmail={userEmail} />
             </Animated.View>
           </TouchableOpacity>
         </Modal>
