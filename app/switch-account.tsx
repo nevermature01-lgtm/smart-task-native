@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -62,6 +62,15 @@ const PersonalAccountCard = ({ user, onPress, isActive }) => (
     </TouchableOpacity>
 );
 
+const CustomToast = ({ message, visible, type }) => {
+    if (!visible) return null;
+    return (
+        <Animated.View style={[styles.toast, type === 'success' ? styles.toastSuccess : styles.toastError]}>
+            <Text style={styles.toastText}>{message}</Text>
+        </Animated.View>
+    );
+};
+
 
 const SwitchAccountScreen = () => {
     const router = useRouter();
@@ -72,6 +81,7 @@ const SwitchAccountScreen = () => {
     const [user, setUser] = useState({ name: "John Doe" });
     const [activeAccount, setActiveAccount] = useState({ type: 'personal' });
     const [isCreatingTeam, setIsCreatingTeam] = useState(false);
+    const [toastConfig, setToastConfig] = useState({ visible: false, message: '', type: 'success' });
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -87,9 +97,16 @@ const SwitchAccountScreen = () => {
         fetchUserData();
     }, []);
 
+    const showToast = (message, type = 'success') => {
+        setToastConfig({ visible: true, message, type });
+        setTimeout(() => {
+            setToastConfig({ visible: false, message: '', type: '' });
+        }, 3000);
+    };
+
     const handleCreateTeam = async () => {
         if (!newTeamName.trim()) {
-            alert('Please enter a team name.');
+            showToast('Please enter a team name.', 'error');
             return;
         }
 
@@ -100,7 +117,7 @@ const SwitchAccountScreen = () => {
         try {
             const querySnapshot = await getDocs(q);
             if (!querySnapshot.empty) {
-                alert('A team with this name already exists.');
+                showToast('A team with this name already exists.', 'error');
                 setIsCreatingTeam(false);
                 return;
             }
@@ -125,14 +142,14 @@ const SwitchAccountScreen = () => {
                     creatorId: currentUser.uid,
                     createdAt: new Date(),
                 });
-
+                showToast(`Team '${newTeamName.trim()}' created successfully!`, 'success');
                 setNewTeamName('');
                 setShowCreateTeamCard(false);
                 // Optionally, refresh the list of teams here
             }
         } catch (error) {
             console.error("Error creating team: ", error);
-            alert('Failed to create team. Please try again.');
+            showToast('Failed to create team. Please try again.', 'error');
         } finally {
             setIsCreatingTeam(false);
         }
@@ -141,6 +158,7 @@ const SwitchAccountScreen = () => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <CustomToast visible={toastConfig.visible} message={toastConfig.message} type={toastConfig.type} />
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <MaterialIcons name="arrow-back" size={24} color="#1F2937" />
@@ -280,6 +298,34 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
         position: 'relative',
+    },
+    toast: {
+        position: 'absolute',
+        top: 60,
+        left: 20,
+        right: 20,
+        padding: 15,
+        borderRadius: 10,
+        zIndex: 100,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    toastSuccess: {
+        backgroundColor: '#4CAF50',
+    },
+    toastError: {
+        backgroundColor: '#F44336',
+    },
+    toastText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '600',
     },
     backButton: {
         position: 'absolute',
