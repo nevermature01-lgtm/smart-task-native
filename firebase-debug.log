@@ -1,0 +1,134 @@
+[debug] [2026-03-02T17:37:21.272Z] ----------------------------------------------------------------------
+[debug] [2026-03-02T17:37:21.274Z] Command:       /nix/store/ws50yvm6vzlzf7jzz6n7xh4szddrack1-nodejs-20.19.1/bin/node /nix/store/gm9mcvzb17vv8cla08khrg29vxn3sq4r-firebase-tools-15.1.0/lib/node_modules/firebase-tools/lib/bin/firebase.js init
+[debug] [2026-03-02T17:37:21.274Z] CLI Version:   15.1.0
+[debug] [2026-03-02T17:37:21.274Z] Platform:      linux
+[debug] [2026-03-02T17:37:21.274Z] Node Version:  v20.19.1
+[debug] [2026-03-02T17:37:21.274Z] Time:          Mon Mar 02 2026 17:37:21 GMT+0000 (Coordinated Universal Time)
+[debug] [2026-03-02T17:37:21.274Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-03-02T17:37:22.430Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:37:22.431Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:37:22.433Z] >>> [apiv2][query] GET https://monospace-pa.googleapis.com/v1/workspaces/smart-task-native-02098287 [none]
+[debug] [2026-03-02T17:37:22.910Z] <<< [apiv2][status] GET https://monospace-pa.googleapis.com/v1/workspaces/smart-task-native-02098287 403
+[debug] [2026-03-02T17:37:22.910Z] <<< [apiv2][body] GET https://monospace-pa.googleapis.com/v1/workspaces/smart-task-native-02098287 {"error":{"code":403,"message":"User is not authorized on this resource","status":"PERMISSION_DENIED"}}
+[error] Failed to fetch Firebase Project from current Studio Workspace: Request to https://monospace-pa.googleapis.com/v1/workspaces/smart-task-native-02098287 had HTTP Error: 403, User is not authorized on this resource
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  /home/user/smart-task-native
+
+[info] 
+=== Project Setup
+[info] 
+[info] First, let's associate this project directory with a Firebase project.
+[info] You can create multiple project aliases by running firebase use --add, 
+[info] 
+[debug] [2026-03-02T17:38:08.092Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2026-03-02T17:38:08.093Z] > authorizing via signed-in user (thesious01@gmail.com)
+[debug] [2026-03-02T17:38:08.093Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:08.093Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:08.094Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/quickly-1e2ee [none]
+[debug] [2026-03-02T17:38:08.371Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/quickly-1e2ee 200
+[debug] [2026-03-02T17:38:08.371Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/quickly-1e2ee {"projectId":"quickly-1e2ee","projectNumber":"793585881297","displayName":"Smart-Task","name":"projects/quickly-1e2ee","resources":{"hostingSite":"quickly-1e2ee","realtimeDatabaseInstance":"quickly-1e2ee-default-rtdb"},"state":"ACTIVE","etag":"1_0f38e0bf-24c9-420a-a60c-c5e6af1ed93d"}
+[info] i  Using project quickly-1e2ee (Smart-Task) . 
+[info] 
+=== Firestore Setup
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-03-02T17:38:08.381Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:08.381Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:08.381Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/quickly-1e2ee/services/firestore.googleapis.com [none]
+[debug] [2026-03-02T17:38:08.381Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/quickly-1e2ee/services/firestore.googleapis.com x-goog-quota-user=projects/quickly-1e2ee
+[debug] [2026-03-02T17:38:09.435Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/quickly-1e2ee/services/firestore.googleapis.com 200
+[debug] [2026-03-02T17:38:09.435Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/quickly-1e2ee/services/firestore.googleapis.com [omitted]
+[info] ✔  firestore: required API firestore.googleapis.com is enabled 
+[debug] [2026-03-02T17:38:09.438Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:09.439Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:09.439Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/quickly-1e2ee/databases [none]
+[debug] [2026-03-02T17:38:09.893Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/quickly-1e2ee/databases 200
+[debug] [2026-03-02T17:38:09.893Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/quickly-1e2ee/databases {"databases":[{"name":"projects/quickly-1e2ee/databases/(default)","uid":"4aae0f30-0345-4ad5-963c-a39a5998b954","createTime":"2026-02-28T18:06:31.653856Z","updateTime":"2026-02-28T18:06:31.653856Z","locationId":"asia-south2","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-03-02T16:38:09.889977Z","appEngineIntegrationMode":"DISABLED","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"INfBgufggZMDMIyXnpqc/5ID"}]}
+[info] 
+[info] Firestore Security Rules allow you to define how and when to allow
+[info] requests. You can keep these rules in your project directory
+[info] and publish them with firebase deploy.
+[info] 
+[debug] [2026-03-02T17:38:13.022Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:13.023Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:13.023Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/quickly-1e2ee/releases pageSize=10&pageToken=
+[debug] [2026-03-02T17:38:13.996Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/quickly-1e2ee/releases 200
+[debug] [2026-03-02T17:38:13.996Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/quickly-1e2ee/releases {"releases":[{"name":"projects/quickly-1e2ee/releases/cloud.firestore","rulesetName":"projects/quickly-1e2ee/rulesets/b52789dd-9fd9-49b9-a28a-a2ef77f3f83b","createTime":"2026-02-28T18:06:42.137177Z","updateTime":"2026-03-02T17:33:47.672465Z"}]}
+[debug] [2026-03-02T17:38:13.996Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:13.996Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:13.997Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/quickly-1e2ee/rulesets/b52789dd-9fd9-49b9-a28a-a2ef77f3f83b [none]
+[debug] [2026-03-02T17:38:14.956Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/quickly-1e2ee/rulesets/b52789dd-9fd9-49b9-a28a-a2ef77f3f83b 200
+[debug] [2026-03-02T17:38:14.956Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/quickly-1e2ee/rulesets/b52789dd-9fd9-49b9-a28a-a2ef77f3f83b [omitted]
+[info] i  Downloaded the existing Firestore Security Rules from the Firebase console 
+[info] 
+[info] Firestore indexes allow you to perform complex queries while
+[info] maintaining performance that scales with the size of the result
+[info] set. You can keep index definitions in your project directory
+[info] and publish them with firebase deploy.
+[info] 
+[debug] [2026-03-02T17:38:16.078Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:16.078Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:16.079Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:16.079Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:16.079Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/quickly-1e2ee/databases/(default)/collectionGroups/-/indexes [none]
+[debug] [2026-03-02T17:38:16.080Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/quickly-1e2ee/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* [none]
+[debug] [2026-03-02T17:38:16.886Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/quickly-1e2ee/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* 200
+[debug] [2026-03-02T17:38:16.886Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/quickly-1e2ee/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* {"fields":[{"name":"projects/quickly-1e2ee/databases/(default)/collectionGroups/__default__/fields/*","indexConfig":{"indexes":[{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","order":"ASCENDING"}],"state":"READY"},{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","order":"DESCENDING"}],"state":"READY"},{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","arrayConfig":"CONTAINS"}],"state":"READY"}]}}]}
+[debug] [2026-03-02T17:38:17.005Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/quickly-1e2ee/databases/(default)/collectionGroups/-/indexes 200
+[debug] [2026-03-02T17:38:17.005Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/quickly-1e2ee/databases/(default)/collectionGroups/-/indexes {}
+[info] i  Downloaded the existing Firestore indexes from the Firebase console 
+[info] ✔  Wrote firestore.rules 
+[info] ✔  Wrote firestore.indexes.json 
+[info] 
+=== Functions Setup
+[debug] [2026-03-02T17:38:17.009Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2026-03-02T17:38:17.009Z] > authorizing via signed-in user (thesious01@gmail.com)
+[debug] [2026-03-02T17:38:17.009Z] [iam] checking project quickly-1e2ee for permissions ["firebase.projects.get"]
+[debug] [2026-03-02T17:38:17.010Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:17.010Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:17.010Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/quickly-1e2ee:testIamPermissions [none]
+[debug] [2026-03-02T17:38:17.010Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/quickly-1e2ee:testIamPermissions x-goog-quota-user=projects/quickly-1e2ee
+[debug] [2026-03-02T17:38:17.010Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/quickly-1e2ee:testIamPermissions {"permissions":["firebase.projects.get"]}
+[debug] [2026-03-02T17:38:17.769Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/quickly-1e2ee:testIamPermissions 200
+[debug] [2026-03-02T17:38:17.769Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/quickly-1e2ee:testIamPermissions {"permissions":["firebase.projects.get"]}
+[debug] [2026-03-02T17:38:17.769Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:17.769Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:17.769Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:17.770Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:17.770Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/quickly-1e2ee/services/cloudfunctions.googleapis.com [none]
+[debug] [2026-03-02T17:38:17.770Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/quickly-1e2ee/services/cloudfunctions.googleapis.com x-goog-quota-user=projects/quickly-1e2ee
+[debug] [2026-03-02T17:38:17.771Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/quickly-1e2ee/services/runtimeconfig.googleapis.com [none]
+[debug] [2026-03-02T17:38:17.771Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/quickly-1e2ee/services/runtimeconfig.googleapis.com x-goog-quota-user=projects/quickly-1e2ee
+[debug] [2026-03-02T17:38:18.800Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/quickly-1e2ee/services/cloudfunctions.googleapis.com 200
+[debug] [2026-03-02T17:38:18.800Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/quickly-1e2ee/services/cloudfunctions.googleapis.com [omitted]
+[debug] [2026-03-02T17:38:18.801Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:18.801Z] Checked if tokens are valid: true, expires at: 1772476604661
+[debug] [2026-03-02T17:38:18.801Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1/projects/quickly-1e2ee/services/cloudfunctions.googleapis.com:enable [none]
+[debug] [2026-03-02T17:38:18.801Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1/projects/quickly-1e2ee/services/cloudfunctions.googleapis.com:enable x-goog-quota-user=projects/quickly-1e2ee
+[debug] [2026-03-02T17:38:18.857Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/quickly-1e2ee/services/runtimeconfig.googleapis.com 200
+[debug] [2026-03-02T17:38:18.857Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/quickly-1e2ee/services/runtimeconfig.googleapis.com [omitted]
+[debug] [2026-03-02T17:38:19.216Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1/projects/quickly-1e2ee/services/cloudfunctions.googleapis.com:enable 200
+[debug] [2026-03-02T17:38:19.216Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1/projects/quickly-1e2ee/services/cloudfunctions.googleapis.com:enable [omitted]
+[info] Let's create a new codebase for your functions.
+[info] A directory corresponding to the codebase will be created in your project
+[info] with sample code pre-configured.
+
+[info] See https://firebase.google.com/docs/functions/organize-functions for
+[info] more information on organizing your functions using codebases.
+
+[info] Functions can be deployed with firebase deploy.
+
+[info] ✔  Wrote functions/package.json 
+[info] ✔  Wrote functions/.eslintrc.js 
+[info] ✔  Wrote functions/tsconfig.dev.json 
+[info] ✔  Wrote functions/tsconfig.json 
+[info] ✔  Wrote functions/src/index.ts 
+[info] ✔  Wrote functions/.gitignore 

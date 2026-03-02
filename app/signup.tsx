@@ -13,8 +13,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
+import { doc, setDoc } from "firebase/firestore";
 import { router } from 'expo-router';
+import Toast from 'react-native-toast-message';
 
 const COLORS = {
   primary: '#2563EB',
@@ -90,16 +92,34 @@ const SignupScreen = () => {
   const [error, setError] = useState('');
 
   const handleSignUp = () => {
+    if (!firstName || !email) {
+      setError('First Name and Email are required.');
+      return;
+    }
     createUserWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
         const user = userCredential.user;
         sendEmailVerification(user).then(() => {
-          alert('A verification email has been sent to your email address. Please verify your email before logging in.');
+          setDoc(doc(db, "users", user.uid), {
+            firstName: firstName,
+            lastName: lastName,
+            email: email
+          });
+          Toast.show({
+            type: 'success',
+            text1: 'Success',
+            text2: 'A verification email has been sent to your email address. Please verify your email before logging in.',
+            visibilityTime: 5000
+          });
           router.replace('/login');
         });
       })
       .catch((error) => {
-        setError(error.message);
+        if (error.code === 'auth/email-already-in-use') {
+          setError('That email address is already in use!');
+        } else {
+          setError(error.message);
+        }
       });
   };
 
