@@ -86,8 +86,10 @@ const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = () => {
+    setLoading(true);
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
         const user = userCredential.user;
@@ -99,6 +101,9 @@ const LoginScreen = () => {
       })
       .catch((error) => {
         setError(error.message);
+      })
+      .finally(() => {
+        setLoading(false);
       });
   };
 
@@ -210,6 +215,14 @@ const LoginScreen = () => {
       ...StyleSheet.absoluteFillObject,
       opacity: 0.05,
     },
+    forgotPasswordContainer: {
+      alignItems: 'flex-end',
+      marginBottom: 16,
+    },
+    forgotPasswordLink: {
+      fontWeight: '600',
+      color: COLORS.primary,
+    },
   });
 
   return (
@@ -258,7 +271,12 @@ const LoginScreen = () => {
                 value={password}
                 onChangeText={setPassword}
               />
-              <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+              <View style={styles.forgotPasswordContainer}>
+                <TouchableOpacity onPress={() => router.push('/forgot-password')}>
+                  <Text style={styles.forgotPasswordLink}>Forgot Password?</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
                   <Text style={styles.loginButtonText}>Log In</Text>
               </TouchableOpacity>
             </View>

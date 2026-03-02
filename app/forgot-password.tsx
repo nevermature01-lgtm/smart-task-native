@@ -12,9 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
-import { auth, db } from '../firebase';
-import { doc, setDoc } from "firebase/firestore";
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../firebase';
 import { router } from 'expo-router';
 import Toast from 'react-native-toast-message';
 
@@ -28,9 +27,7 @@ const COLORS = {
   textDark: '#F9FAFB',
 };
 
-const AppTextInput = ({ label, placeholder, isPassword, value, onChangeText, containerStyle }) => {
-  const [isPasswordVisible, setPasswordVisible] = useState(false);
-
+const AppTextInput = ({ label, placeholder, value, onChangeText }) => {
   const styles = StyleSheet.create({
     container: {
       marginBottom: 20,
@@ -56,72 +53,47 @@ const AppTextInput = ({ label, placeholder, isPassword, value, onChangeText, con
       color: COLORS.textLight,
       fontSize: 16,
     },
-    toggleButton: {
-      marginLeft: 8,
-    },
   });
 
   return (
-    <View style={[styles.container, containerStyle]}>
+    <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
           placeholder={placeholder}
           placeholderTextColor={'rgba(31, 41, 55, 0.5)'}
-          secureTextEntry={isPassword && !isPasswordVisible}
           autoCapitalize="none"
           value={value}
           onChangeText={onChangeText}
         />
-        {isPassword && (
-          <TouchableOpacity onPress={() => setPasswordVisible(!isPasswordVisible)} style={styles.toggleButton}>
-            <MaterialIcons name={isPasswordVisible ? 'visibility-off' : 'visibility'} size={24} color={'rgba(31, 41, 55, 0.5)'} />
-          </TouchableOpacity>
-        )}
       </View>
     </View>
   );
 };
 
-const SignupScreen = () => {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+const ForgotPasswordScreen = () => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSignUp = () => {
-    if (!firstName || !email) {
-      setError('First Name and Email are required.');
+  const handleResetPassword = () => {
+    if (!email) {
+      setError('Email is required.');
       return;
     }
     setLoading(true);
-    createUserWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        const user = userCredential.user;
-        sendEmailVerification(user).then(() => {
-          setDoc(doc(db, "users", user.uid), {
-            firstName: firstName,
-            lastName: lastName,
-            email: email
-          });
-          Toast.show({
-            type: 'success',
-            text1: 'Success',
-            text2: 'A verification email has been sent to your email address. Please verify your email before logging in.',
-            visibilityTime: 5000
-          });
-          router.replace('/login');
+    sendPasswordResetEmail(auth, email)
+      .then(() => {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'A password reset link has been sent to your email address.',
         });
+        router.replace('/login');
       })
       .catch((error) => {
-        if (error.code === 'auth/email-already-in-use') {
-          setError('That email address is already in use!');
-        } else {
-          setError(error.message);
-        }
+        setError(error.message);
       })
       .finally(() => {
         setLoading(false);
@@ -194,10 +166,6 @@ const SignupScreen = () => {
     form: {
       paddingHorizontal: 24,
     },
-    nameRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-    },
     errorMessageContainer: {
       marginBottom: 16,
       backgroundColor: 'rgba(254, 226, 226, 1)',
@@ -211,7 +179,7 @@ const SignupScreen = () => {
       fontWeight: '600',
       marginLeft: 8,
     },
-    signupButton: {
+    resetButton: {
       height: 56,
       width: '100%',
       alignItems: 'center',
@@ -220,7 +188,7 @@ const SignupScreen = () => {
       backgroundColor: COLORS.primary,
       marginTop: 16,
     },
-    signupButtonText: {
+    resetButtonText: {
       color: COLORS.white,
       fontWeight: 'bold',
       fontSize: 18,
@@ -263,10 +231,10 @@ const SignupScreen = () => {
           <ScrollView contentContainerStyle={styles.scrollView}>
             <View style={styles.contentHeader}>
               <View style={styles.iconContainer}>
-                <MaterialIcons name="person-add-alt-1" size={32} color={COLORS.primary} />
+                <MaterialIcons name="lock-reset" size={32} color={COLORS.primary} />
               </View>
-              <Text style={styles.contentHeaderTitle}>Create Account</Text>
-              <Text style={styles.contentHeaderSubtitle}>Join our community of smart task managers</Text>
+              <Text style={styles.contentHeaderTitle}>Forgot Password</Text>
+              <Text style={styles.contentHeaderSubtitle}>Enter your email to receive a password reset link</Text>
             </View>
             <View style={styles.form}>
               {error ? (
@@ -275,42 +243,19 @@ const SignupScreen = () => {
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
               ) : null}
-              <View style={styles.nameRow}>
-                <AppTextInput
-                  label="First Name"
-                  placeholder="First Name"
-                  value={firstName}
-                  onChangeText={setFirstName}
-                  containerStyle={{ flex: 1, marginRight: 8 }}
-                />
-                <AppTextInput
-                  label="Last Name"
-                  placeholder="Last Name"
-                  value={lastName}
-                  onChangeText={setLastName}
-                  containerStyle={{ flex: 1, marginLeft: 8 }}
-                />
-              </View>
               <AppTextInput
                 label="Email Address"
-                placeholder="Email Address"
+                placeholder="Enter your email"
                 value={email}
                 onChangeText={setEmail}
               />
-              <AppTextInput
-                label="Password"
-                placeholder="Password"
-                isPassword={true}
-                value={password}
-                onChangeText={setPassword}
-              />
-              <TouchableOpacity style={styles.signupButton} onPress={handleSignUp} disabled={loading}>
-                  <Text style={styles.signupButtonText}>Sign Up</Text>
+              <TouchableOpacity style={styles.resetButton} onPress={handleResetPassword} disabled={loading}>
+                  <Text style={styles.resetButtonText}>Send Reset Link</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.footer}>
               <TouchableOpacity onPress={() => router.push('/login')}>
-                <Text style={styles.footerText}>Already have an account? <Text style={styles.footerLink}>Login</Text></Text>
+                <Text style={styles.footerText}>Back to <Text style={styles.footerLink}>Login</Text></Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -320,4 +265,4 @@ const SignupScreen = () => {
   );
 };
 
-export default SignupScreen;
+export default ForgotPasswordScreen;
