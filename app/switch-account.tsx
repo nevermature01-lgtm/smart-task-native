@@ -1,14 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, Clipboard } from 'react-native';
+
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { collection, addDoc, getDocs, query, where, doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase';
-
-const generateTeamCode = () => {
-  return Math.random().toString(36).substring(2, 6).toUpperCase();
-};
 
 const TeamListItem = ({ title, creator, avatars, isPriority, onPress, isActive, teamCode, onCopyCode }) => (
     <TouchableOpacity onPress={onPress} style={[styles.teamListItem, isPriority && styles.priorityTeamCard, isActive && styles.activeItem]}>
@@ -49,10 +44,10 @@ const PersonalAccountCard = ({ user, onPress, isActive }) => (
         <View style={styles.teamListItemContent}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                  <View style={styles.personalAvatar}>
-                    <Text style={styles.personalAvatarText}>{user?.firstName?.charAt(0).toUpperCase()}</Text>
+                    <Text style={styles.personalAvatarText}>{user?.name?.charAt(0).toUpperCase()}</Text>
                 </View>
                 <View>
-                    <Text style={styles.teamListTitle}>{user?.firstName} {user?.lastName}</Text>
+                    <Text style={styles.teamListTitle}>{user?.name}</Text>
                     <Text style={styles.teamListMembers}>Personal Account</Text>
                 </View>
             </View>
@@ -72,133 +67,8 @@ const SwitchAccountScreen = () => {
     const [showCreateTeamCard, setShowCreateTeamCard] = useState(false);
     const [teamCode, setTeamCode] = useState('');
     const [newTeamName, setNewTeamName] = useState('');
-    const [user, setUser] = useState(null);
-    const [teams, setTeams] = useState([]);
-    const [activeAccount, setActiveAccount] = useState({ type: 'personal', id: null });
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-
-    useEffect(() => {
-        const fetchData = async () => {
-            const currentUser = auth.currentUser;
-            if (currentUser) {
-                // Fetch user data
-                const userDocRef = doc(db, 'users', currentUser.uid);
-                const userDocSnap = await getDoc(userDocRef);
-                if (userDocSnap.exists()) {
-                    const userData = userDocSnap.data();
-                    setUser({ ...userData, id: currentUser.uid });
-                    setActiveAccount(userData.activeTeamId ? { type: 'team', id: userData.activeTeamId } : { type: 'personal', id: currentUser.uid });
-                }
-
-                // Fetch teams
-                const teamsQuery = query(collection(db, 'teams'), where('members', 'array-contains', currentUser.uid));
-                const teamsSnapshot = await getDocs(teamsQuery);
-                const teamsData = await Promise.all(teamsSnapshot.docs.map(async (teamDoc) => {
-                    const teamData = teamDoc.data();
-                    const creatorDocRef = doc(db, 'users', teamData.creatorId);
-                    const creatorDocSnap = await getDoc(creatorDocRef);
-                    const creatorName = creatorDocSnap.exists() ? `${creatorDocSnap.data().firstName} ${creatorDocSnap.data().lastName}` : 'Unknown';
-                    return { ...teamData, id: teamDoc.id, creatorName };
-                }));
-                setTeams(teamsData);
-            }
-            setLoading(false);
-        };
-
-        fetchData();
-    }, []);
-
-    const handleCreateTeam = async () => {
-        if (!newTeamName.trim()) {
-            setError('Please enter a team name.');
-            return;
-        }
-        setLoading(true);
-        try {
-            const currentUser = auth.currentUser;
-            const newTeam = {
-                name: newTeamName,
-                creatorId: currentUser.uid,
-                members: [currentUser.uid],
-                teamCode: generateTeamCode(),
-                createdAt: new Date(),
-            };
-            const teamDocRef = await addDoc(collection(db, 'teams'), newTeam);
-            await updateDoc(doc(db, 'users', currentUser.uid), { activeTeamId: teamDocRef.id });
-            setTeams([...teams, { ...newTeam, id: teamDocRef.id, creatorName: `${user.firstName} ${user.lastName}` }]);
-            setActiveAccount({ type: 'team', id: teamDocRef.id });
-            setNewTeamName('');
-            setShowCreateTeamCard(false);
-        } catch (e) {
-            setError('Could not create team. Please try again.');
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleJoinTeam = async () => {
-        if (!teamCode.trim() || teamCode.length !== 4) {
-            setError('Please enter a valid 4-digit team code.');
-            return;
-        }
-        setLoading(true);
-        try {
-            const currentUser = auth.currentUser;
-            const teamsQuery = query(collection(db, 'teams'), where('teamCode', '==', teamCode.toUpperCase()));
-            const teamsSnapshot = await getDocs(teamsQuery);
-            if (teamsSnapshot.empty) {
-                setError('Invalid team code.');
-                setLoading(false);
-                return;
-            }
-            const teamDocRef = teamsSnapshot.docs[0].ref;
-            await updateDoc(teamDocRef, { members: arrayUnion(currentUser.uid) });
-            await updateDoc(doc(db, 'users', currentUser.uid), { activeTeamId: teamDocRef.id });
-            
-            // Refetch team to get creator name
-            const teamDocSnap = await getDoc(teamDocRef);
-            const teamData = teamDocSnap.data();
-            const creatorDocSnap = await getDoc(doc(db, 'users', teamData.creatorId));
-            const creatorName = creatorDocSnap.exists() ? `${creatorDocSnap.data().firstName} ${creatorDocSnap.data().lastName}` : 'Unknown';
-
-            setTeams([...teams, { ...teamData, id: teamDocRef.id, creatorName}]);
-            setActiveAccount({ type: 'team', id: teamDocRef.id });
-            setTeamCode('');
-            setShowJoinTeamCard(false);
-        } catch (e) {
-            setError('Could not join team. Please try again.');
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSwitchAccount = async (account) => {
-        setLoading(true);
-        try {
-            const currentUser = auth.currentUser;
-            const activeTeamId = account.type === 'team' ? account.id : null;
-            await updateDoc(doc(db, 'users', currentUser.uid), { activeTeamId });
-            setActiveAccount(account);
-            router.back(); // Go back to home screen after switching
-        } catch (e) {
-            setError('Could not switch account.');
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleCopyCode = (code) => {
-        Clipboard.setString(code);
-        // Optionally, show a toast or message
-    };
-
-    if (loading) {
-        return <ActivityIndicator style={{flex: 1, justifyContent: 'center', alignItems: 'center'}} size="large" color="#2563EB" />;
-    }
+    const [user, setUser] = useState({ name: "John Doe" });
+    const [activeAccount, setActiveAccount] = useState({ type: 'personal' });
 
     return (
         <SafeAreaView style={styles.container}>
@@ -215,7 +85,6 @@ const SwitchAccountScreen = () => {
                         keyboardShouldPersistTaps='handled'
                         contentContainerStyle={{ paddingBottom: 100 }}
                     >
-                        {error && <Text style={styles.errorText}>{error}</Text>}
                         <View style={styles.quickActions}>
                             <TouchableOpacity style={styles.actionButton} onPress={() => { setShowCreateTeamCard(true); setShowJoinTeamCard(false); }}>
                                 <View style={styles.actionIconContainer}>
@@ -251,7 +120,7 @@ const SwitchAccountScreen = () => {
                                         value={newTeamName}
                                         onChangeText={setNewTeamName}
                                     />
-                                    <TouchableOpacity style={styles.submitButton} onPress={handleCreateTeam} disabled={loading}>
+                                    <TouchableOpacity style={styles.submitButton}>
                                         <Text style={styles.submitButtonText}>Create Team</Text>
                                     </TouchableOpacity>
                                 </View>
@@ -271,11 +140,10 @@ const SwitchAccountScreen = () => {
                                         placeholderTextColor="#9CA3AF"
                                         value={teamCode}
                                         onChangeText={setTeamCode}
-                                        keyboardType="default"
+                                        keyboardType="numeric"
                                         maxLength={4}
-                                        autoCapitalize="characters"
                                     />
-                                    <TouchableOpacity style={styles.submitButton} onPress={handleJoinTeam} disabled={loading}>
+                                    <TouchableOpacity style={styles.submitButton}>
                                         <Text style={styles.submitButtonText}>Submit</Text>
                                     </TouchableOpacity>
                                 </View>
@@ -290,7 +158,6 @@ const SwitchAccountScreen = () => {
                             <PersonalAccountCard 
                                 user={user} 
                                 isActive={activeAccount?.type === 'personal'}
-                                onPress={() => handleSwitchAccount({ type: 'personal', id: user.id })}
                             />
                         )}
 
@@ -299,28 +166,21 @@ const SwitchAccountScreen = () => {
                         </View>
 
 
-                        {teams.length > 0 ? (
-                            <View style={styles.teamsList}>
-                                {teams.map(team => (
-                                    <TeamListItem
-                                        key={team.id}
-                                        title={team.name}
-                                        creator={team.creatorName}
-                                        teamCode={team.creatorId === user.id ? team.teamCode : null}
-                                        avatars={[]}
-                                        isPriority={false}
-                                        isActive={activeAccount?.type === 'team' && activeAccount?.id === team.id}
-                                        onPress={() => handleSwitchAccount({ type: 'team', id: team.id })}
-                                        onCopyCode={handleCopyCode}
-                                    />
-                                ))}
-                            </View>
-                        ) : (
-                            <View style={styles.emptyState}>
-                                <MaterialCommunityIcons name="account-group-outline" size={48} color="#D1D5DB" />
-                                <Text style={styles.emptyStateText}>You are not part of any teams yet.</Text>
-                            </View>
-                        )}
+                        <View style={styles.teamsList}>
+                            <TeamListItem
+                                title="Team Name"
+                                creator="Creator Name"
+                                teamCode="XYZ123"
+                                avatars={[]}
+                                isPriority={false}
+                                isActive={activeAccount?.id === "1"}
+                            />
+                        </View>
+                        
+                        <View style={styles.emptyState}>
+                            <MaterialCommunityIcons name="account-group-outline" size={48} color="#D1D5DB" />
+                            <Text style={styles.emptyStateText}>You are not part of any teams yet.</Text>
+                        </View>
                     </ScrollView>
                     {activeAccount?.type === 'team' && (
                         <View style={styles.footer}>
@@ -337,11 +197,6 @@ const SwitchAccountScreen = () => {
 };
 
 const styles = StyleSheet.create({
-    errorText: {
-        color: 'red',
-        textAlign: 'center',
-        margin: 10,
-    },
     container: {
         flex: 1,
         backgroundColor: '#f8f6f6',

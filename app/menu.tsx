@@ -13,19 +13,19 @@ const user = {
 
 const menuItems = [
   { href: '/home', icon: 'home', text: 'Home' },
-  { href: '/switch-account', icon: 'shuffle', text: 'Switch Account' },
-  { href: '/storage', icon: 'hard-drive', text: 'Get More Storage' },
+  { href: '/switch-account', icon: 'users', text: 'Switch Account' },
+  { href: '/storage', icon: 'database', text: 'Get More Storage' },
   { href: '/settings', icon: 'settings', text: 'Settings' },
 ];
 
-const CustomDrawerContent = ({ closeDrawer }) => {
+const CustomDrawerContent = ({ closeMenu }) => {
   const router = useRouter();
   const pathname = usePathname();
 
   const handleNavigation = (href) => {
     router.push(href);
-    if (closeDrawer) {
-      closeDrawer();
+    if (closeMenu) {
+      closeMenu();
     }
   };
 
@@ -33,8 +33,8 @@ const CustomDrawerContent = ({ closeDrawer }) => {
     // Perform logout logic here
     console.log('Logging out...');
     router.push('/login'); 
-    if (closeDrawer) {
-      closeDrawer();
+    if (closeMenu) {
+      closeMenu();
     }
   };
 
@@ -42,6 +42,9 @@ const CustomDrawerContent = ({ closeDrawer }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <TouchableOpacity style={styles.closeButton} onPress={closeMenu}>
+          <Feather name="x" size={24} color="#333" />
+      </TouchableOpacity>
       <View style={styles.profileSection}>
         <View style={styles.avatar}>
           {user.avatar ? (
@@ -68,7 +71,7 @@ const CustomDrawerContent = ({ closeDrawer }) => {
                 <Feather
                   name={item.icon}
                   size={22}
-                  color={isActive ? '#0ab99d' : '#333'}
+                  color={isActive ? '#2563EB' : '#333'}
                 />
               </View>
               <Text style={[styles.menuItemText, isActive && styles.activeMenuItemText]}>
@@ -100,10 +103,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
+  closeButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 1
+  },
   profileSection: {
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 30,
+    marginTop: 20
   },
   avatar: {
     width: 72,
@@ -122,7 +132,7 @@ const styles = StyleSheet.create({
   avatarInitial: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#0ab99d',
+    color: '#2563EB',
   },
   userName: {
     fontSize: 18,
@@ -148,8 +158,8 @@ const styles = StyleSheet.create({
     borderLeftColor: 'transparent',
   },
   activeMenuItem: {
-    backgroundColor: 'rgba(10, 185, 157, 0.12)',
-    borderLeftColor: '#0ab99d',
+    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+    borderLeftColor: '#2563EB',
   },
   iconContainer: {
     width: 24,
@@ -162,7 +172,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   activeMenuItemText: {
-    color: '#0ab99d',
+    color: '#2563EB',
     fontWeight: '600',
   },
   footer: {

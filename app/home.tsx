@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
@@ -30,6 +31,7 @@ const HomeScreen = () => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [userName, setUserName] = useState('User');
   const [userEmail, setUserEmail] = useState('');
+  const slideAnim = useRef(new Animated.Value(-300)).current;
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -44,6 +46,26 @@ const HomeScreen = () => {
     };
     fetchUserData();
   }, []);
+
+  useEffect(() => {
+    if (menuVisible) {
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: -300,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [menuVisible]);
+
+  const closeMenu = () => {
+    setMenuVisible(false);
+  };
 
   return (
     <SafeAreaView style={styles.body} edges={['top']}>
@@ -156,14 +178,15 @@ const HomeScreen = () => {
         </View>
         
         <Modal
+          animationType="fade"
           transparent
           visible={menuVisible}
-          onRequestClose={() => setMenuVisible(false)}
+          onRequestClose={closeMenu}
         >
-          <TouchableOpacity style={styles.menuOverlay} onPress={() => setMenuVisible(false)} activeOpacity={1}>
-            <View style={styles.menuContainer}>
-              <MenuScreen userName={userName} userEmail={userEmail} closeMenu={() => setMenuVisible(false)} />
-            </View>
+          <TouchableOpacity style={styles.menuOverlay} onPress={closeMenu} activeOpacity={1}>
+            <Animated.View style={[styles.menuContainer, { transform: [{ translateX: slideAnim }] }]}>
+              <MenuScreen userName={userName} userEmail={userEmail} closeMenu={closeMenu} />
+            </Animated.View>
           </TouchableOpacity>
         </Modal>
 
