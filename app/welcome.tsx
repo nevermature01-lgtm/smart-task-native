@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
@@ -18,16 +19,14 @@ const WelcomeScreen = () => {
         container: {
             flex: 1,
             backgroundColor: COLORS.backgroundLight,
-        },
-        safeArea: {
-            flex: 1,
+            paddingTop: 70
         },
         header: {
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: 24,
-			paddingTop: 40
+            paddingHorizontal: 24,
+            paddingBottom: 12,
         },
         logoContainer: {
             flexDirection: 'row',
@@ -155,9 +154,9 @@ const WelcomeScreen = () => {
     });
 
     return (
-        <View style={styles.container}>
-            <StatusBar barStyle={'dark-content'} />
-            <SafeAreaView style={styles.safeArea}>
+        <View style={{ flex: 1, backgroundColor: '#F8F9FA' }}>
+            <StatusBar translucent backgroundColor="transparent" style="dark" />
+            <View style={styles.container}>
                 <View style={styles.header}>
                     <View style={styles.logoContainer}>
                         <View style={styles.logoIconContainer}>
@@ -172,7 +171,7 @@ const WelcomeScreen = () => {
 
                 <View style={styles.heroContainer}>
                     <View style={styles.iconBox}>
-                        <MaterialIcons name="task" style={styles.mainIcon} />
+                        <MaterialIcons name="layers" style={styles.mainIcon} />
                     </View>
                     <View style={styles.textContent}>
                         <Text style={styles.title}>
@@ -195,7 +194,7 @@ const WelcomeScreen = () => {
                     </TouchableOpacity>
                     <Text style={styles.footerText}>Focused • Productive • Simple</Text>
                 </View>
-            </SafeAreaView>
+            </View>
         </View>
     );
 };

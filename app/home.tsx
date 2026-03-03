@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Animated } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Animated, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
@@ -70,23 +70,14 @@ const HomeScreen = () => {
 
   return (
     <View style={styles.body}>
+      <StatusBar barStyle="dark-content" />
       <View style={styles.mainContainer}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-          <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-            <View style={styles.userInfo}>
-              <HamburgerMenu onPress={() => setMenuVisible(true)} />
-              <Text style={styles.userName}>Hi, {userName} 👋</Text>
-            </View>
-            <View style={styles.headerActions}>
-              <TouchableOpacity style={[styles.iconButton, styles.customShadow]}>
-                <Feather name="search" size={20} color="#4b5563" />
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.iconButton, styles.customShadow]}>
-                <Feather name="bell" size={20} color="#4b5563" />
-                <View style={styles.notificationBadge} />
-              </TouchableOpacity>
-            </View>
-          </View>
+        <ScrollView 
+            showsVerticalScrollIndicator={false} 
+            contentContainerStyle={{ 
+                paddingBottom: 120, 
+                paddingTop: insets.top + 80 
+            }}>
 
           <View style={styles.greetingSection}>
             <Text style={styles.mainTitle}>My Evernote</Text>
@@ -159,6 +150,22 @@ const HomeScreen = () => {
           </View>
 
         </ScrollView>
+
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+            <View style={styles.userInfo}>
+              <HamburgerMenu onPress={() => setMenuVisible(true)} />
+              <Text style={styles.userName}>Hi, {userName} 👋</Text>
+            </View>
+            <View style={styles.headerActions}>
+              <TouchableOpacity style={[styles.iconButton, styles.customShadow]}>
+                <Feather name="search" size={20} color="#4b5563" />
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.iconButton, styles.customShadow]}>
+                <Feather name="bell" size={20} color="#4b5563" />
+                <View style={styles.notificationBadge} />
+              </TouchableOpacity>
+            </View>
+        </View>
         
         <View style={[styles.floatingNav, { bottom: insets.bottom + 24 }]}>
           <TouchableOpacity style={styles.createButton}>
@@ -213,11 +220,17 @@ const styles = StyleSheet.create({
     borderRadius: 30,
   },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 24,
     paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    zIndex: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
   },
   userInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   hamburgerContainer: {

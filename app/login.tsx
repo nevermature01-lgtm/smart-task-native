@@ -1,3 +1,4 @@
+// 🔒 LOCKED SCREEN — DO NOT MODIFY
 
 import React, { useState } from 'react';
 import {
@@ -5,13 +6,12 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  StatusBar,
   KeyboardAvoidingView,
   ScrollView,
   Platform,
   TextInput,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { MaterialIcons } from '@expo/vector-icons';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -113,14 +113,12 @@ const LoginScreen = () => {
       flex: 1,
       backgroundColor: COLORS.backgroundLight,
     },
-    safeArea: {
-      flex: 1,
-    },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: 24,
+      paddingTop: 40,
     },
     backButton: {
       height: 44,
@@ -227,68 +225,68 @@ const LoginScreen = () => {
   });
 
   return (
-    <View style={styles.root}>
-      <StatusBar hidden />
-      <View style={styles.gridPattern} />
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <MaterialIcons name="arrow-back" size={24} color={COLORS.textLight} />
-          </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>Smart Task</Text>
-            <Text style={styles.headerSubtitle}>powered by Smart Decor</Text>
-          </View>
-          <View style={{ width: 24 }} />
-        </View>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardAvoidingView}>
-          <ScrollView contentContainerStyle={styles.scrollView}>
-            <View style={styles.contentHeader}>
-              <View style={styles.iconContainer}>
-                <MaterialIcons name="login" size={32} color={COLORS.primary} />
-              </View>
-              <Text style={styles.contentHeaderTitle}>Welcome Back</Text>
-              <Text style={styles.contentHeaderSubtitle}>Log in to continue managing your tasks</Text>
+    <View style={{ flex: 1, backgroundColor: '#F8F9FA' }}>
+        <StatusBar style="dark" translucent backgroundColor="transparent" />
+        <View style={styles.root}>
+        <View style={styles.gridPattern} />
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <MaterialIcons name="arrow-back" size={24} color={COLORS.textLight} />
+            </TouchableOpacity>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Smart Task</Text>
+              <Text style={styles.headerSubtitle}>powered by Smart Decor</Text>
             </View>
-            <View style={styles.form}>
-              {error ? (
-                <View style={styles.errorMessageContainer}>
-                  <MaterialIcons name="error-outline" size={24} color={COLORS.danger} />
-                  <Text style={styles.errorText}>{error}</Text>
+            <View style={{ width: 24 }} />
+          </View>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.keyboardAvoidingView}>
+            <ScrollView contentContainerStyle={styles.scrollView}>
+              <View style={styles.contentHeader}>
+                <View style={styles.iconContainer}>
+                  <MaterialIcons name="login" size={32} color={COLORS.primary} />
                 </View>
-              ) : null}
-              <AppTextInput
-                label="Email Address"
-                placeholder="Enter your email"
-                value={email}
-                onChangeText={setEmail}
-              />
-              <AppTextInput
-                label="Password"
-                placeholder="Enter your password"
-                isPassword={true}
-                value={password}
-                onChangeText={setPassword}
-              />
-              <View style={styles.forgotPasswordContainer}>
-                <TouchableOpacity onPress={() => router.push('/forgot-password')}>
-                  <Text style={styles.forgotPasswordLink}>Forgot Password?</Text>
+                <Text style={styles.contentHeaderTitle}>Welcome Back</Text>
+                <Text style={styles.contentHeaderSubtitle}>Log in to continue managing your tasks</Text>
+              </View>
+              <View style={styles.form}>
+                {error ? (
+                  <View style={styles.errorMessageContainer}>
+                    <MaterialIcons name="error-outline" size={24} color={COLORS.danger} />
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
+                ) : null}
+                <AppTextInput
+                  label="Email Address"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChangeText={setEmail}
+                />
+                <AppTextInput
+                  label="Password"
+                  placeholder="Enter your password"
+                  isPassword={true}
+                  value={password}
+                  onChangeText={setPassword}
+                />
+                <View style={styles.forgotPasswordContainer}>
+                  <TouchableOpacity onPress={() => router.push('/forgot-password')}>
+                    <Text style={styles.forgotPasswordLink}>Forgot Password?</Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
+                    <Text style={styles.loginButtonText}>Log In</Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
-                  <Text style={styles.loginButtonText}>Log In</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.footer}>
-              <TouchableOpacity onPress={() => router.push('/signup')}>
-                <Text style={styles.footerText}>Don't have an account? <Text style={styles.footerLink}>Sign Up</Text></Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+              <View style={styles.footer}>
+                <TouchableOpacity onPress={() => router.push('/signup')}>
+                  <Text style={styles.footerText}>Don't have an account? <Text style={styles.footerLink}>Sign Up</Text></Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+      </View>
     </View>
   );
 };

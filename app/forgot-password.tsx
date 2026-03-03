@@ -1,16 +1,17 @@
+// 🔒 LOCKED SCREEN — DO NOT MODIFY
+
 import React, { useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  StatusBar,
   KeyboardAvoidingView,
   ScrollView,
   Platform,
   TextInput,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { MaterialIcons } from '@expo/vector-icons';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -76,7 +77,6 @@ const ForgotPasswordScreen = () => {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const insets = useSafeAreaInsets();
 
   const handleResetPassword = () => {
     if (!email) {
@@ -110,8 +110,8 @@ const ForgotPasswordScreen = () => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 24,
-      paddingBottom: 12,
+      padding: 24,
+      paddingTop: 40,
     },
     backButton: {
       height: 44,
@@ -210,54 +210,56 @@ const ForgotPasswordScreen = () => {
   });
 
   return (
-    <View style={styles.root}>
-      <StatusBar hidden />
-      <View style={styles.gridPattern} />
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color={COLORS.textLight} />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Smart Task</Text>
-          <Text style={styles.headerSubtitle}>powered by Smart Decor</Text>
+    <View style={{ flex: 1, backgroundColor: '#F8F9FA' }}>
+        <StatusBar style="dark" translucent backgroundColor="transparent" />
+        <View style={styles.root}>
+        <View style={styles.gridPattern} />
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <MaterialIcons name="arrow-back" size={24} color={COLORS.textLight} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>Smart Task</Text>
+            <Text style={styles.headerSubtitle}>powered by Smart Decor</Text>
+          </View>
+          <View style={{ width: 24 }} />
         </View>
-        <View style={{ width: 24 }} />
-      </View>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}>
-        <ScrollView contentContainerStyle={[styles.scrollView, { paddingBottom: insets.bottom + 20}]}>
-          <View style={styles.contentHeader}>
-            <View style={styles.iconContainer}>
-              <MaterialIcons name="lock-reset" size={32} color={COLORS.primary} />
-            </View>
-            <Text style={styles.contentHeaderTitle}>Forgot Password</Text>
-            <Text style={styles.contentHeaderSubtitle}>Enter your email to receive a password reset link</Text>
-          </View>
-          <View style={styles.form}>
-            {error ? (
-              <View style={styles.errorMessageContainer}>
-                <MaterialIcons name="error-outline" size={24} color={COLORS.danger} />
-                <Text style={styles.errorText}>{error}</Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoidingView}>
+          <ScrollView contentContainerStyle={styles.scrollView}>
+            <View style={styles.contentHeader}>
+              <View style={styles.iconContainer}>
+                <MaterialIcons name="lock-reset" size={32} color={COLORS.primary} />
               </View>
-            ) : null}
-            <AppTextInput
-              label="Email Address"
-              placeholder="Enter your email"
-              value={email}
-              onChangeText={setEmail}
-            />
-            <TouchableOpacity style={styles.resetButton} onPress={handleResetPassword} disabled={loading}>
+              <Text style={styles.contentHeaderTitle}>Forgot Password</Text>
+              <Text style={styles.contentHeaderSubtitle}>Enter your email to receive a password reset link</Text>
+            </View>
+            <View style={styles.form}>
+              {error ? (
+                <View style={styles.errorMessageContainer}>
+                  <MaterialIcons name="error-outline" size={24} color={COLORS.danger} />
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : null}
+              <AppTextInput
+                label="Email Address"
+                placeholder="Enter your email"
+                value={email}
+                onChangeText={setEmail}
+              />
+              <TouchableOpacity style={styles.resetButton} onPress={handleResetPassword} disabled={loading}>
                 <Text style={styles.resetButtonText}>Send Reset Link</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.footer}>
-            <TouchableOpacity onPress={() => router.push('/login')}>
-              <Text style={styles.footerText}>Back to <Text style={styles.footerLink}>Login</Text></Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.footer}>
+              <TouchableOpacity onPress={() => router.push('/login')}>
+                <Text style={styles.footerText}>Back to <Text style={styles.footerLink}>Login</Text></Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
     </View>
   );
 };

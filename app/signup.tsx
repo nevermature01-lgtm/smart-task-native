@@ -1,3 +1,4 @@
+// 🔒 LOCKED SCREEN — DO NOT MODIFY
 
 import React, { useState } from 'react';
 import {
@@ -5,13 +6,12 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  StatusBar,
   KeyboardAvoidingView,
   ScrollView,
   Platform,
   TextInput,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { MaterialIcons } from '@expo/vector-icons';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth, db } from '../firebase';
@@ -134,14 +134,12 @@ const SignupScreen = () => {
       flex: 1,
       backgroundColor: COLORS.backgroundLight,
     },
-    safeArea: {
-      flex: 1,
-    },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: 24,
+      paddingTop: 40,
     },
     backButton: {
       height: 44,
@@ -244,10 +242,10 @@ const SignupScreen = () => {
   });
 
   return (
-    <View style={styles.root}>
-      <StatusBar hidden />
-      <View style={styles.gridPattern} />
-      <SafeAreaView style={styles.safeArea}>
+    <View style={{ flex: 1, backgroundColor: '#F8F9FA' }}>
+        <StatusBar style="dark" translucent backgroundColor="transparent" />
+        <View style={styles.root}>
+        <View style={styles.gridPattern} />
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <MaterialIcons name="arrow-back" size={24} color={COLORS.textLight} />
@@ -316,7 +314,7 @@ const SignupScreen = () => {
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
     </View>
   );
 };
