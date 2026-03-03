@@ -3,9 +3,11 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
-import { auth, db } from '../firebase'; // Import auth and db from firebase
+import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Clipboard from 'expo-clipboard';
 import MenuScreen from './menu';
 
 const HamburgerMenu = ({ onPress }) => (
@@ -31,6 +33,8 @@ const HomeScreen = () => {
   const [isMenuVisible, setMenuVisible] = useState(false);
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState('Guest');
+  const [activeAccount, setActiveAccount] = useState(null);
+  const [teamDetails, setTeamDetails] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -46,9 +50,28 @@ const HomeScreen = () => {
         }
         const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
         setUserName(capitalizedName);
+
+        const storedActiveAccount = await AsyncStorage.getItem('activeAccount');
+        if (storedActiveAccount) {
+          const account = JSON.parse(storedActiveAccount);
+          setActiveAccount(account);
+          if (account.type === 'team') {
+            const teamDocRef = doc(db, 'teams', account.id);
+            const teamDoc = await getDoc(teamDocRef);
+            if (teamDoc.exists()) {
+              setTeamDetails(teamDoc.data());
+            }
+          } else {
+            setTeamDetails(null);
+          }
+        } else {
+          setActiveAccount({ type: 'personal' });
+        }
       } else {
         setUser(null);
         setUserName('Guest');
+        setActiveAccount(null);
+        setTeamDetails(null);
       }
     });
 
@@ -59,6 +82,11 @@ const HomeScreen = () => {
     setMenuVisible(!isMenuVisible);
   };
 
+  const handleCopyCode = async (code) => {
+    await Clipboard.setStringAsync(code);
+    alert('Team code copied to clipboard!');
+  };
+
   return (
     <SafeAreaView style={styles.body} edges={['top']}>
       <View style={styles.mainContainer}>
@@ -66,6 +94,20 @@ const HomeScreen = () => {
           <View style={styles.header}>
             <View style={styles.userInfo}>
               <HamburgerMenu onPress={toggleMenu} />
+              <View>
+                {activeAccount?.type === 'personal' && (
+                  <Text style={styles.accountType}>Personal Account</Text>
+                )}
+                {activeAccount?.type === 'team' && teamDetails && (
+                  <View style={styles.teamInfoContainer}>
+                    <Text style={styles.accountType}>{teamDetails.name}</Text>
+                    <TouchableOpacity style={styles.teamCodeContainer} onPress={() => handleCopyCode(teamDetails.code)}>
+                      <Text style={styles.teamCodeText}>{teamDetails.code}</Text>
+                      <Feather name="copy" size={12} color="#6B7280" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
             </View>
             <View style={styles.headerActions}>
               <TouchableOpacity style={[styles.iconButton, styles.customShadow]}>
@@ -164,7 +206,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#4b5563',
     borderRadius: 1,
   },
-  userName: { fontWeight: 'bold', color: '#374151', fontSize: 18 },
+  accountType: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  teamInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  teamCodeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  teamCodeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4B5563',
+  },
   headerActions: { flexDirection: 'row', gap: 8 },
   iconButton: {
     width: 40,
