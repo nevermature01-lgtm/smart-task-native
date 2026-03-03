@@ -287,6 +287,10 @@ const SwitchAccountScreen = () => {
                             </View>
                         )}
                     </View>
+                     <TouchableOpacity style={styles.manageTeamsButton}>
+                        <MaterialIcons name="settings" size={20} color="#4B5563" style={{ marginRight: 8 }} />
+                        <Text style={styles.manageTeamsButtonText}>Manage teams</Text>
+                    </TouchableOpacity>
                 </ScrollView>
             </KeyboardAvoidingView>
         </View>
@@ -304,6 +308,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
         position: 'relative',
+        marginTop: 20
     },
     toast: {
         position: 'absolute',
@@ -677,6 +682,20 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         color: '#fff',
+    },
+    manageTeamsButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#F3F4F6',
+        paddingVertical: 16,
+        borderRadius: 16,
+        margin: 16,
+    },
+    manageTeamsButtonText: {
+        color: '#4B5563',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });
 

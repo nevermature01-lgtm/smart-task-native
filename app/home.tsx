@@ -197,7 +197,7 @@ const HomeScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  body: { flex: 1, backgroundColor: '#f9fafb' },
+  body: { flex: 1, backgroundColor: '#f9fafb', paddingVertical: 20 },
   mainContainer: {
     maxWidth: 448,
     marginHorizontal: 'auto',
