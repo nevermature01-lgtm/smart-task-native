@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { db, auth } from '../firebase';
 import { collection, addDoc, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import * as Clipboard from 'expo-clipboard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TeamListItem = ({ title, creator, avatars, isPriority, onPress, isActive, teamCode, onCopyCode }) => (
     <TouchableOpacity onPress={onPress} style={[styles.teamListItem, isPriority && styles.priorityTeamCard, isActive && styles.activeItem]}>
@@ -82,9 +83,10 @@ const SwitchAccountScreen = () => {
     const [newTeamName, setNewTeamName] = useState('');
     const [user, setUser] = useState({ name: "John Doe" });
     const [teams, setTeams] = useState([]);
-    const [activeAccount, setActiveAccount] = useState({ type: 'personal' });
+    const [activeAccount, setActiveAccount] = useState(null);
     const [isCreatingTeam, setIsCreatingTeam] = useState(false);
     const [toastConfig, setToastConfig] = useState({ visible: false, message: '', type: 'success' });
+    const toastTimeout = useRef(null);
 
     useEffect(() => {
         const fetchUserDataAndTeams = async () => {
@@ -101,16 +103,37 @@ const SwitchAccountScreen = () => {
                 const querySnapshot = await getDocs(q);
                 const userTeams = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setTeams(userTeams);
+
+                const storedActiveAccount = await AsyncStorage.getItem('activeAccount');
+                if (storedActiveAccount) {
+                    setActiveAccount(JSON.parse(storedActiveAccount));
+                } else {
+                    setActiveAccount({ type: 'personal' });
+                }
             }
         };
         fetchUserDataAndTeams();
     }, []);
 
     const showToast = (message, type = 'success') => {
+        if (toastTimeout.current) {
+            clearTimeout(toastTimeout.current);
+        }
         setToastConfig({ visible: true, message, type });
-        setTimeout(() => {
+        toastTimeout.current = setTimeout(() => {
             setToastConfig({ visible: false, message: '', type: '' });
         }, 3000);
+    };
+
+    const handleSetAccount = async (account) => {
+        try {
+            await AsyncStorage.setItem('activeAccount', JSON.stringify(account));
+            setActiveAccount(account);
+            showToast(`Switched to ${account.type === 'personal' ? 'Personal Account' : account.name}`, 'success');
+        } catch (error) {
+            console.error("Error setting active account: ", error);
+            showToast('Failed to switch account. Please try again.', 'error');
+        }
     };
 
     const handleCopyCode = async (code) => {
@@ -259,6 +282,7 @@ const SwitchAccountScreen = () => {
                         <PersonalAccountCard
                             user={user}
                             isActive={activeAccount?.type === 'personal'}
+                            onPress={() => handleSetAccount({ type: 'personal' })}
                         />
                     )}
 
@@ -281,6 +305,7 @@ const SwitchAccountScreen = () => {
                                     avatars={[]}
                                     isPriority={false}
                                     isActive={activeAccount?.id === team.id}
+                                    onPress={() => handleSetAccount({ type: 'team', id: team.id, name: team.name })}
                                     onCopyCode={handleCopyCode}
                                 />
                             ))
