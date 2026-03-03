@@ -5,47 +5,97 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { db, auth } from '../firebase';
-import { collection, getDocs, query, where, doc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, deleteDoc, getDoc } from 'firebase/firestore';
 
 const ManageTeamsScreen = () => {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const [teams, setTeams] = useState([]);
-    const [modalVisible, setModalVisible] = useState(false);
-    const [teamToDelete, setTeamToDelete] = useState(null);
+    const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+    const [leaveModalVisible, setLeaveModalVisible] = useState(false);
+    const [teamToAction, setTeamToAction] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isLeaving, setIsLeaving] = useState(false);
 
     useEffect(() => {
         const fetchTeams = async () => {
             const currentUser = auth.currentUser;
             if (currentUser) {
-                const teamsRef = collection(db, 'teams');
-                const q = query(teamsRef, where("creatorId", "==", currentUser.uid));
+                const teamMembersRef = collection(db, 'team_members');
+                const q = query(teamMembersRef, where("userId", "==", currentUser.uid));
                 const querySnapshot = await getDocs(q);
-                const userTeams = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                const teamPromises = querySnapshot.docs.map(async (memberDoc) => {
+                    const teamId = memberDoc.data().teamId;
+                    const teamDocRef = doc(db, 'teams', teamId);
+                    const teamDoc = await getDoc(teamDocRef);
+                    if (teamDoc.exists()) {
+                        return { id: teamDoc.id, ...teamDoc.data() };
+                    }
+                    return null;
+                });
+
+                const userTeams = (await Promise.all(teamPromises)).filter(team => team !== null);
                 setTeams(userTeams);
             }
         };
         fetchTeams();
     }, []);
 
-    const openDeleteModal = (teamId, teamName) => {
-        setTeamToDelete({ id: teamId, name: teamName });
-        setModalVisible(true);
+    const openDeleteModal = (team) => {
+        setTeamToAction(team);
+        setDeleteModalVisible(true);
+    };
+
+    const openLeaveModal = (team) => {
+        setTeamToAction(team);
+        setLeaveModalVisible(true);
     };
 
     const handleDeleteTeam = async () => {
-        if (!teamToDelete) return;
+        if (!teamToAction) return;
         setIsDeleting(true);
         try {
-            await deleteDoc(doc(db, "teams", teamToDelete.id));
-            setTeams(prevTeams => prevTeams.filter(team => team.id !== teamToDelete.id));
-            setModalVisible(false);
-            setTeamToDelete(null);
+            const teamId = teamToAction.id;
+            const membersRef = collection(db, 'team_members');
+            const q = query(membersRef, where("teamId", "==", teamId));
+            const membersSnapshot = await getDocs(q);
+            const deletePromises = membersSnapshot.docs.map(d => deleteDoc(d.ref));
+            await Promise.all(deletePromises);
+
+            await deleteDoc(doc(db, "teams", teamId));
+            setTeams(prevTeams => prevTeams.filter(team => team.id !== teamId));
+            setDeleteModalVisible(false);
+            setTeamToAction(null);
         } catch (error) {
             console.error("Error deleting team: ", error);
         } finally {
             setIsDeleting(false);
+        }
+    };
+
+    const handleLeaveTeam = async () => {
+        if (!teamToAction) return;
+        setIsLeaving(true);
+        const currentUser = auth.currentUser;
+        try {
+            const teamId = teamToAction.id;
+            const membersRef = collection(db, 'team_members');
+            const q = query(membersRef, where("teamId", "==", teamId), where("userId", "==", currentUser.uid));
+            const memberSnapshot = await getDocs(q);
+
+            if (!memberSnapshot.empty) {
+                const memberDocId = memberSnapshot.docs[0].id;
+                await deleteDoc(doc(db, "team_members", memberDocId));
+                setTeams(prevTeams => prevTeams.filter(team => team.id !== teamId));
+            }
+            
+            setLeaveModalVisible(false);
+            setTeamToAction(null);
+        } catch (error) {
+            console.error("Error leaving team: ", error);
+        } finally {
+            setIsLeaving(false);
         }
     };
 
@@ -68,22 +118,32 @@ const ManageTeamsScreen = () => {
                                 <Text style={styles.teamName}>{team.name}</Text>
                                 <Text style={styles.teamCreator}>Created by {team.creator}</Text>
                             </View>
-                            <TouchableOpacity 
-                                style={styles.deleteButton} 
-                                onPress={() => openDeleteModal(team.id, team.name)}
-                            >
-                                <MaterialIcons name="delete-outline" size={22} color="#EF4444" />
-                            </TouchableOpacity>
+                            {team.creatorId === auth.currentUser.uid ? (
+                                <TouchableOpacity 
+                                    style={styles.deleteButton} 
+                                    onPress={() => openDeleteModal(team)}
+                                >
+                                    <MaterialIcons name="delete-outline" size={22} color="#EF4444" />
+                                </TouchableOpacity>
+                            ) : (
+                                <TouchableOpacity 
+                                    style={styles.leaveButton} 
+                                    onPress={() => openLeaveModal(team)}
+                                >
+                                    <MaterialIcons name="exit-to-app" size={22} color="#4B5563" />
+                                </TouchableOpacity>
+                            )}
                         </View>
                     ))}
                 </View>
             </ScrollView>
 
+            {/* Delete Team Modal */}
             <Modal
                 animationType="fade"
                 transparent={true}
-                visible={modalVisible}
-                onRequestClose={() => setModalVisible(false)}
+                visible={deleteModalVisible}
+                onRequestClose={() => setDeleteModalVisible(false)}
             >
                 <View style={styles.modalBackdrop}>
                     <View style={styles.modalView}>
@@ -92,13 +152,12 @@ const ManageTeamsScreen = () => {
                         </View>
                         <Text style={styles.modalTitle}>Delete Team</Text>
                         <Text style={styles.modalText}>
-                            Are you sure you want to delete the team '{teamToDelete?.name}'? This will permanently delete the team and all its data. This action cannot be undone.
+                            Are you sure you want to delete the team '{teamToAction?.name}'? This action cannot be undone.
                         </Text>
-                        
                         <View style={styles.modalActions}>
                             <TouchableOpacity 
                                 style={[styles.button, styles.cancelButton]} 
-                                onPress={() => setModalVisible(false)}
+                                onPress={() => setDeleteModalVisible(false)}
                                 disabled={isDeleting}
                             >
                                 <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancel</Text>
@@ -108,11 +167,43 @@ const ManageTeamsScreen = () => {
                                 onPress={handleDeleteTeam}
                                 disabled={isDeleting}
                             >
-                                {isDeleting ? (
-                                    <ActivityIndicator size="small" color="#fff" />
-                                ) : (
-                                    <Text style={[styles.buttonText, styles.deleteButtonText]}>Delete</Text>
-                                )}
+                                {isDeleting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.buttonText, styles.deleteButtonText]}>Delete</Text>}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Leave Team Modal */}
+            <Modal
+                animationType="fade"
+                transparent={true}
+                visible={leaveModalVisible}
+                onRequestClose={() => setLeaveModalVisible(false)}
+            >
+                <View style={styles.modalBackdrop}>
+                    <View style={styles.modalView}>
+                        <View style={[styles.modalIconContainer, {backgroundColor: '#E5E7EB'}]}>
+                            <MaterialIcons name="exit-to-app" size={32} color="#4B5563" />
+                        </View>
+                        <Text style={styles.modalTitle}>Leave Team</Text>
+                        <Text style={styles.modalText}>
+                            Are you sure you want to leave the team '{teamToAction?.name}'?
+                        </Text>
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity 
+                                style={[styles.button, styles.cancelButton]} 
+                                onPress={() => setLeaveModalVisible(false)}
+                                disabled={isLeaving}
+                            >
+                                <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                style={[styles.button, styles.leaveConfirmButton]} 
+                                onPress={handleLeaveTeam}
+                                disabled={isLeaving}
+                            >
+                                {isLeaving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={[styles.buttonText, styles.deleteButtonText]}>Leave</Text>}
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -182,6 +273,12 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         backgroundColor: '#FEE2E2'
     },
+    leaveButton: {
+        padding: 8,
+        marginLeft: 12,
+        borderRadius: 20,
+        backgroundColor: '#E5E7EB'
+    },
     modalBackdrop: {
         flex: 1,
         justifyContent: 'center',
@@ -246,6 +343,9 @@ const styles = StyleSheet.create({
     },
     deleteConfirmButton: {
         backgroundColor: '#EF4444',
+    },
+    leaveConfirmButton: {
+        backgroundColor: '#374151',
     },
     buttonText: {
         fontSize: 16,
