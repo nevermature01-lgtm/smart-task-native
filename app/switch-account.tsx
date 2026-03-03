@@ -103,8 +103,8 @@ const SwitchAccountScreen = () => {
                 const q = query(teamMembersRef, where("userId", "==", currentUser.uid));
                 const querySnapshot = await getDocs(q);
                 const userTeams = [];
-                for (const doc of querySnapshot.docs) {
-                    const teamId = doc.data().teamId;
+                for (const teamMemberDoc of querySnapshot.docs) {
+                    const teamId = teamMemberDoc.data().teamId;
                     const teamDocRef = doc(db, 'teams', teamId);
                     const teamDoc = await getDoc(teamDocRef);
                     if (teamDoc.exists()) {
