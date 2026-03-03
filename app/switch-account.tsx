@@ -287,7 +287,7 @@ const SwitchAccountScreen = () => {
                             </View>
                         )}
                     </View>
-                     <TouchableOpacity style={styles.manageTeamsButton}>
+                     <TouchableOpacity style={styles.manageTeamsButton} onPress={() => router.push('/manage-teams')}>
                         <MaterialIcons name="settings" size={20} color="#4B5563" style={{ marginRight: 8 }} />
                         <Text style={styles.manageTeamsButtonText}>Manage teams</Text>
                     </TouchableOpacity>

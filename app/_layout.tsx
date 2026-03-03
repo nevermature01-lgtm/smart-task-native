@@ -1,34 +1,24 @@
 
-import { Stack, router } from 'expo-router';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../firebase';
-import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
+import { Stack } from 'expo-router';
+import { useFonts, Inter_400Regular, Inter_700Bold } from '@expo-google-fonts/inter';
 
 export default function RootLayout() {
+  let [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_700Bold,
+  });
 
-  useEffect(() => {
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        router.replace('/home');
-      } else {
-        router.replace('/login');
-      }
-    });
-  }, []);
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
-    <SafeAreaProvider>
-      <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
-        <StatusBar translucent backgroundColor="transparent" style="dark" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-          }}
-        />
-      </View>
-    </SafeAreaProvider>
+    <Stack>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="home" options={{ headerShown: false }} />
+        <Stack.Screen name="menu" options={{ headerShown: false }} />
+        <Stack.Screen name="switch-account" options={{ headerShown: false }} />
+        <Stack.Screen name="manage-teams" options={{ headerShown: false }} />
+    </Stack>
   );
 }
