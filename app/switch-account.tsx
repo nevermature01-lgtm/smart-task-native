@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
     },
     closeButton: {
         position: 'absolute',
-        top: 10,
+        top: 5,
         right: 10,
         width: 32,
         height: 32,
