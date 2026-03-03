@@ -14,7 +14,7 @@ const user = {
 const menuItems = [
   { href: '/home', icon: 'home', text: 'Home', color: '#2563EB' },
   { href: '/switch-account', icon: 'users', text: 'Switch Account', color: '#10B981' },
-  { href: '/storage', icon: 'database', text: 'Get More Storage', color: '#F59E0B' },
+  { href: '/theme', icon: 'droplet', text: 'Theme', color: '#8B5CF6' },
   { href: '/settings', icon: 'settings', text: 'Settings', color: '#6366F1' },
 ];
 
