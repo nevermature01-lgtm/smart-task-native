@@ -1,4 +1,8 @@
-// 🔒 LOCKED SCREEN — DO NOT MODIFY
+// =====================================================
+// 🔒 AUTH SCREEN LOCKED
+// DO NOT MODIFY THIS FILE UNLESS EXPLICITLY INSTRUCTED
+// Any UI, layout, spacing, or logic change is forbidden.
+// =====================================================
 
 import React, { useState } from 'react';
 import {

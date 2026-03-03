@@ -1,3 +1,9 @@
+// =====================================================
+// 🔒 AUTH SCREEN LOCKED
+// DO NOT MODIFY THIS FILE UNLESS EXPLICITLY INSTRUCTED
+// Any UI, layout, spacing, or logic change is forbidden.
+// =====================================================
+
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';

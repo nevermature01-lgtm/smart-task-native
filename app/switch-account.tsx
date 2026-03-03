@@ -264,6 +264,10 @@ const SwitchAccountScreen = () => {
 
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>Your Teams</Text>
+                        <TouchableOpacity style={styles.manageTeamsLink} onPress={() => router.push('/manage-teams')}>
+                            <MaterialIcons name="settings" size={16} color="#4B5563" style={{ marginRight: 4 }} />
+                            <Text style={styles.manageTeamsLinkText}>Manage teams</Text>
+                        </TouchableOpacity>
                     </View>
 
                     <View style={styles.teamsList}>
@@ -287,10 +291,6 @@ const SwitchAccountScreen = () => {
                             </View>
                         )}
                     </View>
-                     <TouchableOpacity style={styles.manageTeamsButton} onPress={() => router.push('/manage-teams')}>
-                        <MaterialIcons name="settings" size={20} color="#4B5563" style={{ marginRight: 8 }} />
-                        <Text style={styles.manageTeamsButtonText}>Manage teams</Text>
-                    </TouchableOpacity>
                 </ScrollView>
             </KeyboardAvoidingView>
         </View>
@@ -489,6 +489,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: 16,
         paddingBottom: 8,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     sectionTitle: {
         fontSize: 10,
@@ -683,19 +686,14 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#fff',
     },
-    manageTeamsButton: {
+    manageTeamsLink: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#F3F4F6',
-        paddingVertical: 16,
-        borderRadius: 16,
-        margin: 16,
     },
-    manageTeamsButtonText: {
+    manageTeamsLinkText: {
         color: '#4B5563',
-        fontSize: 16,
-        fontWeight: 'bold',
+        fontSize: 12,
+        fontWeight: '600',
     },
 });
 
