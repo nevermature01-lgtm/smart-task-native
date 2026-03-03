@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { db, auth } from '../firebase';
-import { collection, addDoc, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, getDoc, setDoc } from 'firebase/firestore';
 import * as Clipboard from 'expo-clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -85,6 +85,7 @@ const SwitchAccountScreen = () => {
     const [teams, setTeams] = useState([]);
     const [activeAccount, setActiveAccount] = useState(null);
     const [isCreatingTeam, setIsCreatingTeam] = useState(false);
+    const [isJoiningTeam, setIsJoiningTeam] = useState(false);
     const [toastConfig, setToastConfig] = useState({ visible: false, message: '', type: 'success' });
     const toastTimeout = useRef(null);
 
@@ -95,13 +96,21 @@ const SwitchAccountScreen = () => {
                 const userDocRef = doc(db, 'users', currentUser.uid);
                 const userDoc = await getDoc(userDocRef);
                 if (userDoc.exists()) {
-                    setUser({ name: userDoc.data().firstName });
+                    setUser({ id: currentUser.uid, name: userDoc.data().firstName });
                 }
 
-                const teamsRef = collection(db, 'teams');
-                const q = query(teamsRef, where("creatorId", "==", currentUser.uid));
+                const teamMembersRef = collection(db, 'team_members');
+                const q = query(teamMembersRef, where("userId", "==", currentUser.uid));
                 const querySnapshot = await getDocs(q);
-                const userTeams = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const userTeams = [];
+                for (const doc of querySnapshot.docs) {
+                    const teamId = doc.data().teamId;
+                    const teamDocRef = doc(db, 'teams', teamId);
+                    const teamDoc = await getDoc(teamDocRef);
+                    if (teamDoc.exists()) {
+                        userTeams.push({ id: teamDoc.id, ...teamDoc.data() });
+                    }
+                }
                 setTeams(userTeams);
 
                 const storedActiveAccount = await AsyncStorage.getItem('activeAccount');
@@ -149,16 +158,8 @@ const SwitchAccountScreen = () => {
 
         setIsCreatingTeam(true);
         const teamsRef = collection(db, 'teams');
-        const q = query(teamsRef, where("name", "==", newTeamName.trim()));
 
         try {
-            const querySnapshot = await getDocs(q);
-            if (!querySnapshot.empty) {
-                showToast('A team with this name already exists.', 'error');
-                setIsCreatingTeam(false);
-                return;
-            }
-
             let teamCode;
             let isCodeUnique = false;
             while (!isCodeUnique) {
@@ -180,6 +181,15 @@ const SwitchAccountScreen = () => {
                     createdAt: new Date(),
                 };
                 const docRef = await addDoc(teamsRef, newTeam);
+
+                const teamMembersRef = collection(db, 'team_members');
+                await addDoc(teamMembersRef, {
+                    teamId: docRef.id,
+                    userId: currentUser.uid,
+                    role: 'admin',
+                    joinedAt: new Date()
+                });
+
                 setTeams(prevTeams => [...prevTeams, { id: docRef.id, ...newTeam }]);
                 showToast(`Team '${newTeamName.trim()}' created successfully!`, 'success');
                 setNewTeamName('');
@@ -190,6 +200,59 @@ const SwitchAccountScreen = () => {
             showToast('Failed to create team. Please try again.', 'error');
         } finally {
             setIsCreatingTeam(false);
+        }
+    };
+
+    const handleJoinTeam = async () => {
+        if (!teamCode.trim() || teamCode.length !== 4) {
+            showToast('Please enter a valid 4-digit team code.', 'error');
+            return;
+        }
+
+        setIsJoiningTeam(true);
+        const teamsRef = collection(db, 'teams');
+        const q = query(teamsRef, where("code", "==", teamCode));
+
+        try {
+            const querySnapshot = await getDocs(q);
+            if (querySnapshot.empty) {
+                showToast('Invalid team code. Please check and try again.', 'error');
+                setIsJoiningTeam(false);
+                return;
+            }
+
+            const teamDoc = querySnapshot.docs[0];
+            const teamId = teamDoc.id;
+            const currentUser = auth.currentUser;
+
+            const teamMembersRef = collection(db, 'team_members');
+            const memberQuery = query(teamMembersRef, where("teamId", "==", teamId), where("userId", "==", currentUser.uid));
+            const memberSnapshot = await getDocs(memberQuery);
+
+            if (!memberSnapshot.empty) {
+                showToast("You are already a member of this team.", 'error');
+                setIsJoiningTeam(false);
+                return;
+            }
+
+            if (currentUser) {
+                await addDoc(teamMembersRef, {
+                    teamId: teamId,
+                    userId: currentUser.uid,
+                    role: 'member',
+                    joinedAt: new Date(),
+                });
+
+                setTeams(prevTeams => [...prevTeams, { id: teamDoc.id, ...teamDoc.data() }]);
+                showToast(`Successfully joined team '${teamDoc.data().name}'!`, 'success');
+                setTeamCode('');
+                setShowJoinTeamCard(false);
+            }
+        } catch (error) {
+            console.error("Error joining team: ", error);
+            showToast('Failed to join team. Please try again.', 'error');
+        } finally {
+            setIsJoiningTeam(false);
         }
     };
 
@@ -268,8 +331,8 @@ const SwitchAccountScreen = () => {
                                 keyboardType="numeric"
                                 maxLength={4}
                             />
-                            <TouchableOpacity style={styles.submitButton}>
-                                <Text style={styles.submitButtonText}>Submit</Text>
+                            <TouchableOpacity style={styles.submitButton} onPress={handleJoinTeam} disabled={isJoiningTeam}>
+                                {isJoiningTeam ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Join Team</Text>}
                             </TouchableOpacity>
                         </View>
                     )}
