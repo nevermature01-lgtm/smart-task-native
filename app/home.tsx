@@ -138,15 +138,6 @@ const HomeScreen = () => {
                 )}
               </View>
             </View>
-            <View style={styles.headerActions}>
-              <TouchableOpacity style={[styles.iconButton, styles.customShadow]}>
-                <Feather name="search" size={20} color="#4b5563" />
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.iconButton, styles.customShadow]}>
-                <Feather name="bell" size={20} color="#4b5563" />
-                <View style={styles.notificationBadge} />
-              </TouchableOpacity>
-            </View>
           </View>
 
           <View style={styles.greetingSection}>

@@ -1,13 +1,118 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { db, auth } from '../firebase';
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const MemberCard = ({ member, onPress }) => (
+    <TouchableOpacity onPress={onPress} style={styles.memberCard}>
+        <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{member.name.charAt(0).toUpperCase()}</Text>
+        </View>
+        <Text style={styles.memberName}>{member.name}</Text>
+    </TouchableOpacity>
+);
+
+const LockedView = () => (
+    <View style={styles.lockedContainer}>
+        <MaterialCommunityIcons name="lock-outline" size={64} color="#9CA3AF" />
+        <Text style={styles.lockedTitle}>Permission Denied</Text>
+        <Text style={styles.lockedSubtitle}>You don't have the required permissions to assign tasks.</Text>
+    </View>
+);
 
 const AssignTaskScreen = () => {
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const [taskName, setTaskName] = useState('');
+    const [teamMembers, setTeamMembers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [currentUserRole, setCurrentUserRole] = useState('member');
+
+    useEffect(() => {
+        const fetchTeamData = async () => {
+            try {
+                const activeAccountString = await AsyncStorage.getItem('activeAccount');
+                const currentUser = auth.currentUser;
+
+                if (activeAccountString && currentUser) {
+                    const activeAccount = JSON.parse(activeAccountString);
+                    if (activeAccount.type === 'team') {
+                        const teamMembersRef = collection(db, 'team_members');
+                        const q = query(teamMembersRef, where("teamId", "==", activeAccount.id));
+                        const querySnapshot = await getDocs(q);
+                        
+                        const members = [];
+                        let userRole = 'member';
+
+                        for (const teamMemberDoc of querySnapshot.docs) {
+                            const memberData = teamMemberDoc.data();
+                            const userId = memberData.userId;
+
+                            if (userId === currentUser.uid) {
+                                userRole = memberData.role;
+                            }
+
+                            const userDocRef = doc(db, 'users', userId);
+                            const userDoc = await getDoc(userDocRef);
+                            if (userDoc.exists()) {
+                                members.push({ id: userDoc.id, name: userDoc.data().firstName });
+                            }
+                        }
+                        
+                        setTeamMembers(members);
+                        setCurrentUserRole(userRole);
+                    } else {
+                        setCurrentUserRole('member'); 
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching team members: ", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchTeamData();
+    }, []);
+
+    const handleMemberPress = (member) => {
+        router.push({
+            pathname: '/task-details',
+            params: { memberId: member.id, memberName: member.name }
+        });
+    };
+
+    const renderContent = () => {
+        if (loading) {
+            return <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 20 }}/>;
+        }
+
+        if (currentUserRole !== 'admin') {
+            return <LockedView />;
+        }
+
+        return (
+             <ScrollView style={styles.content}>
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.title}>Assign to:</Text>
+                    <TouchableOpacity style={styles.manageMembersLink} onPress={() => router.push('/manage-members')}>
+                        <MaterialIcons name="settings" size={16} color="#4B5563" style={{ marginRight: 4 }} />
+                        <Text style={styles.manageMembersLinkText}>Manage members</Text>
+                    </TouchableOpacity>
+                </View>
+                {teamMembers.map(member => (
+                    <MemberCard 
+                        key={member.id} 
+                        member={member} 
+                        onPress={() => handleMemberPress(member)}
+                    />
+                ))}
+            </ScrollView>
+        );
+    };
 
     return (
         <View style={{ flex: 1, backgroundColor: '#f8f6f6' }}>
@@ -17,18 +122,7 @@ const AssignTaskScreen = () => {
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Assign Task</Text>
             </View>
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.content}>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter task name"
-                    placeholderTextColor="#9CA3AF"
-                    value={taskName}
-                    onChangeText={setTaskName}
-                />
-                <TouchableOpacity style={styles.assignButton}>
-                    <Text style={styles.assignButtonText}>Assign</Text>
-                </TouchableOpacity>
-            </KeyboardAvoidingView>
+            {renderContent()}
         </View>
     );
 };
@@ -44,13 +138,13 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
         position: 'relative',
+        marginTop: 20
     },
     backButton: {
         position: 'absolute',
         left: 16,
-        top: 0,
-        bottom: 0,
-        justifyContent: 'center',
+        padding: 4,
+        zIndex: 1,
     },
     headerTitle: {
         fontSize: 18,
@@ -61,27 +155,81 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: 20,
     },
-    input: {
-        height: 50,
-        backgroundColor: 'white',
-        borderRadius: 10,
-        paddingHorizontal: 15,
-        fontSize: 16,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        marginBottom: 20,
-    },
-    assignButton: {
-        backgroundColor: '#2563EB',
-        padding: 15,
-        borderRadius: 10,
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
+        marginBottom: 10,
     },
-    assignButtonText: {
-        color: 'white',
+    title: {
         fontSize: 16,
         fontWeight: 'bold',
+        color: '#1F2937',
     },
+    manageMembersLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    manageMembersLinkText: {
+        color: '#4B5563',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    memberCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(0, 0, 0, 0.07)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 5,
+        elevation: 3,
+    },
+    avatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 15,
+    },
+    avatarText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#2563EB',
+    },
+    memberName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1F2937',
+    },
+    lockedContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+        backgroundColor: '#f8f6f6'
+    },
+    lockedTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#1F2937',
+        marginTop: 16,
+        textAlign: 'center'
+    },
+    lockedSubtitle: {
+        fontSize: 16,
+        color: '#6B7280',
+        marginTop: 8,
+        textAlign: 'center',
+        lineHeight: 24,
+    }
 });
 
 export default AssignTaskScreen;
