@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, Animated } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { db, auth } from '../firebase';
 import { collection, addDoc, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import * as Clipboard from 'expo-clipboard';
 
 const TeamListItem = ({ title, creator, avatars, isPriority, onPress, isActive, teamCode, onCopyCode }) => (
     <TouchableOpacity onPress={onPress} style={[styles.teamListItem, isPriority && styles.priorityTeamCard, isActive && styles.activeItem]}>
@@ -74,17 +75,19 @@ const CustomToast = ({ message, visible, type }) => {
 
 const SwitchAccountScreen = () => {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const [showJoinTeamCard, setShowJoinTeamCard] = useState(false);
     const [showCreateTeamCard, setShowCreateTeamCard] = useState(false);
     const [teamCode, setTeamCode] = useState('');
     const [newTeamName, setNewTeamName] = useState('');
     const [user, setUser] = useState({ name: "John Doe" });
+    const [teams, setTeams] = useState([]);
     const [activeAccount, setActiveAccount] = useState({ type: 'personal' });
     const [isCreatingTeam, setIsCreatingTeam] = useState(false);
     const [toastConfig, setToastConfig] = useState({ visible: false, message: '', type: 'success' });
 
     useEffect(() => {
-        const fetchUserData = async () => {
+        const fetchUserDataAndTeams = async () => {
             const currentUser = auth.currentUser;
             if (currentUser) {
                 const userDocRef = doc(db, 'users', currentUser.uid);
@@ -92,9 +95,15 @@ const SwitchAccountScreen = () => {
                 if (userDoc.exists()) {
                     setUser({ name: userDoc.data().firstName });
                 }
+
+                const teamsRef = collection(db, 'teams');
+                const q = query(teamsRef, where("creatorId", "==", currentUser.uid));
+                const querySnapshot = await getDocs(q);
+                const userTeams = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setTeams(userTeams);
             }
         };
-        fetchUserData();
+        fetchUserDataAndTeams();
     }, []);
 
     const showToast = (message, type = 'success') => {
@@ -102,6 +111,11 @@ const SwitchAccountScreen = () => {
         setTimeout(() => {
             setToastConfig({ visible: false, message: '', type: '' });
         }, 3000);
+    };
+
+    const handleCopyCode = async (code) => {
+        await Clipboard.setStringAsync(code);
+        showToast('Team code copied to clipboard!', 'success');
     };
 
     const handleCreateTeam = async () => {
@@ -135,17 +149,18 @@ const SwitchAccountScreen = () => {
 
             const currentUser = auth.currentUser;
             if (currentUser) {
-                await addDoc(teamsRef, {
+                const newTeam = {
                     name: newTeamName.trim(),
                     code: teamCode,
                     creator: user.name,
                     creatorId: currentUser.uid,
                     createdAt: new Date(),
-                });
+                };
+                const docRef = await addDoc(teamsRef, newTeam);
+                setTeams(prevTeams => [...prevTeams, { id: docRef.id, ...newTeam }]);
                 showToast(`Team '${newTeamName.trim()}' created successfully!`, 'success');
                 setNewTeamName('');
                 setShowCreateTeamCard(false);
-                // Optionally, refresh the list of teams here
             }
         } catch (error) {
             console.error("Error creating team: ", error);
@@ -157,143 +172,134 @@ const SwitchAccountScreen = () => {
 
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={{ flex: 1, backgroundColor: '#f8f6f6' }}>
             <CustomToast visible={toastConfig.visible} message={toastConfig.message} type={toastConfig.type} />
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: insets.top }]}>
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <MaterialIcons name="arrow-back" size={24} color="#1F2937" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Switch Account</Text>
             </View>
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{flex: 1}}>
-                <View style={{flex: 1, backgroundColor: '#f8f6f6'}}>
-                    <ScrollView 
-                        style={styles.scrollView} 
-                        keyboardShouldPersistTaps='handled'
-                        contentContainerStyle={{ paddingBottom: 100 }}
-                    >
-                        <View style={styles.quickActions}>
-                            <TouchableOpacity style={styles.actionButton} onPress={() => { setShowCreateTeamCard(true); setShowJoinTeamCard(false); }}>
-                                <View style={styles.actionIconContainer}>
-                                    <MaterialIcons name="add" size={24} color="white" />
-                                </View>
-                                <View>
-                                    <Text style={styles.actionButtonTitle}>Create Team</Text>
-                                    <Text style={styles.actionButtonSubtitle}>Start a new team</Text>
-                                </View>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.actionButtonSecondary} onPress={() => { setShowJoinTeamCard(true); setShowCreateTeamCard(false); }}>
-                                <View style={styles.actionIconContainerSecondary}>
-                                    <MaterialIcons name="group-add" size={24} color="#2563EB" />
-                                </View>
-                                <View>
-                                    <Text style={styles.actionButtonTitleSecondary}>Join Team</Text>
-                                    <Text style={styles.actionButtonSubtitle}>Enter a team code</Text>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+                <ScrollView
+                    style={styles.scrollView}
+                    keyboardShouldPersistTaps='handled'
+                    contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+                >
+                    <View style={styles.quickActions}>
+                        <TouchableOpacity style={styles.actionButton} onPress={() => { setShowCreateTeamCard(true); setShowJoinTeamCard(false); }}>
+                            <View style={styles.actionIconContainer}>
+                                <MaterialIcons name="add" size={24} color="white" />
+                            </View>
+                            <View>
+                                <Text style={styles.actionButtonTitle}>Create Team</Text>
+                                <Text style={styles.actionButtonSubtitle}>Start a new team</Text>
+                            </View>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.actionButtonSecondary} onPress={() => { setShowJoinTeamCard(true); setShowCreateTeamCard(false); }}>
+                            <View style={styles.actionIconContainerSecondary}>
+                                <MaterialIcons name="group-add" size={24} color="#2563EB" />
+                            </View>
+                            <View>
+                                <Text style={styles.actionButtonTitleSecondary}>Join Team</Text>
+                                <Text style={styles.actionButtonSubtitle}>Enter a team code</Text>
+                            </View>
+                        </TouchableOpacity>
+                    </View>
 
-                        {showCreateTeamCard && (
-                             <View style={styles.card}>
-                                <View style={styles.cardHeader}>
-                                    <Text style={styles.cardTitle}>Create a New Team</Text>
-                                    <TouchableOpacity onPress={() => setShowCreateTeamCard(false)} style={styles.closeButton}>
-                                        <MaterialIcons name="close" size={20} color="#fff" />
-                                    </TouchableOpacity>
-                                </View>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Enter team name"
-                                    placeholderTextColor="#9CA3AF"
-                                    value={newTeamName}
-                                    onChangeText={setNewTeamName}
-                                />
-                                <TouchableOpacity style={styles.submitButton} onPress={handleCreateTeam} disabled={isCreatingTeam}>
-                                    {isCreatingTeam ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Create Team</Text>}
+                    {showCreateTeamCard && (
+                         <View style={styles.card}>
+                            <View style={styles.cardHeader}>
+                                <Text style={styles.cardTitle}>Create a New Team</Text>
+                                <TouchableOpacity onPress={() => setShowCreateTeamCard(false)} style={styles.closeButton}>
+                                    <MaterialIcons name="close" size={20} color="#fff" />
                                 </TouchableOpacity>
                             </View>
-                        )}
-
-                        {showJoinTeamCard && (
-                            <View style={styles.createTeamContainer}>
-                                <View style={styles.createTeamCard}>
-                                    <Text style={styles.createTeamTitle}>Join a Team</Text>
-                                    <TouchableOpacity style={styles.closeButton} onPress={() => setShowJoinTeamCard(false)}>
-                                        <MaterialIcons name="close" size={20} color="#6B7280" />
-                                    </TouchableOpacity>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Enter 4-digit team code"
-                                        placeholderTextColor="#9CA3AF"
-                                        value={teamCode}
-                                        onChangeText={setTeamCode}
-                                        keyboardType="numeric"
-                                        maxLength={4}
-                                    />
-                                    <TouchableOpacity style={styles.submitButton}>
-                                        <Text style={styles.submitButtonText}>Submit</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        )}
-
-                        <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>Personal Account</Text>
-                        </View>
-
-                        {user && (
-                            <PersonalAccountCard 
-                                user={user} 
-                                isActive={activeAccount?.type === 'personal'}
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Enter team name"
+                                placeholderTextColor="#9CA3AF"
+                                value={newTeamName}
+                                onChangeText={setNewTeamName}
                             />
-                        )}
-
-                        <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>Your Teams</Text>
-                        </View>
-
-
-                        <View style={styles.teamsList}>
-                            <TeamListItem
-                                title="Team Name"
-                                creator="Creator Name"
-                                teamCode="XYZ123"
-                                avatars={[]}
-                                isPriority={false}
-                                isActive={activeAccount?.id === "1"}
-                            />
-                        </View>
-                        
-                        <View style={styles.emptyState}>
-                            <MaterialCommunityIcons name="account-group-outline" size={48} color="#D1D5DB" />
-                            <Text style={styles.emptyStateText}>You are not part of any teams yet.</Text>
-                        </View>
-                    </ScrollView>
-                    {activeAccount?.type === 'team' && (
-                        <View style={styles.footer}>
-                            <TouchableOpacity style={styles.manageTeamButton}>
-                                <MaterialIcons name="settings" size={20} color="#2563EB" />
-                                <Text style={styles.manageTeamButtonText}>Manage Team</Text>
+                            <TouchableOpacity style={styles.submitButton} onPress={handleCreateTeam} disabled={isCreatingTeam} activeOpacity={1}>
+                                {isCreatingTeam ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Create Team</Text>}
                             </TouchableOpacity>
                         </View>
                     )}
-                </View>
+
+                    {showJoinTeamCard && (
+                        <View style={styles.card}>
+                            <View style={styles.cardHeader}>
+                                <Text style={styles.cardTitle}>Join a Team</Text>
+                                <TouchableOpacity style={styles.closeButton} onPress={() => setShowJoinTeamCard(false)}>
+                                    <MaterialIcons name="close" size={20} color="#fff" />
+                                </TouchableOpacity>
+                            </View>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Enter 4-digit team code"
+                                placeholderTextColor="#9CA3AF"
+                                value={teamCode}
+                                onChangeText={setTeamCode}
+                                keyboardType="numeric"
+                                maxLength={4}
+                            />
+                            <TouchableOpacity style={styles.submitButton}>
+                                <Text style={styles.submitButtonText}>Submit</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Personal Account</Text>
+                    </View>
+
+                    {user && (
+                        <PersonalAccountCard
+                            user={user}
+                            isActive={activeAccount?.type === 'personal'}
+                        />
+                    )}
+
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Your Teams</Text>
+                    </View>
+
+                    <View style={styles.teamsList}>
+                        {teams.length > 0 ? (
+                            teams.map(team => (
+                                <TeamListItem
+                                    key={team.id}
+                                    title={team.name}
+                                    creator={team.creator}
+                                    teamCode={team.code}
+                                    avatars={[]}
+                                    isPriority={false}
+                                    isActive={activeAccount?.id === team.id}
+                                    onCopyCode={handleCopyCode}
+                                />
+                            ))
+                        ) : (
+                            <View style={styles.emptyState}>
+                                <MaterialCommunityIcons name="account-group-outline" size={48} color="#D1D5DB" />
+                                <Text style={styles.emptyStateText}>You are not part of any teams yet.</Text>
+                            </View>
+                        )}
+                    </View>
+                </ScrollView>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f8f6f6',
-    },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingBottom: 12,
         backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
@@ -465,8 +471,8 @@ const styles = StyleSheet.create({
     },
     closeButton: {
         position: 'absolute',
-        top: 16,
-        right: 16,
+        top: 10,
+        right: 10,
         width: 32,
         height: 32,
         borderRadius: 8,
@@ -649,40 +655,12 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#374151',
     },
-    footer: {
-        position: 'absolute',
-        bottom: 24,
-        left: 0,
-        right: 0,
-        alignItems: 'center',
-    },
-    manageTeamButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        height: 50,
-        paddingHorizontal: 24,
-        backgroundColor: 'white',
-        borderRadius: 25,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 8,
-        borderWidth: 1,
-        borderColor: '#E5E7EB'
-    },
-    manageTeamButtonText: {
-        color: '#2563EB',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
     card: {
         backgroundColor: '#1D4ED8',
         borderRadius: 16,
         padding: 20,
-        margin: 16,
+        marginHorizontal: 16,
+        marginTop: -10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.2,

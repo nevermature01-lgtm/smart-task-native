@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Animated } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import MenuScreen from './menu';
@@ -32,6 +32,7 @@ const HomeScreen = () => {
   const [userName, setUserName] = useState('User');
   const [userEmail, setUserEmail] = useState('');
   const slideAnim = useRef(new Animated.Value(-300)).current;
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -68,10 +69,10 @@ const HomeScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.body} edges={['top']}>
+    <View style={styles.body}>
       <View style={styles.mainContainer}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
-          <View style={styles.header}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+          <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
             <View style={styles.userInfo}>
               <HamburgerMenu onPress={() => setMenuVisible(true)} />
               <Text style={styles.userName}>Hi, {userName} 👋</Text>
@@ -159,7 +160,7 @@ const HomeScreen = () => {
 
         </ScrollView>
         
-        <View style={styles.floatingNav}>
+        <View style={[styles.floatingNav, { bottom: insets.bottom + 24 }]}>
           <TouchableOpacity style={styles.createButton}>
             <LinearGradient
               colors={['#d6bcfa', '#f6ad55']}
@@ -184,15 +185,14 @@ const HomeScreen = () => {
           onRequestClose={closeMenu}
         >
           <TouchableOpacity style={styles.menuOverlay} onPress={closeMenu} activeOpacity={1}>
-            <Animated.View style={[styles.menuContainer, { transform: [{ translateX: slideAnim }] }]}>
+            <Animated.View style={[styles.menuContainer, { transform: [{ translateX: slideAnim }], paddingTop: insets.top }]}>
               <MenuScreen userName={userName} userEmail={userEmail} closeMenu={closeMenu} />
             </Animated.View>
           </TouchableOpacity>
         </Modal>
 
-        <View style={styles.bottomIndicator} />
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     maxWidth: 448,
     marginHorizontal: 'auto',
     backgroundColor: 'white',
-    minHeight: '100%',
+    flex: 1,
     position: 'relative',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -381,7 +381,6 @@ const styles = StyleSheet.create({
   scratchPadContent: { minHeight: 100, borderBottomWidth: 1, borderColor: '#f3f4f6' },
   floatingNav: {
     position: 'absolute',
-    bottom: 24,
     left: '5%',
     right: '5%',
     backgroundColor: '#0a051f',
@@ -418,16 +417,6 @@ const styles = StyleSheet.create({
   createButtonText: { fontWeight: 'bold', color: '#0a051f', fontSize: 14 },
   navIcons: { flexDirection: 'row', gap: 16, paddingHorizontal: 16 },
   navIcon: { color: '#9ca3af' },
-  bottomIndicator: {
-    position: 'absolute',
-    bottom: 4,
-    left: '50%',
-    marginLeft: -64,
-    width: 128,
-    height: 4,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 2,
-  },
   menuOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
