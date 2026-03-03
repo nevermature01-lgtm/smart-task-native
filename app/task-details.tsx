@@ -1,23 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 
-const ChecklistItem = ({ item, onToggle, onTextChange }) => (
+const ChecklistItem = ({ item, onToggle, onTextChange, onRemove }) => (
     <View style={styles.checklistItem}>
-        <TouchableOpacity onPress={onToggle} style={styles.checkbox}>
+        <TouchableOpacity onPress={onToggle} style={[styles.checkbox, item.completed && styles.checkboxCompleted]}>
             {item.completed && <Feather name="check" size={14} color="#fff" />}
         </TouchableOpacity>
         <TextInput
             style={[styles.checklistInput, item.completed && styles.checklistInputCompleted]}
             value={item.text}
             onChangeText={onTextChange}
-            placeholder="Add a step..."
+            placeholder="Add a checklist item..."
             placeholderTextColor="#9CA3AF"
         />
+        <TouchableOpacity onPress={onRemove} style={styles.removeButton}>
+            <MaterialIcons name="close" size={20} color="#9CA3AF" />
+        </TouchableOpacity>
     </View>
 );
+
+const StepItem = ({ item, onTextChange, index, onRemove }) => (
+     <View style={styles.stepItem}>
+        <Text style={styles.stepNumber}>{index + 1}.</Text>
+        <TextInput
+            style={styles.stepInput}
+            value={item.text}
+            onChangeText={onTextChange}
+            placeholder="Describe this step"
+            placeholderTextColor="#9CA3AF"
+            multiline
+        />
+        <TouchableOpacity onPress={onRemove} style={styles.removeButton}>
+            <MaterialIcons name="close" size={20} color="#9CA3AF" />
+        </TouchableOpacity>
+    </View>
+)
 
 const TaskDetailsScreen = () => {
     const router = useRouter();
@@ -26,8 +46,21 @@ const TaskDetailsScreen = () => {
     
     const [taskName, setTaskName] = useState('');
     const [description, setDescription] = useState('');
+    const [steps, setSteps] = useState([{ id: 1, text: ''}]);
     const [checklist, setChecklist] = useState([{ id: 1, text: '', completed: false }]);
     const [priority, setPriority] = useState(5);
+
+    const addStep = () => {
+        setSteps([...steps, { id: Date.now(), text: ''}]);
+    };
+
+    const handleStepTextChange = (id, text) => {
+        setSteps(steps.map(item => item.id === id ? { ...item, text } : item));
+    };
+    
+    const removeStep = (id) => {
+        setSteps(steps.filter(item => item.id !== id));
+    };
 
     const addChecklistItem = () => {
         setChecklist([...checklist, { id: Date.now(), text: '', completed: false }]);
@@ -41,10 +74,13 @@ const TaskDetailsScreen = () => {
         setChecklist(checklist.map(item => item.id === id ? { ...item, text } : item));
     };
 
+    const removeChecklistItem = (id) => {
+        setChecklist(checklist.filter(item => item.id !== id));
+    };
+
     const handleCreateTask = () => {
-        // Logic to create the task with all the state data
-        console.log({ taskName, description, checklist, priority, assignedTo: memberId });
-        // maybe router.back() or navigate to a success screen
+        console.log({ taskName, description, steps, checklist, priority, assignedTo: memberId });
+        router.back();
     };
 
     return (
@@ -57,6 +93,9 @@ const TaskDetailsScreen = () => {
                     <MaterialIcons name="arrow-back" size={24} color="#1F2937" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>New Task</Text>
+                <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+                    <MaterialIcons name="close" size={24} color="#1F2937" />
+                </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.contentContainer} keyboardShouldPersistTaps="handled">
@@ -93,6 +132,23 @@ const TaskDetailsScreen = () => {
                     />
                 </View>
 
+                 <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Steps</Text>
+                    {steps.map((item, index) => (
+                        <StepItem 
+                            key={item.id}
+                            item={item}
+                            index={index}
+                            onTextChange={(text) => handleStepTextChange(item.id, text)}
+                            onRemove={() => removeStep(item.id)}
+                        />
+                    ))}
+                    <TouchableOpacity style={styles.addButton} onPress={addStep}>
+                         <MaterialIcons name="add" size={16} color="#4B5563" />
+                        <Text style={styles.addText}>Add Step</Text>
+                    </TouchableOpacity>
+                </View>
+
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>Checklist</Text>
                     {checklist.map(item => (
@@ -101,23 +157,35 @@ const TaskDetailsScreen = () => {
                             item={item}
                             onToggle={() => toggleChecklistItem(item.id)}
                             onTextChange={(text) => handleChecklistTextChange(item.id, text)}
+                            onRemove={() => removeChecklistItem(item.id)}
                         />
                     ))}
-                    <TouchableOpacity style={styles.addStepButton} onPress={addChecklistItem}>
+                    <TouchableOpacity style={styles.addButton} onPress={addChecklistItem}>
                          <MaterialIcons name="add" size={16} color="#4B5563" />
-                        <Text style={styles.addStepText}>Add Step</Text>
+                        <Text style={styles.addText}>Add Item</Text>
                     </TouchableOpacity>
                 </View>
 
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>Priority</Text>
-                    <View style={styles.prioritySelector}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         {[...Array(10)].map((_, i) => (
-                            <TouchableOpacity key={i} style={[styles.priorityButton, priority === i + 1 && styles.priorityButtonSelected]} onPress={() => setPriority(i + 1)}>
-                                <Text style={[styles.priorityButtonText, priority === i + 1 && styles.priorityButtonTextSelected]}>{i + 1}</Text>
+                            <TouchableOpacity
+                                key={i}
+                                style={[
+                                    styles.priorityButton,
+                                    priority === i + 1 && styles.priorityButtonSelected,
+                                ]}
+                                onPress={() => setPriority(i + 1)}>
+                                <Text style={[
+                                    styles.priorityButtonText,
+                                    priority === i + 1 && styles.priorityButtonTextSelected
+                                ]}>
+                                    {i + 1}
+                                </Text>
                             </TouchableOpacity>
                         ))}
-                    </View>
+                    </ScrollView>
                 </View>
             </ScrollView>
 
@@ -146,6 +214,14 @@ const styles = StyleSheet.create({
     backButton: {
         position: 'absolute',
         left: 16,
+        top: 10, 
+        padding: 4,
+        zIndex: 1,
+    },
+    closeButton: {
+        position: 'absolute',
+        right: 16,
+        top: 10,
         padding: 4,
         zIndex: 1,
     },
@@ -216,6 +292,26 @@ const styles = StyleSheet.create({
         height: 100,
         textAlignVertical: 'top',
     },
+    stepItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    stepNumber: {
+        fontSize: 16,
+        lineHeight: 24, 
+        fontWeight: '600',
+        color: '#6B7280',
+        marginRight: 8,
+    },
+    stepInput: {
+        flex: 1,
+        fontSize: 16,
+        color: '#374151',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E7EB',
+        paddingVertical: 8,
+    },
     checklistItem: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -248,39 +344,39 @@ const styles = StyleSheet.create({
         textDecorationLine: 'line-through',
         color: '#9CA3AF',
     },
-    addStepButton: {
+    addButton: {
         flexDirection: 'row',
         alignItems: 'center',
         marginTop: 10,
         padding: 6,
     },
-    addStepText: {
+    addText: {
         fontSize: 14,
         fontWeight: '600',
         color: '#4B5563',
         marginLeft: 6
     },
-    prioritySelector: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    removeButton: {
+        padding: 4,
+        marginLeft: 8,
     },
     priorityButton: {
-        width: 32, 
-        height: 32, 
-        borderRadius: 8,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#fff',
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: '#D1D5DB',
+        marginRight: 10,
     },
     priorityButtonSelected: {
         backgroundColor: '#2563EB',
         borderColor: '#2563EB',
     },
     priorityButtonText: {
-        fontSize: 14,
-        fontWeight: 'bold',
+        fontSize: 16,
+        fontWeight: '600',
         color: '#374151',
     },
     priorityButtonTextSelected: {
