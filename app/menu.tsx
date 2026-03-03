@@ -1,15 +1,8 @@
-
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
-
-const user = {
-  name: 'Adnan',
-  email: 'adnankhan75e@gmail.com',
-  avatar: null,
-};
 
 const menuItems = [
   { href: '/home', icon: 'home', text: 'Home', color: '#2563EB' },
@@ -18,9 +11,13 @@ const menuItems = [
   { href: '/settings', icon: 'settings', text: 'Settings', color: '#6366F1' },
 ];
 
-const CustomDrawerContent = ({ closeMenu }) => {
+const CustomDrawerContent = ({ closeMenu, user }) => {
   const router = useRouter();
   const pathname = usePathname();
+  
+  const userName = user ? (user.displayName || user.email.split('@')[0]) : 'Guest';
+  const userEmail = user ? user.email : '';
+  const initial = userName ? userName[0].toUpperCase() : '?';
 
   const handleNavigation = (href) => {
     router.push(href);
@@ -30,15 +27,12 @@ const CustomDrawerContent = ({ closeMenu }) => {
   };
 
   const handleLogout = () => {
-    // Perform logout logic here
     console.log('Logging out...');
     router.push('/login'); 
     if (closeMenu) {
       closeMenu();
     }
   };
-
-  const initial = user.name ? user.name[0].toUpperCase() : '?';
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -47,14 +41,14 @@ const CustomDrawerContent = ({ closeMenu }) => {
       </TouchableOpacity>
       <View style={styles.profileSection}>
         <View style={styles.avatar}>
-          {user.avatar ? (
-            <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+          {user && user.photoURL ? (
+            <Image source={{ uri: user.photoURL }} style={styles.avatarImage} />
           ) : (
             <Text style={styles.avatarInitial}>{initial}</Text>
           )}
         </View>
-        <Text style={styles.userName}>{user.name}</Text>
-        <Text style={styles.userEmail}>{user.email}</Text>
+        <Text style={styles.userName}>{userName}</Text>
+        <Text style={styles.userEmail}>{userEmail}</Text>
       </View>
 
       <View style={styles.menuItemsContainer}>

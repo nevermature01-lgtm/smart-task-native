@@ -1,11 +1,15 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
+import { auth, db } from '../firebase'; // Import auth and db from firebase
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import MenuScreen from './menu';
 
-const HamburgerMenu = () => (
-  <TouchableOpacity style={styles.hamburgerContainer}>
+const HamburgerMenu = ({ onPress }) => (
+  <TouchableOpacity onPress={onPress} style={styles.hamburgerContainer}>
     <View style={styles.hamburgerBar} />
     <View style={styles.hamburgerBar} />
     <View style={styles.hamburgerBar} />
@@ -24,14 +28,44 @@ const ActionButton = ({ icon, label, color, bg }) => (
 );
 
 const HomeScreen = () => {
+  const [isMenuVisible, setMenuVisible] = useState(false);
+  const [user, setUser] = useState(null);
+  const [userName, setUserName] = useState('Guest');
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        let name = '';
+        if (userDoc.exists()) {
+          name = userDoc.data().firstName;
+        } else {
+          name = currentUser.displayName || currentUser.email.split('@')[0];
+        }
+        const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
+        setUserName(capitalizedName);
+      } else {
+        setUser(null);
+        setUserName('Guest');
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const toggleMenu = () => {
+    setMenuVisible(!isMenuVisible);
+  };
+
   return (
     <SafeAreaView style={styles.body} edges={['top']}>
       <View style={styles.mainContainer}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
           <View style={styles.header}>
             <View style={styles.userInfo}>
-              <HamburgerMenu />
-              <Text style={styles.userName}>Hi, John 👋</Text>
+              <HamburgerMenu onPress={toggleMenu} />
             </View>
             <View style={styles.headerActions}>
               <TouchableOpacity style={[styles.iconButton, styles.customShadow]}>
@@ -45,14 +79,17 @@ const HomeScreen = () => {
           </View>
 
           <View style={styles.greetingSection}>
-            <Text style={styles.mainTitle}>Dashboard</Text>
+            <Text style={styles.mainTitle}>Hi, {userName} 👋</Text>
           </View>
 
-          <View style={styles.actionsSlider}>
-            <ActionButton icon="check-square" label="Tasks" color="#ec4899" bg="#fce7f3" />
-            <ActionButton icon="users" label="Leads" color="#a78bfa" bg="#f5f3ff" />
-            <ActionButton icon="briefcase" label="Projects" color="#60a5fa" bg="#eff6ff" />
-            <ActionButton icon="dollar-sign" label="Finance" color="#fb923c" bg="#fff7ed" />
+          <View>
+            <Text style={styles.sectionTitle}>Actions</Text>
+            <View style={styles.actionsSlider}>
+              <ActionButton icon="check-square" label="Tasks" color="#ec4899" bg="#fce7f3" />
+              <ActionButton icon="users" label="Leads" color="#a78bfa" bg="#f5f3ff" />
+              <ActionButton icon="briefcase" label="Projects" color="#60a5fa" bg="#eff6ff" />
+              <ActionButton icon="dollar-sign" label="Finance" color="#fb923c" bg="#fff7ed" />
+            </View>
           </View>
 
           <View style={styles.primaryActions}>
@@ -66,6 +103,18 @@ const HomeScreen = () => {
           </View>
         </ScrollView>
       </View>
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isMenuVisible}
+        onRequestClose={toggleMenu}
+      >
+        <TouchableOpacity style={styles.menuOverlay} onPress={toggleMenu} activeOpacity={1}>
+            <View style={styles.menuContainer}>
+                <MenuScreen closeMenu={toggleMenu} user={user} />
+            </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -151,6 +200,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginTop: 32,
   },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#374151',
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
   taskBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -190,6 +246,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   actionLabel: { fontSize: 14, fontWeight: '500', color: '#4b5563' },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  menuContainer: {
+    width: '80%',
+    height: '100%',
+    backgroundColor: '#f9fafb',
+  },
 });
 
 export default HomeScreen;
