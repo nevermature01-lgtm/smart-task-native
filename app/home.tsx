@@ -1,15 +1,11 @@
-
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Animated, StatusBar } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
-import MenuScreen from './menu';
-import { auth, db } from '../firebase';
-import { doc, getDoc } from 'firebase/firestore';
 
-const HamburgerMenu = ({ onPress }) => (
-  <TouchableOpacity onPress={onPress} style={styles.hamburgerContainer}>
+const HamburgerMenu = () => (
+  <TouchableOpacity style={styles.hamburgerContainer}>
     <View style={styles.hamburgerBar} />
     <View style={styles.hamburgerBar} />
     <View style={styles.hamburgerBar} />
@@ -28,133 +24,14 @@ const ActionButton = ({ icon, label, color, bg }) => (
 );
 
 const HomeScreen = () => {
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [userName, setUserName] = useState('User');
-  const [userEmail, setUserEmail] = useState('');
-  const slideAnim = useRef(new Animated.Value(-300)).current;
-  const insets = useSafeAreaInsets();
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      const user = auth.currentUser;
-      if (user) {
-        setUserEmail(user.email);
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-          setUserName(userDoc.data().firstName);
-        }
-      }
-    };
-    fetchUserData();
-  }, []);
-
-  useEffect(() => {
-    if (menuVisible) {
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(slideAnim, {
-        toValue: -300,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [menuVisible]);
-
-  const closeMenu = () => {
-    setMenuVisible(false);
-  };
-
   return (
-    <View style={styles.body}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={styles.body} edges={['top']}>
       <View style={styles.mainContainer}>
-        <ScrollView 
-            showsVerticalScrollIndicator={false} 
-            contentContainerStyle={{ 
-                paddingBottom: 120, 
-                paddingTop: insets.top + 80 
-            }}>
-
-          <View style={styles.greetingSection}>
-            <Text style={styles.mainTitle}>My Evernote</Text>
-            <Text style={styles.dateText}>Today January 11, 2027</Text>
-          </View>
-
-          <View style={styles.primaryActions}>
-            <LinearGradient
-              colors={['#b794f4', '#9061f9']}
-              style={styles.actionCard}
-            >
-              <View style={styles.cardIcon}>
-                <Feather name="plus" size={24} color="white" />
-              </View>
-              <View>
-                <Text style={styles.cardSubtitle}>Create</Text>
-                <Text style={styles.cardTitle}>New Note</Text>
-              </View>
-              <View style={styles.cardDecorator} />
-            </LinearGradient>
-            <LinearGradient
-              colors={['#fbd38d', '#ed8936']}
-              style={styles.actionCard}
-            >
-              <View style={styles.cardIcon}>
-                <Feather name="plus" size={24} color="white" />
-              </View>
-              <View>
-                <Text style={styles.cardSubtitle}>Create</Text>
-                <Text style={styles.cardTitle}>New Task</Text>
-              </View>
-              <View style={styles.cardDecorator} />
-            </LinearGradient>
-          </View>
-
-          <View style={styles.progressSection}>
-            <View style={[styles.progressCard, styles.customShadow]}>
-              <View>
-                <Text style={styles.progressTitle}>Complete Your</Text>
-                <Text style={styles.progressSubtitle}>Profile Setup</Text>
-              </View>
-              <Text style={styles.progressPercentage}>80% Done</Text>
-            </View>
-            <View style={styles.progressBarContainer}>
-               <LinearGradient
-                colors={['#b794f4', '#fbd38d']}
-                style={styles.progressBar}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              />
-            </View>
-          </View>
-          
-          <View style={styles.actionsSlider}>
-            <Text style={styles.sectionTitle}>Actions</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-              <ActionButton icon="book-open" label="Notebook" color="#ec4899" bg="#fce7f3" />
-              <ActionButton icon="camera" label="Camera" color="#a78bfa" bg="#f5f3ff" />
-              <ActionButton icon="mic" label="Audio" color="#60a5fa" bg="#eff6ff" />
-              <ActionButton icon="calendar" label="Event" color="#fb923c" bg="#fff7ed" />
-            </ScrollView>
-          </View>
-
-          <View style={styles.scratchPadSection}>
-            <View style={styles.scratchPadHeader}>
-              <Feather name="edit-2" size={20} color="#9ca3af" />
-              <Text style={styles.scratchPadTitle}>Scratch pad</Text>
-            </View>
-            <View style={styles.scratchPadContent} />
-          </View>
-
-        </ScrollView>
-
-        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
+          <View style={styles.header}>
             <View style={styles.userInfo}>
-              <HamburgerMenu onPress={() => setMenuVisible(true)} />
-              <Text style={styles.userName}>Hi, {userName} 👋</Text>
+              <HamburgerMenu />
+              <Text style={styles.userName}>Hi, John 👋</Text>
             </View>
             <View style={styles.headerActions}>
               <TouchableOpacity style={[styles.iconButton, styles.customShadow]}>
@@ -165,51 +42,41 @@ const HomeScreen = () => {
                 <View style={styles.notificationBadge} />
               </TouchableOpacity>
             </View>
-        </View>
-        
-        <View style={[styles.floatingNav, { bottom: insets.bottom + 24 }]}>
-          <TouchableOpacity style={styles.createButton}>
-            <LinearGradient
-              colors={['#d6bcfa', '#f6ad55']}
-              style={styles.createButtonIcon}
-            >
-              <Feather name="plus" size={24} color="white" />
-            </LinearGradient>
-            <Text style={styles.createButtonText}>Create</Text>
-          </TouchableOpacity>
-          <View style={styles.navIcons}>
-            <TouchableOpacity><Feather name="file-text" size={24} style={styles.navIcon} /></TouchableOpacity>
-            <TouchableOpacity><Feather name="briefcase" size={24} style={styles.navIcon} /></TouchableOpacity>
-            <TouchableOpacity><Feather name="check-square" size={24} style={styles.navIcon} /></TouchableOpacity>
-            <TouchableOpacity><Feather name="calendar" size={24} style={styles.navIcon} /></TouchableOpacity>
           </View>
-        </View>
-        
-        <Modal
-          animationType="fade"
-          transparent
-          visible={menuVisible}
-          onRequestClose={closeMenu}
-        >
-          <TouchableOpacity style={styles.menuOverlay} onPress={closeMenu} activeOpacity={1}>
-            <Animated.View style={[styles.menuContainer, { transform: [{ translateX: slideAnim }], paddingTop: insets.top }]}>
-              <MenuScreen userName={userName} userEmail={userEmail} closeMenu={closeMenu} />
-            </Animated.View>
-          </TouchableOpacity>
-        </Modal>
 
+          <View style={styles.greetingSection}>
+            <Text style={styles.mainTitle}>Dashboard</Text>
+          </View>
+
+          <View style={styles.actionsSlider}>
+            <ActionButton icon="check-square" label="Tasks" color="#ec4899" bg="#fce7f3" />
+            <ActionButton icon="users" label="Leads" color="#a78bfa" bg="#f5f3ff" />
+            <ActionButton icon="briefcase" label="Projects" color="#60a5fa" bg="#eff6ff" />
+            <ActionButton icon="dollar-sign" label="Finance" color="#fb923c" bg="#fff7ed" />
+          </View>
+
+          <View style={styles.primaryActions}>
+            <LinearGradient
+              colors={['#f3f4f6', '#e5e7eb']}
+              style={styles.taskBar}
+            >
+              <Text style={styles.taskTitle}>Ongoing Tasks</Text>
+              <Feather name="chevron-right" size={24} color="#4b5563" />
+            </LinearGradient>
+          </View>
+        </ScrollView>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  body: { flex: 1, backgroundColor: '#f9fafb', paddingVertical: 20 },
+  body: { flex: 1, backgroundColor: '#f9fafb' },
   mainContainer: {
     maxWidth: 448,
     marginHorizontal: 'auto',
     backgroundColor: 'white',
-    flex: 1,
+    minHeight: '100%',
     position: 'relative',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
@@ -217,20 +84,13 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 20,
     overflow: 'hidden',
-    borderRadius: 30,
   },
   header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
     paddingHorizontal: 24,
-    paddingBottom: 16,
+    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    zIndex: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
   },
   userInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   hamburgerContainer: {
@@ -287,82 +147,30 @@ const styles = StyleSheet.create({
   },
   greetingSection: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24 },
   mainTitle: { fontSize: 30, fontWeight: '800', color: '#1e293b' },
-  dateText: { color: '#6b7280', fontWeight: '500', marginTop: 4 },
   primaryActions: {
     paddingHorizontal: 24,
+    marginTop: 32,
+  },
+  taskBar: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+  },
+  taskTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  actionsSlider: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
     gap: 16,
   },
-  actionCard: {
-    flex: 1,
-    aspectRatio: 1,
-    borderRadius: 32,
-    padding: 20,
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 10,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  cardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardSubtitle: { fontSize: 14, fontWeight: '300', opacity: 0.9, color: 'white' },
-  cardTitle: { fontSize: 20, fontWeight: 'bold', color: 'white' },
-  cardDecorator: {
-    position: 'absolute',
-    right: -16,
-    bottom: -16,
-    width: 80,
-    height: 80,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 40,
-  },
-  progressSection: { paddingHorizontal: 24, marginTop: 32 },
-  progressCard: {
-    backgroundColor: 'white',
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-  },
-  progressTitle: { fontWeight: 'bold', color: '#1e293b' },
-  progressSubtitle: { color: '#6b7280', fontSize: 12, fontWeight: '400' },
-  progressPercentage: { fontSize: 12, fontWeight: 'bold', color: '#4b5563' },
-  progressBarContainer: {
-    marginTop: -8,
-    zIndex: -1,
-    paddingHorizontal: 10,
-    height: 20,
-    justifyContent: 'center',
-  },
-  progressBar: {
-    height: 12,
-    borderRadius: 6,
-    width: '80%',
-  },
-  actionsSlider: { marginTop: 32 },
-  sectionTitle: {
-    paddingHorizontal: 24,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    fontSize: 18,
-    marginBottom: 16,
-  },
   actionItem: {
-    width: 96,
     alignItems: 'center',
     gap: 8,
   },
@@ -382,66 +190,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   actionLabel: { fontSize: 14, fontWeight: '500', color: '#4b5563' },
-  scratchPadSection: { paddingHorizontal: 24, marginTop: 24, paddingBottom: 80 },
-  scratchPadHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  scratchPadTitle: {
-    fontWeight: 'bold',
-    color: '#9ca3af',
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  scratchPadContent: { minHeight: 100, borderBottomWidth: 1, borderColor: '#f3f4f6' },
-  floatingNav: {
-    position: 'absolute',
-    left: '5%',
-    right: '5%',
-    backgroundColor: '#0a051f',
-    borderRadius: 999,
-    padding: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 20,
-    zIndex: 50,
-  },
-  createButton: {
-    backgroundColor: 'white',
-    borderRadius: 999,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingRight: 24,
-    paddingLeft: 4,
-    paddingVertical: 4,
-    height: 48,
-  },
-  createButtonIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  createButtonText: { fontWeight: 'bold', color: '#0a051f', fontSize: 14 },
-  navIcons: { flexDirection: 'row', gap: 16, paddingHorizontal: 16 },
-  navIcon: { color: '#9ca3af' },
-  menuOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  menuContainer: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    width: 300,
-    backgroundColor: '#F9FAFB',
-  },
 });
 
 export default HomeScreen;
