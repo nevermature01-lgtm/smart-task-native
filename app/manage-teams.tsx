@@ -109,33 +109,41 @@ const ManageTeamsScreen = () => {
             </View>
             <ScrollView 
                 style={styles.scrollView}
-                contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+                contentContainerStyle={[{ paddingBottom: insets.bottom + 20 }, teams.length === 0 && styles.emptyScrollViewContent]}
             >
-                <View style={styles.teamsList}>
-                    {teams.map(team => (
-                        <View key={team.id} style={styles.teamListItem}>
-                            <View style={styles.teamInfo}>
-                                <Text style={styles.teamName}>{team.name}</Text>
-                                <Text style={styles.teamCreator}>Created by {team.creator}</Text>
+                {teams.length > 0 ? (
+                    <View style={styles.teamsList}>
+                        {teams.map(team => (
+                            <View key={team.id} style={styles.teamListItem}>
+                                <View style={styles.teamInfo}>
+                                    <Text style={styles.teamName}>{team.name}</Text>
+                                    <Text style={styles.teamCreator}>Created by {team.creator}</Text>
+                                </View>
+                                {team.creatorId === auth.currentUser.uid ? (
+                                    <TouchableOpacity 
+                                        style={styles.deleteButton} 
+                                        onPress={() => openDeleteModal(team)}
+                                    >
+                                        <MaterialIcons name="delete-outline" size={22} color="#EF4444" />
+                                    </TouchableOpacity>
+                                ) : (
+                                    <TouchableOpacity 
+                                        style={styles.leaveButton} 
+                                        onPress={() => openLeaveModal(team)}
+                                    >
+                                        <MaterialIcons name="exit-to-app" size={22} color="#4B5563" />
+                                    </TouchableOpacity>
+                                )}
                             </View>
-                            {team.creatorId === auth.currentUser.uid ? (
-                                <TouchableOpacity 
-                                    style={styles.deleteButton} 
-                                    onPress={() => openDeleteModal(team)}
-                                >
-                                    <MaterialIcons name="delete-outline" size={22} color="#EF4444" />
-                                </TouchableOpacity>
-                            ) : (
-                                <TouchableOpacity 
-                                    style={styles.leaveButton} 
-                                    onPress={() => openLeaveModal(team)}
-                                >
-                                    <MaterialIcons name="exit-to-app" size={22} color="#4B5563" />
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                    ))}
-                </View>
+                        ))}
+                    </View>
+                ) : (
+                    <View style={styles.emptyStateContainer}>
+                        <MaterialIcons name="people-outline" size={64} color="#D1D5DB" />
+                        <Text style={styles.emptyStateText}>No teams found</Text>
+                        <Text style={styles.emptyStateSubText}>You are not part of any teams yet. Create or join a team to get started.</Text>
+                    </View>
+                )}
             </ScrollView>
 
             {/* Delete Team Modal */}
@@ -239,6 +247,28 @@ const styles = StyleSheet.create({
     },
     scrollView: {
         flex: 1,
+    },
+    emptyScrollViewContent: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    emptyStateContainer: {
+        alignItems: 'center',
+        paddingHorizontal: 32,
+    },
+    emptyStateText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#374151',
+        marginTop: 20,
+        textAlign: 'center',
+    },
+    emptyStateSubText: {
+        fontSize: 14,
+        color: '#6B7280',
+        marginTop: 8,
+        textAlign: 'center',
     },
     teamsList: {
         padding: 16,
