@@ -4,6 +4,7 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
 import { View, ActivityIndicator } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const InitialLayout = () => {
     const [user, setUser] = useState(null);
@@ -46,5 +47,9 @@ const InitialLayout = () => {
 };
 
 export default function RootLayout() {
-    return <InitialLayout />;
+    return (
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <InitialLayout />
+        </GestureHandlerRootView>
+    );
 }

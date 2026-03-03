@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { db, auth } from '../firebase';
-import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const MemberCard = ({ member, onPress }) => (
@@ -27,6 +27,7 @@ const LockedView = () => (
 const AssignTaskScreen = () => {
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { taskId } = useLocalSearchParams();
     const [teamMembers, setTeamMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [currentUserRole, setCurrentUserRole] = useState('member');
@@ -80,11 +81,27 @@ const AssignTaskScreen = () => {
         fetchTeamData();
     }, []);
 
-    const handleMemberPress = (member) => {
-        router.push({
-            pathname: '/task-details',
-            params: { memberId: member.id, memberName: member.name, teamId: teamId }
-        });
+    const handleMemberPress = async (member) => {
+        if (taskId) {
+            const taskRef = doc(db, 'tasks', taskId);
+            const taskSnap = await getDoc(taskRef);
+            if (taskSnap.exists()) {
+                const taskData = taskSnap.data();
+                const personBeingReplaced = { id: taskData.assignedToId, name: taskData.assignedToName };
+    
+                await updateDoc(taskRef, {
+                    assignedToId: member.id,
+                    assignedToName: member.name,
+                    assignmentChain: arrayUnion(personBeingReplaced)
+                });
+            }
+            router.back();
+        } else {
+            router.push({
+                pathname: '/task-details',
+                params: { memberId: member.id, memberName: member.name, teamId: teamId }
+            });
+        }
     };
 
     const renderContent = () => {
