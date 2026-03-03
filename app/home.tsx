@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     width: 300,
-    backgroundColor: '#111827',
+    backgroundColor: '#F9FAFB',
   },
 });
 
