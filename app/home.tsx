@@ -39,6 +39,17 @@ const ActionButton = ({ icon, label, color, bg }) => (
   </View>
 );
 
+const MemberCard = ({ name }) => (
+    <View style={styles.actionItem}>
+        <View style={[styles.actionButton, styles.customShadow]}>
+            <View style={[styles.actionIconContainer, { backgroundColor: '#e0f2fe' }]}>
+                <Feather name="user" size={32} color="#0ea5e9" />
+            </View>
+        </View>
+        <Text style={styles.actionLabel}>{name}</Text>
+    </View>
+);
+
 const HomeScreen = () => {
   const router = useRouter();
   const [isMenuVisible, setMenuVisible] = useState(false);
@@ -163,6 +174,19 @@ const HomeScreen = () => {
               <Feather name="chevron-right" size={24} color="#4b5563" />
             </LinearGradient>
           </View>
+          
+          {activeAccount?.type === 'team' && (
+            <View style={{ marginTop: 32 }}>
+              <Text style={styles.sectionTitle}>Members</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, gap: 16 }}>
+                <MemberCard name="John Doe" />
+                <MemberCard name="Jane Smith" />
+                <MemberCard name="Peter Jones" />
+                <MemberCard name="Susan Williams" />
+                <MemberCard name="David Brown" />
+              </ScrollView>
+            </View>
+          )}
         </ScrollView>
         <TouchableOpacity style={styles.fab} onPress={() => router.push('/assign-task')}>
             <LinearGradient
