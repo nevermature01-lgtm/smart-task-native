@@ -15,15 +15,17 @@ const TeamListItem = ({ title, creator, avatars, isPriority, onPress, isActive, 
             <View style={{ flex: 1, marginRight: 8 }}>
                 <Text style={styles.teamListTitle}>{title}</Text>
                 <Text style={styles.teamListMembers}>Created by {creator}</Text>
-                {teamCode &&
-                    <TouchableOpacity onPress={(e) => { e.stopPropagation(); onCopyCode(teamCode); }} style={styles.teamCodeWrapper}>
+                {teamCode && (
+                    <View style={styles.teamCodeWrapper}>
                         <View style={styles.teamCodeContainer}>
                             <Text style={styles.teamCodeLabel}>Team Code</Text>
                             <Text style={styles.teamCode}>{teamCode}</Text>
-                            <MaterialIcons name="content-copy" size={14} color="#6B7280" />
+                            <TouchableOpacity onPress={(e) => { e.stopPropagation(); onCopyCode(teamCode); }} style={styles.copyIcon}>
+                                <MaterialIcons name="content-copy" size={14} color="#6B7280" />
+                            </TouchableOpacity>
                         </View>
-                    </TouchableOpacity>
-                }
+                    </View>
+                )}
             </View>
             <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
                 <View style={styles.avatarStack}>
@@ -750,6 +752,9 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '600',
         color: '#374151',
+    },
+    copyIcon: {
+        padding: 4,
     },
     card: {
         backgroundColor: '#1D4ED8',
