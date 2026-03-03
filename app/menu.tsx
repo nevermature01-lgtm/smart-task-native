@@ -43,7 +43,7 @@ const CustomDrawerContent = ({ closeMenu }) => {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <TouchableOpacity style={styles.closeButton} onPress={closeMenu}>
-          <Feather name="x" size={24} color="#9CA3AF" />
+          <Feather name="x" size={20} color="#4B5563" />
       </TouchableOpacity>
       <View style={styles.profileSection}>
         <View style={styles.avatar}>
@@ -105,18 +105,26 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 40,
+    top: 45,
     right: 20,
     zIndex: 1,
-    padding: 10
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   profileSection: {
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 30,
     marginTop: 40,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB'
   },
   avatar: {
     width: 80,
@@ -158,9 +166,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     marginVertical: 2,
   },
-  activeMenuItem: (color) => ({
-    backgroundColor: '#F9FAFB',
-  }),
+  activeMenuItem: (color) => ({}),
   iconContainer: {
     width: 40,
     height: 40,
@@ -190,8 +196,6 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 20,
     paddingBottom: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB'
   },
   logoutButton: {
     flexDirection: 'row',
