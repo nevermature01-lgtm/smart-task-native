@@ -1,28 +1,50 @@
 
-import { Stack } from 'expo-router';
-import { useFonts, Inter_400Regular, Inter_700Bold } from '@expo-google-fonts/inter';
+import React, { useState, useEffect } from 'react';
+import { Slot, useRouter, useSegments } from 'expo-router';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../firebase';
+import { View, ActivityIndicator } from 'react-native';
+
+const InitialLayout = () => {
+    const [user, setUser] = useState(null);
+    const [initializing, setInitializing] = useState(true);
+    const router = useRouter();
+    const segments = useSegments();
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+            if (initializing) {
+                setInitializing(false);
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    useEffect(() => {
+        if (initializing) return;
+
+        const inAuthGroup = segments[0] === 'login';
+
+        if (user && inAuthGroup) {
+            router.replace('/home');
+        } else if (!user && !inAuthGroup) {
+            router.replace('/login');
+        }
+    }, [user, segments, initializing]);
+
+    if (initializing) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" color="#999999" />
+            </View>
+        );
+    }
+
+    return <Slot />;
+};
 
 export default function RootLayout() {
-  let [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_700Bold,
-  });
-
-  if (!fontsLoaded) {
-    return null;
-  }
-
-  return (
-    <Stack>
-      <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="home" options={{ headerShown: false }} />
-      <Stack.Screen name="menu" options={{ headerShown: false }} />
-      <Stack.Screen name="switch-account" options={{ headerShown: false }} />
-      <Stack.Screen name="manage-teams" options={{ headerShown: false }} />
-      <Stack.Screen name="welcome" options={{ headerShown: false }} />
-      <Stack.Screen name="login" options={{ headerShown: false }} />
-      <Stack.Screen name="signup" options={{ headerShown: false }} />
-      <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
-    </Stack>
-  );
+    return <InitialLayout />;
 }
