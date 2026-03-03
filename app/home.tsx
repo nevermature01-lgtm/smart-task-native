@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
@@ -39,26 +39,16 @@ const ActionButton = ({ icon, label, color, bg }) => (
   </View>
 );
 
-const TaskCard = ({ taskName, priority }) => {
-    const priorityColor = {
-        High: '#EF4444',
-        Medium: '#F97316',
-        Low: '#22C55E'
-    };
-
-    return (
-        <TouchableOpacity style={styles.taskCard}>
-            <View>
-                <Text style={styles.taskName}>{taskName}</Text>
-                <Text style={{ ...styles.taskPriority, color: priorityColor[priority] || '#6B7280' }}>
-                    {priority} Priority
-                </Text>
+const MemberCard = ({ name }) => (
+    <View style={styles.actionItem}>
+        <View style={[styles.actionButton, styles.customShadow]}>
+            <View style={[styles.actionIconContainer, { backgroundColor: '#e0f2fe' }]}>
+                <Feather name="user" size={32} color="#0ea5e9" />
             </View>
-            <Feather name="chevron-right" size={24} color="#9CA3AF" />
-        </TouchableOpacity>
-    )
-};
-
+        </View>
+        <Text style={styles.actionLabel}>{name}</Text>
+    </View>
+);
 
 const HomeScreen = () => {
   const router = useRouter();
@@ -69,12 +59,9 @@ const HomeScreen = () => {
   const [teamDetails, setTeamDetails] = useState(null);
   const [toastConfig, setToastConfig] = useState({ visible: false, message: '', type: 'success' });
   const toastTimeout = useRef(null);
-  const [tasks, setTasks] = useState([]);
 
   useEffect(() => {
-    let unsubscribeTasks = () => {};
-
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         const userDocRef = doc(db, 'users', currentUser.uid);
@@ -89,41 +76,31 @@ const HomeScreen = () => {
         setUserName(capitalizedName);
 
         const storedActiveAccount = await AsyncStorage.getItem('activeAccount');
-        const account = storedActiveAccount ? JSON.parse(storedActiveAccount) : { type: 'personal' };
-        setActiveAccount(account);
-
-        const tasksCollectionRef = collection(db, 'tasks');
-        let tasksQuery;
-
-        if (account.type === 'team') {
-          const teamDocRef = doc(db, 'teams', account.id);
-          const teamDoc = await getDoc(teamDocRef);
-          if (teamDoc.exists()) {
-            setTeamDetails(teamDoc.data());
+        if (storedActiveAccount) {
+          const account = JSON.parse(storedActiveAccount);
+          setActiveAccount(account);
+          if (account.type === 'team') {
+            const teamDocRef = doc(db, 'teams', account.id);
+            const teamDoc = await getDoc(teamDocRef);
+            if (teamDoc.exists()) {
+              setTeamDetails(teamDoc.data());
+            }
+          } else {
+            setTeamDetails(null);
           }
-          tasksQuery = query(tasksCollectionRef, where('teamId', '==', account.id));
         } else {
-          setTeamDetails(null);
-          tasksQuery = query(tasksCollectionRef, where('assignee', '==', currentUser.uid), where('teamId', '==', null));
+          setActiveAccount({ type: 'personal' });
         }
-
-        unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
-          const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setTasks(tasksData);
-        });
-
       } else {
         setUser(null);
         setUserName('Guest');
         setActiveAccount(null);
         setTeamDetails(null);
-        setTasks([]);
       }
     });
 
     return () => {
-      unsubscribeAuth();
-      unsubscribeTasks();
+      unsubscribe();
       if (toastTimeout.current) {
         clearTimeout(toastTimeout.current);
       }
@@ -190,20 +167,26 @@ const HomeScreen = () => {
 
           <View style={styles.primaryActions}>
             <LinearGradient
-              colors={['#2563EB', '#1D4ED8']}
+              colors={['#f3f4f6', '#e5e7eb']}
               style={styles.taskBar}
             >
               <Text style={styles.taskTitle}>Ongoing Tasks</Text>
-              <Feather name="chevron-right" size={24} color="white" />
+              <Feather name="chevron-right" size={24} color="#4b5563" />
             </LinearGradient>
           </View>
-
-          <View style={{paddingHorizontal: 24, marginTop: 16, gap: 12}}>
-            {tasks.map(task => (
-                <TaskCard key={task.id} taskName={task.name} priority={task.priority} />
-            ))}
-          </View>
           
+          {activeAccount?.type === 'team' && (
+            <View style={{ marginTop: 32 }}>
+              <Text style={styles.sectionTitle}>Members</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, gap: 16 }}>
+                <MemberCard name="John Doe" />
+                <MemberCard name="Jane Smith" />
+                <MemberCard name="Peter Jones" />
+                <MemberCard name="Susan Williams" />
+                <MemberCard name="David Brown" />
+              </ScrollView>
+            </View>
+          )}
         </ScrollView>
         <TouchableOpacity style={styles.fab} onPress={() => router.push('/assign-task')}>
             <LinearGradient
@@ -379,7 +362,7 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: 'white',
+    color: '#374151',
   },
   actionsSlider: {
     flexDirection: 'row',
@@ -435,26 +418,6 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  taskCard: {
-    backgroundColor: '#F9FAFB',
-    padding: 16,
-    borderRadius: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  taskName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  taskPriority: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginTop: 4,
   },
 });
 
