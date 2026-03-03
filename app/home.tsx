@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
@@ -8,7 +8,17 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
+import { useRouter } from 'expo-router';
 import MenuScreen from './menu';
+
+const CustomToast = ({ message, visible, type }) => {
+    if (!visible) return null;
+    return (
+        <Animated.View style={[styles.toast, type === 'success' ? styles.toastSuccess : styles.toastError]}>
+            <Text style={styles.toastText}>{message}</Text>
+        </Animated.View>
+    );
+};
 
 const HamburgerMenu = ({ onPress }) => (
   <TouchableOpacity onPress={onPress} style={styles.hamburgerContainer}>
@@ -30,11 +40,14 @@ const ActionButton = ({ icon, label, color, bg }) => (
 );
 
 const HomeScreen = () => {
+  const router = useRouter();
   const [isMenuVisible, setMenuVisible] = useState(false);
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState('Guest');
   const [activeAccount, setActiveAccount] = useState(null);
   const [teamDetails, setTeamDetails] = useState(null);
+  const [toastConfig, setToastConfig] = useState({ visible: false, message: '', type: 'success' });
+  const toastTimeout = useRef(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -75,8 +88,23 @@ const HomeScreen = () => {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (toastTimeout.current) {
+        clearTimeout(toastTimeout.current);
+      }
+    };
   }, []);
+
+  const showToast = (message, type = 'success') => {
+    if (toastTimeout.current) {
+        clearTimeout(toastTimeout.current);
+    }
+    setToastConfig({ visible: true, message, type });
+    toastTimeout.current = setTimeout(() => {
+        setToastConfig({ visible: false, message: '', type: '' });
+    }, 3000);
+  };
 
   const toggleMenu = () => {
     setMenuVisible(!isMenuVisible);
@@ -84,11 +112,12 @@ const HomeScreen = () => {
 
   const handleCopyCode = async (code) => {
     await Clipboard.setStringAsync(code);
-    alert('Team code copied to clipboard!');
+    showToast('Team code copied to clipboard!', 'success');
   };
 
   return (
     <SafeAreaView style={styles.body} edges={['top']}>
+      <CustomToast visible={toastConfig.visible} message={toastConfig.message} type={toastConfig.type} />
       <View style={styles.mainContainer}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
           <View style={styles.header}>
@@ -144,6 +173,14 @@ const HomeScreen = () => {
             </LinearGradient>
           </View>
         </ScrollView>
+        <TouchableOpacity style={styles.fab} onPress={() => router.push('/assign-task')}>
+            <LinearGradient
+                colors={['#2563EB', '#1D4ED8']}
+                style={styles.fabGradient}
+            >
+                <Feather name="plus" size={28} color="white" />
+            </LinearGradient>
+        </TouchableOpacity>
       </View>
       <Modal
         animationType="fade"
@@ -175,6 +212,33 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 20,
     overflow: 'hidden',
+  },
+  toast: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    right: 20,
+    padding: 15,
+    borderRadius: 10,
+    zIndex: 1000,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  toastSuccess: {
+      backgroundColor: '#4CAF50',
+  },
+  toastError: {
+      backgroundColor: '#F44336',
+  },
+  toastText: {
+      color: '#fff',
+      fontSize: 14,
+      fontWeight: '600',
   },
   header: {
     paddingHorizontal: 24,
@@ -319,6 +383,26 @@ const styles = StyleSheet.create({
     width: '80%',
     height: '100%',
     backgroundColor: '#f9fafb',
+  },
+  fab: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    bottom: 60,
+    right: 30,
+    shadowColor: '#1D4ED8',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  fabGradient: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
