@@ -1,8 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, collection, addDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 const ChecklistItem = ({ item, onToggle, onTextChange, onRemove }) => (
     <View style={styles.checklistItem}>
@@ -39,10 +41,11 @@ const StepItem = ({ item, onTextChange, index, onRemove }) => (
     </View>
 )
 
+
 const TaskDetailsScreen = () => {
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const { memberName, memberId } = useLocalSearchParams();
+    const { memberName, memberId, teamId } = useLocalSearchParams();
     
     const [taskName, setTaskName] = useState('');
     const [description, setDescription] = useState('');
@@ -50,12 +53,15 @@ const TaskDetailsScreen = () => {
     const [checklist, setChecklist] = useState([{ id: 1, text: '', completed: false }]);
     const [priority, setPriority] = useState(5);
 
+    const auth = getAuth();
+    const db = getFirestore();
+
     const addStep = () => {
         setSteps([...steps, { id: Date.now(), text: ''}]);
     };
 
     const handleStepTextChange = (id, text) => {
-        setSteps(steps.map(item => item.id === id ? { ...item, text } : item));
+        setSteps(steps.map(item => (item.id === id ? { ...item, text } : item)));
     };
     
     const removeStep = (id) => {
@@ -67,21 +73,57 @@ const TaskDetailsScreen = () => {
     };
 
     const toggleChecklistItem = (id) => {
-        setChecklist(checklist.map(item => item.id === id ? { ...item, completed: !item.completed } : item));
+        setChecklist(checklist.map(item => (item.id === id ? { ...item, completed: !item.completed } : item)));
     };
 
     const handleChecklistTextChange = (id, text) => {
-        setChecklist(checklist.map(item => item.id === id ? { ...item, text } : item));
+        setChecklist(checklist.map(item => (item.id === id ? { ...item, text } : item)));
     };
 
     const removeChecklistItem = (id) => {
         setChecklist(checklist.filter(item => item.id !== id));
     };
 
-    const handleCreateTask = () => {
-        console.log({ taskName, description, steps, checklist, priority, assignedTo: memberId });
-        router.back();
+    const handleSaveTask = async () => {
+        const user = auth.currentUser;
+        if (!user) {
+            Alert.alert("Error", "You must be logged in to create a task.");
+            return;
+        }
+
+        if (!taskName.trim()) {
+            Alert.alert("Validation Error", "Task name cannot be empty.");
+            return;
+        }
+
+        try {
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
+            const assignedByName = userDoc.exists() ? userDoc.data().firstName : "Unknown User";
+
+            await addDoc(collection(db, "tasks"), {
+                name: taskName,
+                description,
+                steps,
+                checklist,
+                priority,
+                assignedToId: memberId,
+                assignedToName: memberName,
+                assignedById: user.uid,
+                assignedByName,
+                teamId: teamId, 
+                createdAt: serverTimestamp(),
+                status: 'pending',
+            });
+
+            Alert.alert("Success", "Task created successfully!");
+            router.back();
+        } catch (error) {
+            console.error("Error creating task: ", error);
+            Alert.alert("Error", "An error occurred while creating the task.");
+        }
     };
+    
 
     return (
         <KeyboardAvoidingView 
@@ -190,7 +232,7 @@ const TaskDetailsScreen = () => {
             </ScrollView>
 
             <View style={[styles.footer, { paddingBottom: insets.bottom > 0 ? insets.bottom : 20 }]}>
-                <TouchableOpacity style={styles.createButton} onPress={handleCreateTask}>
+                <TouchableOpacity style={styles.createButton} onPress={handleSaveTask}>
                     <Text style={styles.createButtonText}>Create Task</Text>
                 </TouchableOpacity>
             </View>

@@ -30,6 +30,7 @@ const AssignTaskScreen = () => {
     const [teamMembers, setTeamMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [currentUserRole, setCurrentUserRole] = useState('member');
+    const [teamId, setTeamId] = useState(null);
 
     useEffect(() => {
         const fetchTeamData = async () => {
@@ -40,6 +41,7 @@ const AssignTaskScreen = () => {
                 if (activeAccountString && currentUser) {
                     const activeAccount = JSON.parse(activeAccountString);
                     if (activeAccount.type === 'team') {
+                        setTeamId(activeAccount.id);
                         const teamMembersRef = collection(db, 'team_members');
                         const q = query(teamMembersRef, where("teamId", "==", activeAccount.id));
                         const querySnapshot = await getDocs(q);
@@ -81,7 +83,7 @@ const AssignTaskScreen = () => {
     const handleMemberPress = (member) => {
         router.push({
             pathname: '/task-details',
-            params: { memberId: member.id, memberName: member.name }
+            params: { memberId: member.id, memberName: member.name, teamId: teamId }
         });
     };
 
