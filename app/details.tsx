@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { doc, deleteDoc, updateDoc, onSnapshot, collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, getDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -173,17 +173,16 @@ const DetailsScreen = () => {
     return (
         <View style={{ flex: 1, backgroundColor: '#fff' }}>
              <View style={[styles.header, { paddingTop: insets.top }]}>
-                <TouchableOpacity style={styles.headerButton} onPress={() => {
+                <TouchableOpacity style={styles.backButton} onPress={() => {
                     if (router.canGoBack()) {
                         router.back();
                     } else {
                         router.replace('/home');
                     }
                 }}>
-                    <Feather name="chevron-left" size={24} color="#1F2937" />
+                    <MaterialIcons name="arrow-back" size={24} color="#1F2937" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Details</Text>
-                <View style={{width: 36}} />
             </View>
 
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={100}>
@@ -344,19 +343,21 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         paddingHorizontal: 16,
         paddingBottom: 12,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: 'white',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E7EB',
+        position: 'relative',
+        marginTop: 20
     },
-    headerButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#E5E7EB'
+    backButton: {
+        position: 'absolute',
+        left: 16,
+        top: 20,
+        padding: 4,
+        zIndex: 1,
     },
     headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1F2937' },
     container: { flex: 1, paddingHorizontal: 16, },
