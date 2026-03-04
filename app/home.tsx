@@ -154,8 +154,8 @@ const HomeScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.body} edges={['top']}>
-      <StatusBar style="dark" />
+    <SafeAreaView style={styles.body}>
+      <StatusBar style={isMenuVisible ? "light" : "dark"} backgroundColor="transparent" translucent={true} />
       <CustomToast visible={toastConfig.visible} message={toastConfig.message} type={toastConfig.type} />
       <View style={styles.mainContainer}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
@@ -280,8 +280,9 @@ const styles = StyleSheet.create({
       fontWeight: '600',
   },
   header: {
+    paddingTop: 60,
+    paddingBottom: 16,
     paddingHorizontal: 24,
-    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

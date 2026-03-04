@@ -53,7 +53,7 @@ export default function RootLayout() {
     const lockSystemBars = async () => {
         await NavigationBar.setVisibilityAsync("visible");
         await NavigationBar.setButtonStyleAsync("dark");
-        await SystemUI.setBackgroundColorAsync("#ffffff");
+        await SystemUI.setBackgroundColorAsync("#f9fafb");
     };
 
     useEffect(() => {
