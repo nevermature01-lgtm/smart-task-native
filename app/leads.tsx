@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 const LeadsScreen = () => {
@@ -12,23 +12,30 @@ const LeadsScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color="#1F2937" />
+        <TouchableOpacity style={styles.headerButton} onPress={() => {
+            if (router.canGoBack()) {
+                router.back();
+            } else {
+                router.replace('/home');
+            }
+        }}>
+            <Feather name="chevron-left" size={24} color="#1F2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Leads</Text>
+        <View style={{width: 36}} />
       </View>
       <ScrollView>
         <View style={styles.mainContent}>
           <View style={styles.searchSection}>
             <View style={styles.searchInputContainer}>
-              <Ionicons name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
+              <Feather name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
               <TextInput
                 placeholder="Search name, company, email..."
                 style={styles.searchInput}
               />
             </View>
             <TouchableOpacity style={styles.filterButton}>
-              <Ionicons name="options-outline" size={24} color="#4B5563" />
+              <Feather name="sliders" size={24} color="#4B5563" />
             </TouchableOpacity>
           </View>
 
@@ -54,7 +61,7 @@ const LeadsScreen = () => {
             <View style={styles.leadsListHeader}>
               <Text style={styles.leadsListTitle}>Recent Leads (24)</Text>
               <TouchableOpacity style={styles.createLeadButton}>
-                <Ionicons name="add-circle-outline" size={16} color="#fc6027" />
+                <Feather name="plus-circle" size={16} color="#fc6027" />
                 <Text style={styles.createLeadButtonText}>Create Lead</Text>
               </TouchableOpacity>
             </View>
@@ -79,7 +86,7 @@ const LeadsScreen = () => {
                 </View>
                 <View style={styles.leadStat}>
                   <Text style={styles.leadStatLabel}>Source</Text>
-                  <Text style={styles.leadStatValue}><Ionicons name="globe-outline" size={12} /> Website</Text>
+                  <Text style={styles.leadStatValue}><Feather name="globe" size={12} /> Website</Text>
                 </View>
               </View>
               <View style={styles.leadCardFooter}>
@@ -89,13 +96,13 @@ const LeadsScreen = () => {
                 </View>
                 <View style={styles.leadActions}>
                   <TouchableOpacity style={styles.leadActionButton}>
-                    <Ionicons name="chatbubble-ellipses-outline" size={18} color="#4B5563" />
+                    <Feather name="message-square" size={18} color="#4B5563" />
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.leadActionButton, { backgroundColor: 'rgba(252, 96, 39, 0.1)' }]}>
-                    <Ionicons name="call-outline" size={18} color="#fc6027" />
+                    <Feather name="phone" size={18} color="#fc6027" />
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.leadActionButton}>
-                    <Ionicons name="ellipsis-vertical" size={18} color="#4B5563" />
+                    <Feather name="more-vertical" size={18} color="#4B5563" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -121,7 +128,7 @@ const LeadsScreen = () => {
                 </View>
                 <View style={styles.leadStat}>
                   <Text style={styles.leadStatLabel}>Source</Text>
-                  <Text style={styles.leadStatValue}><Ionicons name="mail-outline" size={12} /> LinkedIn</Text>
+                  <Text style={styles.leadStatValue}><Feather name="linkedin" size={12} /> LinkedIn</Text>
                 </View>
               </View>
               <View style={styles.leadCardFooter}>
@@ -130,13 +137,13 @@ const LeadsScreen = () => {
                 </View>
                 <View style={styles.leadActions}>
                    <TouchableOpacity style={styles.leadActionButton}>
-                    <Ionicons name="chatbubble-ellipses-outline" size={18} color="#4B5563" />
+                    <Feather name="message-square" size={18} color="#4B5563" />
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.leadActionButton, { backgroundColor: 'rgba(252, 96, 39, 0.1)' }]}>
-                    <Ionicons name="call-outline" size={18} color="#fc6027" />
+                    <Feather name="phone" size={18} color="#fc6027" />
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.leadActionButton}>
-                    <Ionicons name="ellipsis-vertical" size={18} color="#4B5563" />
+                    <Feather name="more-vertical" size={18} color="#4B5563" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -153,26 +160,26 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingBottom: 12,
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
-    position: 'relative',
   },
-  backButton: {
-      position: 'absolute',
-      left: 16,
-      top: 45,
-      padding: 4,
-      zIndex: 1,
+  headerButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: '#E5E7EB'
   },
   headerTitle: {
       fontSize: 18,
       fontWeight: 'bold',
       color: '#1F2937',
-      marginTop: 20
   },
   mainContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 },
   searchSection: { flexDirection: 'row', gap: 8, alignItems: 'center' },

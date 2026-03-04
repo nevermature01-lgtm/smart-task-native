@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { doc, deleteDoc, updateDoc, onSnapshot, collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, getDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -72,7 +72,11 @@ const DetailsScreen = () => {
                 setIsCompleted(taskData.status === 'completed');
             } else {
                 console.log("No such task!");
-                router.back();
+                if (router.canGoBack()) {
+                    router.back();
+                } else {
+                    router.replace('/home');
+                }
             }
         });
 
@@ -134,7 +138,11 @@ const DetailsScreen = () => {
         setIsDeleting(true);
         try {
             await deleteDoc(doc(db, 'tasks', taskId));
-            router.back();
+            if (router.canGoBack()) {
+                router.back();
+            } else {
+                router.replace('/home');
+            }
         } catch (error) {
             console.error("Error deleting task: ", error);
             setIsDeleting(false);
@@ -165,10 +173,17 @@ const DetailsScreen = () => {
     return (
         <View style={{ flex: 1, backgroundColor: '#fff' }}>
              <View style={[styles.header, { paddingTop: insets.top }]}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                    <MaterialIcons name="arrow-back" size={24} color="#1F2937" />
+                <TouchableOpacity style={styles.headerButton} onPress={() => {
+                    if (router.canGoBack()) {
+                        router.back();
+                    } else {
+                        router.replace('/home');
+                    }
+                }}>
+                    <Feather name="chevron-left" size={24} color="#1F2937" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Details</Text>
+                <View style={{width: 36}} />
             </View>
 
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={100}>
@@ -185,18 +200,18 @@ const DetailsScreen = () => {
                                 <View style={styles.priorityContainer}>
                                     {currentUserRole === 'admin' && !isCompleted && (
                                         <TouchableOpacity style={[styles.actionButton, styles.deleteButton]} onPress={() => setDeleteModalVisible(true)}>
-                                            <MaterialIcons name="delete" size={24} color="#fff" />
+                                            <Feather name="trash-2" size={24} color="#fff" />
                                         </TouchableOpacity>
                                     )}
                                     <Text style={styles.priorityText}>P{task.priority}</Text>
                                 </View>
                             </View>
                             <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 4}}>
-                                <MaterialIcons name="subdirectory-arrow-right" size={16} color="#6B7280" style={{marginRight: 4}}/>
+                                <Feather name="corner-down-right" size={16} color="#6B7280" style={{marginRight: 4}}/>
                                 <Text style={[styles.taskSubtitle, {marginBottom: 0}]}>{task.description}</Text>
                             </View>
                             <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                                <MaterialIcons name="calendar-today" size={14} color="#6B7280" style={{marginRight: 4}}/>
+                                <Feather name="calendar" size={14} color="#6B7280" style={{marginRight: 4}}/>
                                 <Text style={styles.taskDate}>{formattedTaskDateTime}</Text>
                             </View>
                         </View>
@@ -226,7 +241,7 @@ const DetailsScreen = () => {
                                                     <Text style={styles.stepText}>{step.text}</Text>
                                                 </View>
                                                 {index < taskSteps.length - 1 && (
-                                                    <MaterialIcons name="arrow-forward" size={20} color="#6B7280" style={styles.arrow} />
+                                                    <Feather name="arrow-right" size={20} color="#6B7280" style={styles.arrow} />
                                                 )}
                                             </React.Fragment>
                                         ))}
@@ -243,7 +258,7 @@ const DetailsScreen = () => {
                                     <TouchableOpacity key={index} style={styles.checklistItem} onPress={() => toggleChecklistItemCompletion(index)} disabled={isCompleted}>
                                         <Text style={[styles.checklistText, item.completed && styles.checklistTextCompleted]}>{item.text}</Text>
                                         <View style={[styles.checkbox, item.completed && styles.checkboxCompleted]}>
-                                            {item.completed && <MaterialIcons name="check" size={18} color="white" />}
+                                            {item.completed && <Feather name="check" size={18} color="white" />}
                                         </View>
                                     </TouchableOpacity>
                                 ))}
@@ -288,7 +303,7 @@ const DetailsScreen = () => {
                                 onChangeText={setMessageText}
                             />
                             <TouchableOpacity onPress={handleSendMessage}>
-                                <MaterialIcons name="send" size={24} color={messageText.trim() === '' ? '#999' : '#000'} />
+                                <Feather name="send" size={24} color={messageText.trim() === '' ? '#999' : '#000'} />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -326,8 +341,23 @@ const DetailsScreen = () => {
 
 const styles = StyleSheet.create({
     // Header, Container, Task Info, etc.
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingBottom: 12, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', marginTop: 20 },
-    backButton: { position: 'absolute', left: 16, padding: 4, zIndex: 1 },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+        backgroundColor: '#FFFFFF',
+    },
+    headerButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E5E7EB'
+    },
     headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1F2937' },
     container: { flex: 1, paddingHorizontal: 16, },
     taskInfoContainer: { marginBottom: 16 },

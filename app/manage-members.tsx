@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { db, auth } from '../firebase';
 import { collection, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,7 +20,7 @@ const MemberCard = ({ member, onMorePress, currentUserId }) => (
         )}
         {onMorePress && member.id !== currentUserId && (
              <TouchableOpacity onPress={() => onMorePress(member)} style={styles.moreButton}>
-                <MaterialIcons name="more-vert" size={24} color="#6B7280" />
+                <Feather name="more-vertical" size={24} color="#6B7280" />
             </TouchableOpacity>
         )}
     </View>
@@ -227,10 +227,17 @@ const ManageMembersScreen = () => {
     return (
         <View style={{ flex: 1, backgroundColor: '#f8f6f6' }}>
             <View style={[styles.header, { paddingTop: insets.top }]}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                    <MaterialIcons name="arrow-back" size={24} color="#1F2937" />
+                <TouchableOpacity style={styles.headerButton} onPress={() => {
+                    if (router.canGoBack()) {
+                        router.back();
+                    } else {
+                        router.replace('/home');
+                    }
+                }}>
+                    <Feather name="chevron-left" size={24} color="#1F2937" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Manage Members</Text>
+                <View style={{width: 36}} />
             </View>
             <ScrollView style={styles.content}>
                 {loading ? (
@@ -271,7 +278,7 @@ const ManageMembersScreen = () => {
                                 </TouchableOpacity>
                             )}
                             <TouchableOpacity style={[styles.modalButton, {marginTop: 10}]} onPress={() => prepareConfirmation('removeMember')}>
-                                <MaterialIcons name="person-remove-outline" size={22} color="#EF4444" />
+                                <Feather name="user-x" size={22} color="#EF4444" />
                                 <Text style={[styles.modalButtonText, {color: '#EF4444'}]}>Remove from Team</Text>
                             </TouchableOpacity>
                              <TouchableOpacity style={[styles.modalButton, {marginTop: 20}]} onPress={() => { setModalVisible(false); setSelectedMember(null); }}>
@@ -295,20 +302,21 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingBottom: 12,
         backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
-        position: 'relative',
-        marginTop: 20
     },
-    backButton: {
-        position: 'absolute',
-        left: 16,
-        padding: 4,
-        zIndex: 1,
+    headerButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E5E7EB'
     },
     headerTitle: {
         fontSize: 18,

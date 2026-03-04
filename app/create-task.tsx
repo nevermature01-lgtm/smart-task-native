@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { MaterialIcons, Feather } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, collection, addDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -19,7 +19,7 @@ const ChecklistItem = ({ item, onToggle, onTextChange, onRemove }) => (
             placeholderTextColor="#9CA3AF"
         />
         <TouchableOpacity onPress={onRemove} style={styles.removeButton}>
-            <MaterialIcons name="close" size={20} color="#9CA3AF" />
+            <Feather name="x" size={20} color="#9CA3AF" />
         </TouchableOpacity>
     </View>
 );
@@ -36,7 +36,7 @@ const StepItem = ({ item, onTextChange, index, onRemove }) => (
             multiline
         />
         <TouchableOpacity onPress={onRemove} style={styles.removeButton}>
-            <MaterialIcons name="close" size={20} color="#9CA3AF" />
+            <Feather name="x" size={20} color="#9CA3AF" />
         </TouchableOpacity>
     </View>
 )
@@ -117,7 +117,11 @@ const TaskDetailsScreen = () => {
             });
 
             Alert.alert("Success", "Task created successfully!");
-            router.back();
+            if (router.canGoBack()) {
+                router.back();
+            } else {
+                router.replace('/home');
+            }
         } catch (error) {
             console.error("Error creating task: ", error);
             Alert.alert("Error", "An error occurred while creating the task.");
@@ -127,17 +131,21 @@ const TaskDetailsScreen = () => {
 
     return (
         <KeyboardAvoidingView 
-            style={{ flex: 1, backgroundColor: '#f8f6f6' }} 
+            style={{ flex: 1, backgroundColor: '#F9FAFB' }} 
             behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
             <View style={[styles.header, { paddingTop: insets.top }]}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                    <MaterialIcons name="arrow-back" size={24} color="#1F2937" />
+                <TouchableOpacity style={styles.headerButton} onPress={() => {
+                    if (router.canGoBack()) {
+                        router.back();
+                    } else {
+                        router.replace('/home');
+                    }
+                }}>
+                    <Feather name="chevron-left" size={24} color="#1F2937" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>New Task</Text>
-                <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
-                    <MaterialIcons name="close" size={24} color="#1F2937" />
-                </TouchableOpacity>
+                <View style={{width: 36}} />
             </View>
 
             <ScrollView style={styles.contentContainer} keyboardShouldPersistTaps="handled">
@@ -186,7 +194,7 @@ const TaskDetailsScreen = () => {
                         />
                     ))}
                     <TouchableOpacity style={styles.addButton} onPress={addStep}>
-                         <MaterialIcons name="add" size={16} color="#4B5563" />
+                         <Feather name="plus" size={16} color="#4B5563" />
                         <Text style={styles.addText}>Add Step</Text>
                     </TouchableOpacity>
                 </View>
@@ -203,7 +211,7 @@ const TaskDetailsScreen = () => {
                         />
                     ))}
                     <TouchableOpacity style={styles.addButton} onPress={addChecklistItem}>
-                         <MaterialIcons name="add" size={16} color="#4B5563" />
+                         <Feather name="plus" size={16} color="#4B5563" />
                         <Text style={styles.addText}>Add Item</Text>
                     </TouchableOpacity>
                 </View>
@@ -244,31 +252,22 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingBottom: 12,
-        backgroundColor: 'white',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
-        position: 'relative',
-        marginTop: 20
+        backgroundColor: '#FFFFFF',
     },
-    backButton: {
-        position: 'absolute',
-        left: 16,
-        top: 10, 
-        padding: 4,
-        zIndex: 1,
-    },
-    closeButton: {
-        position: 'absolute',
-        right: 16,
-        top: 10,
-        padding: 4,
-        zIndex: 1,
+    headerButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E5E7EB'
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: 'bold',
         color: '#1F2937',
     },

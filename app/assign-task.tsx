@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../firebase';
 import { collection, getDocs, query, where, doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,7 +18,7 @@ const MemberCard = ({ member, onPress }) => (
 
 const LockedView = () => (
     <View style={styles.lockedContainer}>
-        <MaterialCommunityIcons name="lock-outline" size={64} color="#9CA3AF" />
+        <Feather name="lock" size={64} color="#9CA3AF" />
         <Text style={styles.lockedTitle}>Permission Denied</Text>
         <Text style={styles.lockedSubtitle}>You don't have the required permissions to assign tasks.</Text>
     </View>
@@ -134,12 +134,13 @@ const AssignTaskScreen = () => {
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#f8f6f6' }}>
+        <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
             <View style={[styles.header, { paddingTop: insets.top }]}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                    <MaterialIcons name="arrow-back" size={24} color="#1F2937" />
+                <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
+                    <Feather name="chevron-left" size={24} color="#1F2937" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Assign Task</Text>
+                <View style={{width: 36}} />
             </View>
             {renderContent()}
         </View>
@@ -150,23 +151,22 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingBottom: 12,
-        backgroundColor: 'white',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
-        position: 'relative',
-        marginTop: 20
+        backgroundColor: '#FFFFFF',
     },
-    backButton: {
-        position: 'absolute',
-        left: 16,
-        padding: 4,
-        zIndex: 1,
+    headerButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E5E7EB'
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: 'bold',
         color: '#1F2937',
     },
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         padding: 20,
-        backgroundColor: '#f8f6f6'
+        backgroundColor: '#F9FAFB'
     },
     lockedTitle: {
         fontSize: 22,

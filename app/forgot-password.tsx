@@ -11,7 +11,7 @@ import {
   Platform,
   TextInput,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../firebase';
 import { router } from 'expo-router';
@@ -106,33 +106,26 @@ const ForgotPasswordScreen = () => {
       backgroundColor: COLORS.backgroundLight,
     },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: 24,
-      paddingTop: 40,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+        backgroundColor: '#FFFFFF',
     },
-    backButton: {
-      height: 44,
-      width: 44,
-      borderRadius: 22,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: COLORS.white,
-      borderColor: 'rgba(37, 99, 235, 0.2)',
-      borderWidth: 1,
-    },
-    headerTitleContainer: {
-      alignItems: 'center',
+    headerButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E5E7EB'
     },
     headerTitle: {
-      color: COLORS.textLight,
-      fontWeight: 'bold',
-      fontSize: 20,
-    },
-    headerSubtitle: {
-      color: 'rgba(31, 41, 55, 0.6)',
-      fontSize: 12,
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#1F2937',
     },
     keyboardAvoidingView: {
       flex: 1,
@@ -213,14 +206,17 @@ const ForgotPasswordScreen = () => {
         <View style={styles.root}>
         <View style={styles.gridPattern} />
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <MaterialIcons name="arrow-back" size={24} color={COLORS.textLight} />
-          </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>Smart Task</Text>
-            <Text style={styles.headerSubtitle}>powered by Smart Decor</Text>
-          </View>
-          <View style={{ width: 24 }} />
+            <TouchableOpacity style={styles.headerButton} onPress={() => {
+                if (router.canGoBack()) {
+                    router.back();
+                } else {
+                    router.replace('/home');
+                }
+            }}>
+                <Feather name="chevron-left" size={24} color="#1F2937" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Forgot Password</Text>
+            <View style={{width: 36}} />
         </View>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -228,7 +224,7 @@ const ForgotPasswordScreen = () => {
           <ScrollView contentContainerStyle={styles.scrollView}>
             <View style={styles.contentHeader}>
               <View style={styles.iconContainer}>
-                <MaterialIcons name="lock-reset" size={32} color={COLORS.primary} />
+                <Feather name="lock" size={32} color={COLORS.primary} />
               </View>
               <Text style={styles.contentHeaderTitle}>Forgot Password</Text>
               <Text style={styles.contentHeaderSubtitle}>Enter your email to receive a password reset link</Text>
@@ -236,7 +232,7 @@ const ForgotPasswordScreen = () => {
             <View style={styles.form}>
               {error ? (
                 <View style={styles.errorMessageContainer}>
-                  <MaterialIcons name="error-outline" size={24} color={COLORS.danger} />
+                  <Feather name="alert-circle" size={24} color={COLORS.danger} />
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
               ) : null}

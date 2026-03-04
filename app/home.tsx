@@ -160,23 +160,22 @@ const HomeScreen = () => {
       <View style={styles.mainContainer}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
           <View style={styles.header}>
-            <View style={styles.userInfo}>
-              <HamburgerMenu onPress={toggleMenu} />
-              <View>
+            <HamburgerMenu onPress={toggleMenu} />
+            <View style={{alignItems: 'center'}}>
                 {activeAccount?.type === 'personal' && (
                   <Text style={styles.accountType}>Personal Account</Text>
                 )}
                 {activeAccount?.type === 'team' && teamDetails && (
                   <View style={styles.teamInfoContainer}>
-                    <Text style={styles.accountType}>{teamDetails.name}</Text>
+                    <Text style={styles.accountType}>Team name: {teamDetails.name}</Text>
                     <TouchableOpacity style={styles.teamCodeContainer} onPress={() => handleCopyCode(teamDetails.code)}>
-                      <Text style={styles.teamCodeText}>{teamDetails.code}</Text>
+                      <Text style={styles.teamCodeText}>Team code: {teamDetails.code}</Text>
                       <Feather name="copy" size={12} color="#6B7280" />
                     </TouchableOpacity>
                   </View>
                 )}
-              </View>
             </View>
+            <View style={{width: 48}}/>
           </View>
 
           <View style={styles.greetingSection}>
@@ -197,11 +196,10 @@ const HomeScreen = () => {
 
           <View style={styles.primaryActions}>
             <LinearGradient
-              colors={['#f3f4f6', '#e5e7eb']}
+              colors={['#2563EB', '#1D4ED8']}
               style={styles.taskBar}
             >
               <Text style={styles.taskTitle}>Ongoing Tasks</Text>
-              <Feather name="chevron-right" size={24} color="#4b5563" />
             </LinearGradient>
           </View>
 
@@ -287,7 +285,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  userInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   hamburgerContainer: {
     width: 48,
     height: 48,
@@ -316,9 +313,9 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   teamInfoContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
   },
   teamCodeContainer: {
     flexDirection: 'row',
@@ -379,7 +376,7 @@ const styles = StyleSheet.create({
   taskBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 24,
@@ -387,7 +384,7 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#374151',
+    color: '#fff',
   },
   actionsSlider: {
     flexDirection: 'row',

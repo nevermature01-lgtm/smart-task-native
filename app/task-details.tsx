@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Alert, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Alert, Dimensions, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -57,9 +57,34 @@ const TaskDetailsScreen = () => {
     const [checklist, setChecklist] = useState([{ id: 1, text: '', completed: false }]);
     const [priority, setPriority] = useState(5);
     const scrollViewRef = useRef(null);
+    const [notification, setNotification] = useState(null);
+    const fadeAnim = useRef(new Animated.Value(0)).current;
 
     const auth = getAuth();
     const db = getFirestore();
+
+    const showNotification = (message) => {
+        setNotification(message);
+        Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+        }).start();
+
+        setTimeout(() => {
+            hideNotification();
+        }, 3000);
+    };
+
+    const hideNotification = () => {
+        Animated.timing(fadeAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+        }).start(() => {
+            setNotification(null);
+        });
+    };
 
     const addStep = () => {
         setSteps([...steps, { id: Date.now(), text: ''}]);
@@ -92,12 +117,12 @@ const TaskDetailsScreen = () => {
     const handleSaveTask = async () => {
         const user = auth.currentUser;
         if (!user) {
-            Alert.alert("Error", "You must be logged in to create a task.");
+            showNotification("You must be logged in to create a task.");
             return;
         }
 
         if (!taskName.trim()) {
-            Alert.alert("Validation Error", "Task name cannot be empty.");
+            showNotification("Task name cannot be empty.");
             return;
         }
 
@@ -121,11 +146,17 @@ const TaskDetailsScreen = () => {
                 status: 'pending',
             });
 
-            Alert.alert("Success", "Task assigned successfully!");
-            router.back();
+            showNotification("Task assigned successfully!");
+            setTimeout(() => {
+                if (router.canGoBack()) {
+                    router.back();
+                } else {
+                    router.replace('/home');
+                }
+            }, 1000);
         } catch (error) {
             console.error("Error creating task: ", error);
-            Alert.alert("Error", "An error occurred while creating the task.");
+            showNotification("An error occurred while creating the task.");
         }
     };
 
@@ -142,12 +173,20 @@ const TaskDetailsScreen = () => {
             style={{ flex: 1, backgroundColor: '#F9FAFB' }} 
             behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-            <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+            {notification && (
+                <Animated.View style={[styles.notification, { opacity: fadeAnim, top: insets.top + 10 }]}>
+                    <Text style={styles.notificationText}>{notification}</Text>
+                    <TouchableOpacity onPress={hideNotification}>
+                        <Feather name="x" size={20} color="#fff" />
+                    </TouchableOpacity>
+                </Animated.View>
+            )}
+            <View style={[styles.header, { paddingTop: insets.top }]}>
                 <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
                     <Feather name="chevron-left" size={24} color="#1F2937" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>New Task</Text>
-                <View style={{width: 40}} />
+                <View style={{width: 36}} />
             </View>
 
             <ScrollView style={styles.contentContainer} keyboardShouldPersistTaps="handled">
@@ -276,13 +315,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
-        paddingBottom: 16,
+        paddingBottom: 12,
         backgroundColor: '#FFFFFF',
     },
     headerButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
@@ -460,6 +499,24 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    notification: {
+        position: 'absolute',
+        left: 20,
+        right: 20,
+        backgroundColor: '#4B5563',
+        padding: 16,
+        borderRadius: 8,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        zIndex: 1000,
+        elevation: 5,
+    },
+    notificationText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
     },
 });
 
