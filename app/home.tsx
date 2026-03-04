@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   },
   toast: {
     position: 'absolute',
-    top: 60,
+    top: 40,
     left: 20,
     right: 20,
     padding: 15,
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
       fontWeight: '600',
   },
   header: {
-    paddingTop: 60,
+    paddingTop: 20,
     paddingBottom: 16,
     paddingHorizontal: 24,
     flexDirection: 'row',
