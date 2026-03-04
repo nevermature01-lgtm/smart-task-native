@@ -157,7 +157,7 @@ const TaskDetailsScreen = () => {
                         style={styles.input}
                         value={taskName}
                         onChangeText={setTaskName}
-                        placeholder="e.g., Develop the new API"
+                        placeholder="Enter your task name"
                         placeholderTextColor="#9CA3AF"
                     />
                 </View>
