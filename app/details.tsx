@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -8,6 +8,8 @@ import { db, auth } from '../firebase';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Audio } from 'expo-av';
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const DetailsScreen = () => {
     const router = useRouter();
@@ -24,19 +26,12 @@ const DetailsScreen = () => {
     const [reopenModalVisible, setReopenModalVisible] = useState(false);
     const [deleteModalVisible, setDeleteModalVisible] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [recording, setRecording] = useState(null);
+    const [isRecording, setIsRecording] = useState(false);
+    const [audioPlayer, setAudioPlayer] = useState(null);
+    const [playingAudioId, setPlayingAudioId] = useState(null);
     const scrollViewRef = useRef(null);
-
-    const CompletedScreen = () => (
-        <TouchableOpacity 
-            style={styles.completedOverlay} 
-            onPress={() => currentUserRole === 'admin' && setReopenModalVisible(true)}
-            disabled={currentUserRole !== 'admin'}
-        >
-            <MaterialIcons name="lock" size={80} color="white" />
-            <Text style={styles.completedOverlayText}>Task Locked & Completed</Text>
-            {currentUserRole === 'admin' && <Text style={styles.unlockText}>Tap to unlock</Text>}
-        </TouchableOpacity>
-    );
+    const storage = getStorage();
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -100,8 +95,79 @@ const DetailsScreen = () => {
         return () => {
             unsubscribeTask();
             unsubscribeMessages();
+            if (audioPlayer) {
+                audioPlayer.unloadAsync();
+            }
         };
     }, [taskId]);
+
+    const startRecording = async () => {
+        try {
+            const { status } = await Audio.requestPermissionsAsync();
+            if (status !== 'granted') {
+                alert('Sorry, we need microphone permissions to make this work!');
+                return;
+            }
+            if (recording) {
+                await recording.stopAndUnloadAsync();
+            }
+            setIsRecording(true);
+            const { recording: newRecording } = await Audio.Recording.createAsync(
+                Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY
+            );
+            setRecording(newRecording);
+        } catch (err) {
+            console.error('Failed to start recording', err);
+            setIsRecording(false);
+        }
+    };
+
+    const stopRecording = async () => {
+        if (!recording) return;
+        try {
+            await recording.stopAndUnloadAsync();
+            const uri = recording.getURI();
+            setRecording(null);
+            setIsRecording(false);
+            await uploadAudioAndSend(uri);
+        } catch (error) {
+            console.error("Error stopping recording: ", error);
+            setRecording(null);
+            setIsRecording(false);
+        }
+    };
+
+    const uploadAudioAndSend = async (uri) => {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        const storageRef = ref(storage, `voice_notes/${taskId}/${new Date().getTime()}.m4a`);
+        
+        try {
+            await uploadBytes(storageRef, blob);
+            const downloadURL = await getDownloadURL(storageRef);
+            handleSendAudio(downloadURL);
+        } catch (error) {
+            console.error("Error uploading audio: ", error);
+        }
+    };
+
+    const handleSendAudio = async (audioUrl) => {
+        if (!taskId || !currentUserName) return;
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
+
+        try {
+            await addDoc(collection(db, 'tasks', taskId, 'messages'), {
+                senderId: currentUser.uid,
+                senderName: currentUserName,
+                createdAt: serverTimestamp(),
+                audioUrl: audioUrl,
+                type: 'audio'
+            });
+        } catch (error) {
+            console.error("Error sending audio message: ", error);
+        }
+    };
 
     const handleSendMessage = async () => {
         if (messageText.trim() === '' || !taskId || !currentUserName) return;
@@ -113,12 +179,40 @@ const DetailsScreen = () => {
                 text: messageText,
                 senderId: currentUser.uid,
                 senderName: currentUserName,
-                createdAt: serverTimestamp()
+                createdAt: serverTimestamp(),
+                type: 'text'
             });
             setMessageText('');
         } catch (error) {
             console.error("Error sending message: ", error);
         }
+    };
+
+    const playAudio = async (id, url) => {
+        if (playingAudioId === id) {
+            if (audioPlayer) {
+                await audioPlayer.pauseAsync();
+                setPlayingAudioId(null);
+            }
+            return;
+        }
+
+        if (audioPlayer) {
+            await audioPlayer.unloadAsync();
+        }
+
+        const { sound } = await Audio.Sound.createAsync({ uri: url });
+        setAudioPlayer(sound);
+        setPlayingAudioId(id);
+        await sound.playAsync();
+
+        sound.setOnPlaybackStatusUpdate(async (status) => {
+            if (status.didJustFinish) {
+                await sound.unloadAsync();
+                setAudioPlayer(null);
+                setPlayingAudioId(null);
+            }
+        });
     };
 
     const toggleChecklistItemCompletion = async (index) => {
@@ -172,9 +266,10 @@ const DetailsScreen = () => {
     const taskCreationDate = task.createdAt?.toDate();
     const formattedTaskDateTime = taskCreationDate ? `${taskCreationDate.getDate()}-${taskCreationDate.toLocaleString('default', { month: 'short' })}-${taskCreationDate.getFullYear()}, ${taskCreationDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : '';
 
+
     return (
         <View style={{ flex: 1, backgroundColor: '#fff' }}>
-            <View style={[styles.header, { paddingTop: insets.top }]}>
+             <View style={[styles.header, { paddingTop: insets.top }]}>
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <MaterialIcons name="arrow-back" size={24} color="#1F2937" />
                 </TouchableOpacity>
@@ -262,16 +357,22 @@ const DetailsScreen = () => {
                         
                         {/* Messages */}
                          <View style={styles.messagesContainer}>
-                            <Text style={styles.messagesTitle}>Messages</Text>
-                            {messages.map((msg) => (
-                                <View key={msg.id} style={[
-                                    styles.messageBubble,
-                                    msg.senderId === auth.currentUser.uid ? styles.myMessageBubble : styles.theirMessageBubble
-                                ]}>
-                                    <Text style={styles.messageSender}>{msg.senderName}</Text>
-                                    <Text style={styles.messageText}>{msg.text}</Text>
-                                </View>
-                            ))}
+                             <Text style={styles.messagesTitle}>Messages</Text>
+                             {messages.map((msg) => (
+                                 <View key={msg.id} style={[
+                                     styles.messageBubble,
+                                     msg.senderId === auth.currentUser.uid ? styles.myMessageBubble : styles.theirMessageBubble
+                                 ]}>
+                                     <Text style={styles.messageSender}>{msg.senderName}</Text>
+                                     {msg.type === 'audio' && msg.audioUrl ? (
+                                         <TouchableOpacity onPress={() => playAudio(msg.id, msg.audioUrl)} style={styles.playButton}>
+                                             <MaterialIcons name={playingAudioId === msg.id ? 'pause' : 'play-arrow'} size={30} color="#000" />
+                                         </TouchableOpacity>
+                                     ) : (
+                                         <Text style={styles.messageText}>{msg.text}</Text>
+                                     )}
+                                 </View>
+                             ))}
                         </View>
 
                         {!isCompleted && (
@@ -297,16 +398,22 @@ const DetailsScreen = () => {
                                 value={messageText}
                                 onChangeText={setMessageText}
                             />
-                            <TouchableOpacity onPress={handleSendMessage} disabled={messageText.trim() === ''}>
-                                <MaterialIcons name="send" size={24} color={messageText.trim() === '' ? '#999' : '#000'} />
-                            </TouchableOpacity>
+                            {messageText.trim() === '' ? (
+                                <TouchableOpacity onPressIn={startRecording} onPressOut={stopRecording}>
+                                    <MaterialIcons name="mic" size={24} color={isRecording ? 'red' : '#000'} />
+                                </TouchableOpacity>
+                            ) : (
+                                <TouchableOpacity onPress={handleSendMessage}>
+                                    <MaterialIcons name="send" size={24} color={'#000'} />
+                                </TouchableOpacity>
+                            )}
                         </View>
                     </View>
                 )}
             </KeyboardAvoidingView>
 
             {/* Modals */}
-            <Modal transparent={true} visible={reopenModalVisible} onRequestClose={() => setReopenModalVisible(false)}>
+             <Modal transparent={true} visible={reopenModalVisible} onRequestClose={() => setReopenModalVisible(false)}>
                 <View style={styles.modalContainer}>
                     <View style={styles.modalView}>
                         <Text style={styles.modalText}>Reopen Task?</Text>
@@ -375,6 +482,7 @@ const styles = StyleSheet.create({
     theirMessageBubble: { backgroundColor: '#f1f0f0', alignSelf: 'flex-start', },
     messageSender: { fontWeight: 'bold', marginBottom: 4, fontSize: 12, color: '#555' },
     messageText: { fontSize: 16, color: '#333' },
+    playButton: { justifyContent: 'center', alignItems: 'center', width: 40, height: 40, },
 
     // Footer & Swipe
     footerContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, },
