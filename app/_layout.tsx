@@ -52,18 +52,12 @@ const InitialLayout = () => {
 export default function RootLayout() {
     const lockSystemBars = async () => {
         await NavigationBar.setVisibilityAsync("visible");
-        await NavigationBar.setBehaviorAsync("inset-touch");
         await NavigationBar.setButtonStyleAsync("dark");
         await SystemUI.setBackgroundColorAsync("#ffffff");
     };
 
     useEffect(() => {
         lockSystemBars();
-        const interval = setInterval(() => {
-            lockSystemBars();
-        }, 2000);
-
-        return () => clearInterval(interval);
     }, []);
 
     useFocusEffect(

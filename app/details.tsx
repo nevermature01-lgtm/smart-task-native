@@ -8,8 +8,6 @@ import { db, auth } from '../firebase';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Audio } from 'expo-av';
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const DetailsScreen = () => {
     const router = useRouter();
@@ -26,12 +24,7 @@ const DetailsScreen = () => {
     const [reopenModalVisible, setReopenModalVisible] = useState(false);
     const [deleteModalVisible, setDeleteModalVisible] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [recording, setRecording] = useState(null);
-    const [isRecording, setIsRecording] = useState(false);
-    const [audioPlayer, setAudioPlayer] = useState(null);
-    const [playingAudioId, setPlayingAudioId] = useState(null);
     const scrollViewRef = useRef(null);
-    const storage = getStorage();
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -95,79 +88,8 @@ const DetailsScreen = () => {
         return () => {
             unsubscribeTask();
             unsubscribeMessages();
-            if (audioPlayer) {
-                audioPlayer.unloadAsync();
-            }
         };
     }, [taskId]);
-
-    const startRecording = async () => {
-        try {
-            const { status } = await Audio.requestPermissionsAsync();
-            if (status !== 'granted') {
-                alert('Sorry, we need microphone permissions to make this work!');
-                return;
-            }
-            if (recording) {
-                await recording.stopAndUnloadAsync();
-            }
-            setIsRecording(true);
-            const { recording: newRecording } = await Audio.Recording.createAsync(
-                Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY
-            );
-            setRecording(newRecording);
-        } catch (err) {
-            console.error('Failed to start recording', err);
-            setIsRecording(false);
-        }
-    };
-
-    const stopRecording = async () => {
-        if (!recording) return;
-        try {
-            await recording.stopAndUnloadAsync();
-            const uri = recording.getURI();
-            setRecording(null);
-            setIsRecording(false);
-            await uploadAudioAndSend(uri);
-        } catch (error) {
-            console.error("Error stopping recording: ", error);
-            setRecording(null);
-            setIsRecording(false);
-        }
-    };
-
-    const uploadAudioAndSend = async (uri) => {
-        const response = await fetch(uri);
-        const blob = await response.blob();
-        const storageRef = ref(storage, `voice_notes/${taskId}/${new Date().getTime()}.m4a`);
-        
-        try {
-            await uploadBytes(storageRef, blob);
-            const downloadURL = await getDownloadURL(storageRef);
-            handleSendAudio(downloadURL);
-        } catch (error) {
-            console.error("Error uploading audio: ", error);
-        }
-    };
-
-    const handleSendAudio = async (audioUrl) => {
-        if (!taskId || !currentUserName) return;
-        const currentUser = auth.currentUser;
-        if (!currentUser) return;
-
-        try {
-            await addDoc(collection(db, 'tasks', taskId, 'messages'), {
-                senderId: currentUser.uid,
-                senderName: currentUserName,
-                createdAt: serverTimestamp(),
-                audioUrl: audioUrl,
-                type: 'audio'
-            });
-        } catch (error) {
-            console.error("Error sending audio message: ", error);
-        }
-    };
 
     const handleSendMessage = async () => {
         if (messageText.trim() === '' || !taskId || !currentUserName) return;
@@ -186,33 +108,6 @@ const DetailsScreen = () => {
         } catch (error) {
             console.error("Error sending message: ", error);
         }
-    };
-
-    const playAudio = async (id, url) => {
-        if (playingAudioId === id) {
-            if (audioPlayer) {
-                await audioPlayer.pauseAsync();
-                setPlayingAudioId(null);
-            }
-            return;
-        }
-
-        if (audioPlayer) {
-            await audioPlayer.unloadAsync();
-        }
-
-        const { sound } = await Audio.Sound.createAsync({ uri: url });
-        setAudioPlayer(sound);
-        setPlayingAudioId(id);
-        await sound.playAsync();
-
-        sound.setOnPlaybackStatusUpdate(async (status) => {
-            if (status.didJustFinish) {
-                await sound.unloadAsync();
-                setAudioPlayer(null);
-                setPlayingAudioId(null);
-            }
-        });
     };
 
     const toggleChecklistItemCompletion = async (index) => {
@@ -364,13 +259,7 @@ const DetailsScreen = () => {
                                      msg.senderId === auth.currentUser.uid ? styles.myMessageBubble : styles.theirMessageBubble
                                  ]}>
                                      <Text style={styles.messageSender}>{msg.senderName}</Text>
-                                     {msg.type === 'audio' && msg.audioUrl ? (
-                                         <TouchableOpacity onPress={() => playAudio(msg.id, msg.audioUrl)} style={styles.playButton}>
-                                             <MaterialIcons name={playingAudioId === msg.id ? 'pause' : 'play-arrow'} size={30} color="#000" />
-                                         </TouchableOpacity>
-                                     ) : (
-                                         <Text style={styles.messageText}>{msg.text}</Text>
-                                     )}
+                                     {msg.type === 'text' && <Text style={styles.messageText}>{msg.text}</Text>}
                                  </View>
                              ))}
                         </View>
@@ -398,15 +287,9 @@ const DetailsScreen = () => {
                                 value={messageText}
                                 onChangeText={setMessageText}
                             />
-                            {messageText.trim() === '' ? (
-                                <TouchableOpacity onPressIn={startRecording} onPressOut={stopRecording}>
-                                    <MaterialIcons name="mic" size={24} color={isRecording ? 'red' : '#000'} />
-                                </TouchableOpacity>
-                            ) : (
-                                <TouchableOpacity onPress={handleSendMessage}>
-                                    <MaterialIcons name="send" size={24} color={'#000'} />
-                                </TouchableOpacity>
-                            )}
+                            <TouchableOpacity onPress={handleSendMessage}>
+                                <MaterialIcons name="send" size={24} color={messageText.trim() === '' ? '#999' : '#000'} />
+                            </TouchableOpacity>
                         </View>
                     </View>
                 )}

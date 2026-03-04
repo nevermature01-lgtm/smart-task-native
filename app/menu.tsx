@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, Easing } from 'react-native-reanimated';
-import { StatusBar } from 'expo-status-bar';
+import { setStatusBarStyle, setStatusBarHidden } from 'expo-status-bar';
 
 const menuItems = [
   { href: '/home', icon: 'home', text: 'Home', color: '#2563EB' },
@@ -189,6 +189,11 @@ const CustomDrawerContent = ({ closeMenu, user }) => {
   const userEmail = user ? user.email : '';
   const initial = userName ? userName[0].toUpperCase() : '?';
 
+  useEffect(() => {
+    setStatusBarHidden(false, 'none');
+    setStatusBarStyle('dark');
+  }, []);
+
   const handleNavigation = (href) => {
     router.push(href);
     if (closeMenu) {
@@ -222,7 +227,6 @@ const CustomDrawerContent = ({ closeMenu, user }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar style="dark" />
       <View style={styles.gridPattern} />
       <Animated.View style={animatedCloseButtonStyle}>
         <TouchableOpacity style={styles.closeButton} onPress={closeMenu}>
