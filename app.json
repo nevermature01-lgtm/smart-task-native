@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "vision-ai-app",
-    "slug": "vision-ai-app",
+    "name": "Smart Task",
+    "slug": "smart-task",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -18,7 +18,11 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "android.permission.INTERNET"
+      ],
+      "package": "com.smartdecor.smarttask"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -26,15 +30,21 @@
     "plugins": [
       "expo-router"
     ],
-    "scheme": "vision-ai-app",
+    "scheme": "smart-task",
     "androidStatusBar": {
       "translucent": true,
-      "backgroundColor": "transparent"
+      "backgroundColor": "#0ab99d"
     },
     "androidNavigationBar": {
       "visible": "leanback",
       "backgroundColor": "#00000000",
       "barStyle": "dark-content"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0eef2205-acd7-4648-8654-6eecf6b8d1e0"
+      }
     }
   }
 }

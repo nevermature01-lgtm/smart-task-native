@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebase';
 
 const menuItems = [
   { href: '/home', icon: 'home', text: 'Home', color: '#2563EB' },
@@ -26,11 +28,14 @@ const CustomDrawerContent = ({ closeMenu, user }) => {
     }
   };
 
-  const handleLogout = () => {
-    console.log('Logging out...');
-    router.push('/login'); 
-    if (closeMenu) {
-      closeMenu();
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      if (closeMenu) {
+        closeMenu();
+      }
+    } catch (error) {
+        console.error("Logout Error: ", error);
     }
   };
 

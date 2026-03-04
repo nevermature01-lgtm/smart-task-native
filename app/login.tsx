@@ -95,17 +95,18 @@ const LoginScreen = () => {
 
   const handleLogin = () => {
     setLoading(true);
+    setError('');
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
         const user = userCredential.user;
-        if (user.emailVerified) {
-          router.replace('/home');
-        } else {
-          setError('Please verify your email before logging in.');
-        }
+        router.replace('/home');
       })
       .catch((error) => {
-        setError(error.message);
+        if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+            setError('The email or password you entered is incorrect. Please try again.');
+        } else {
+            setError('An unexpected error occurred. Please try again later.');
+        }
       })
       .finally(() => {
         setLoading(false);
@@ -188,6 +189,7 @@ const LoginScreen = () => {
       color: COLORS.danger,
       fontWeight: '600',
       marginLeft: 8,
+      flex: 1,
     },
     loginButton: {
       height: 56,

@@ -26,12 +26,12 @@ const InitialLayout = () => {
     useEffect(() => {
         if (initializing) return;
 
-        const inAuthGroup = segments[0] === 'login';
+        const isPublicRoute = segments.length === 0 || ['login', 'signup', 'forgot-password'].includes(segments[0]);
 
-        if (user && inAuthGroup) {
+        if (user && isPublicRoute) {
             router.replace('/home');
-        } else if (!user && !inAuthGroup) {
-            router.replace('/login');
+        } else if (!user && !isPublicRoute) {
+            router.replace('/');
         }
     }, [user, segments, initializing]);
 
