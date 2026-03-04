@@ -185,7 +185,9 @@ const HomeScreen = () => {
             <Text style={styles.sectionTitle}>Actions</Text>
             <View style={styles.actionsSlider}>
               <ActionButton icon="check-square" label="Tasks" color="#ec4899" bg="#fce7f3" />
-              <ActionButton icon="users" label="Leads" color="#a78bfa" bg="#f5f3ff" />
+              <TouchableOpacity onPress={() => router.push('/leads')}>
+                <ActionButton icon="users" label="Leads" color="#a78bfa" bg="#f5f3ff" />
+              </TouchableOpacity>
               <ActionButton icon="briefcase" label="Projects" color="#60a5fa" bg="#eff6ff" />
               <ActionButton icon="dollar-sign" label="Finance" color="#fb923c" bg="#fff7ed" />
             </View>
