@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, Easing } from 'react-native-reanimated';
 
 const menuItems = [
   { href: '/home', icon: 'home', text: 'Home', color: '#2563EB' },
@@ -12,89 +13,6 @@ const menuItems = [
   { href: '/theme', icon: 'droplet', text: 'Theme', color: '#8B5CF6' },
   { href: '/settings', icon: 'settings', text: 'Settings', color: '#6366F1' },
 ];
-
-const CustomDrawerContent = ({ closeMenu, user }) => {
-  const router = useRouter();
-  const pathname = usePathname();
-  
-  const userName = user ? (user.displayName || user.email.split('@')[0]) : 'Guest';
-  const userEmail = user ? user.email : '';
-  const initial = userName ? userName[0].toUpperCase() : '?';
-
-  const handleNavigation = (href) => {
-    router.push(href);
-    if (closeMenu) {
-      closeMenu();
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      if (closeMenu) {
-        closeMenu();
-      }
-    } catch (error) {
-        console.error("Logout Error: ", error);
-    }
-  };
-
-  return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.gridPattern} />
-      <TouchableOpacity style={styles.closeButton} onPress={closeMenu}>
-          <Feather name="x" size={20} color="#4B5563" />
-      </TouchableOpacity>
-      <View style={styles.profileSection}>
-        <View style={styles.avatar}>
-          {user && user.photoURL ? (
-            <Image source={{ uri: user.photoURL }} style={styles.avatarImage} />
-          ) : (
-            <Text style={styles.avatarInitial}>{initial}</Text>
-          )}
-        </View>
-        <Text style={styles.userName}>{userName}</Text>
-        <Text style={styles.userEmail}>{userEmail}</Text>
-      </View>
-
-      <View style={styles.menuItemsContainer}>
-        {menuItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <TouchableOpacity
-              key={item.href}
-              style={[styles.menuItemCard, isActive && styles.activeMenuItem(item.color)]}
-              onPress={() => handleNavigation(item.href)}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.iconContainer, isActive && styles.activeIconContainer]}>
-                <Feather
-                  name={item.icon}
-                  size={22}
-                  color={isActive ? '#FFFFFF' : item.color}
-                />
-              </View>
-              <Text style={[styles.menuItemText, isActive && styles.activeMenuItemText]}>
-                {item.text}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          activeOpacity={0.8}
-        >
-            <Feather name="log-out" size={22} color="#FFFFFF" style={{marginRight: 12}} />
-            <Text style={styles.logoutButtonText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
-  );
-};
 
 const styles = StyleSheet.create({
   container: {
@@ -228,5 +146,118 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 });
+
+const AnimatedMenuItem = ({ item, index, isActive, handleNavigation }) => {
+    const opacity = useSharedValue(0);
+    const translateX = useSharedValue(-30);
+
+    useEffect(() => {
+        const delay = 150 + index * 70;
+        opacity.value = withDelay(delay, withTiming(1, { duration: 400, easing: Easing.out(Easing.quad) }));
+        translateX.value = withDelay(delay, withTiming(0, { duration: 400, easing: Easing.out(Easing.quad) }));
+    }, []);
+
+    const animatedStyle = useAnimatedStyle(() => {
+        return {
+            opacity: opacity.value,
+            transform: [{ translateX: translateX.value }],
+        };
+    });
+
+    return (
+        <Animated.View style={animatedStyle}>
+              <TouchableOpacity
+                style={[styles.menuItemCard, isActive && styles.activeMenuItem(item.color)]}
+                onPress={() => handleNavigation(item.href)}
+                activeOpacity={0.8}
+            >
+                <View style={[styles.iconContainer, isActive && styles.activeIconContainer]}>
+                    <Feather name={item.icon} size={22} color={isActive ? '#FFFFFF' : item.color} />
+                </View>
+                <Text style={[styles.menuItemText, isActive && styles.activeMenuItemText]}>{item.text}</Text>
+            </TouchableOpacity>
+        </Animated.View>
+    );
+};
+
+const CustomDrawerContent = ({ closeMenu, user }) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  
+  const userName = user ? (user.displayName || user.email.split('@')[0]) : 'Guest';
+  const userEmail = user ? user.email : '';
+  const initial = userName ? userName[0].toUpperCase() : '?';
+
+  const handleNavigation = (href) => {
+    router.push(href);
+    if (closeMenu) {
+      closeMenu();
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      if (closeMenu) {
+        closeMenu();
+      }
+    } catch (error) {
+        console.error("Logout Error: ", error);
+    }
+  };
+
+  const closeButtonOpacity = useSharedValue(0);
+  const closeButtonTranslateX = useSharedValue(20);
+
+  useEffect(() => {
+      closeButtonOpacity.value = withDelay(300, withTiming(1, { duration: 400, easing: Easing.out(Easing.cubic) }));
+      closeButtonTranslateX.value = withDelay(300, withTiming(0, { duration: 400, easing: Easing.out(Easing.cubic) }));
+  }, []);
+
+  const animatedCloseButtonStyle = useAnimatedStyle(() => ({
+      opacity: closeButtonOpacity.value,
+      transform: [{ translateX: closeButtonTranslateX.value }],
+  }));
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={styles.gridPattern} />
+      <Animated.View style={animatedCloseButtonStyle}>
+        <TouchableOpacity style={styles.closeButton} onPress={closeMenu}>
+            <Feather name="x" size={20} color="#4B5563" />
+        </TouchableOpacity>
+      </Animated.View>
+      <View style={styles.profileSection}>
+        <View style={styles.avatar}>
+          {user && user.photoURL ? (
+            <Image source={{ uri: user.photoURL }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarInitial}>{initial}</Text>
+          )}
+        </View>
+        <Text style={styles.userName}>{userName}</Text>
+        <Text style={styles.userEmail}>{userEmail}</Text>
+      </View>
+
+      <View style={styles.menuItemsContainer}>
+        {menuItems.map((item, index) => {
+            const isActive = pathname === item.href;
+            return <AnimatedMenuItem key={item.href} item={item} index={index} isActive={isActive} handleNavigation={handleNavigation} />
+        })}
+      </View>
+
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          activeOpacity={0.8}
+        >
+            <Feather name="log-out" size={22} color="#FFFFFF" style={{marginRight: 12}} />
+            <Text style={styles.logoutButtonText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+};
 
 export default CustomDrawerContent;
