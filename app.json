@@ -32,8 +32,9 @@
     ],
     "scheme": "smart-task",
     "androidStatusBar": {
-      "translucent": true,
-      "backgroundColor": "#0ab99d"
+      "backgroundColor": "#ffffff",
+      "barStyle": "dark-content",
+      "translucent": false
     },
     "androidNavigationBar": {
       "visible": "leanback",

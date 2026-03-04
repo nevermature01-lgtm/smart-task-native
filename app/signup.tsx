@@ -11,7 +11,6 @@ import {
   Platform,
   TextInput,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { MaterialIcons } from '@expo/vector-icons';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth, db } from '../firebase';
@@ -243,7 +242,6 @@ const SignupScreen = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F8F9FA' }}>
-        <StatusBar style="dark" translucent backgroundColor="transparent" />
         <View style={styles.root}>
         <View style={styles.gridPattern} />
         <View style={styles.header}>

@@ -1,10 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
 import { View, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useFocusEffect } from "@react-navigation/native";
+import * as NavigationBar from "expo-navigation-bar";
+import * as SystemUI from "expo-system-ui";
 
 const InitialLayout = () => {
     const [user, setUser] = useState(null);
@@ -47,6 +50,28 @@ const InitialLayout = () => {
 };
 
 export default function RootLayout() {
+    const lockSystemBars = async () => {
+        await NavigationBar.setVisibilityAsync("visible");
+        await NavigationBar.setBehaviorAsync("inset-touch");
+        await NavigationBar.setButtonStyleAsync("dark");
+        await SystemUI.setBackgroundColorAsync("#ffffff");
+    };
+
+    useEffect(() => {
+        lockSystemBars();
+        const interval = setInterval(() => {
+            lockSystemBars();
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            lockSystemBars();
+        }, [])
+    );
+
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
             <InitialLayout />

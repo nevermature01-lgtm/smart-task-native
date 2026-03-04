@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import MenuScreen from './menu';
+import { StatusBar } from 'expo-status-bar';
 
 const CustomToast = ({ message, visible, type }) => {
     if (!visible) return null;
@@ -154,6 +155,7 @@ const HomeScreen = () => {
 
   return (
     <SafeAreaView style={styles.body} edges={['top']}>
+      <StatusBar style="dark" />
       <CustomToast visible={toastConfig.visible} message={toastConfig.message} type={toastConfig.type} />
       <View style={styles.mainContainer}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>

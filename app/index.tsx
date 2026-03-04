@@ -6,7 +6,6 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
@@ -161,7 +160,6 @@ const WelcomeScreen = () => {
 
     return (
         <View style={{ flex: 1, backgroundColor: '#F8F9FA' }}>
-            <StatusBar translucent backgroundColor="transparent" style="dark" />
             <View style={styles.container}>
                 <View style={styles.header}>
                     <View style={styles.logoContainer}>
