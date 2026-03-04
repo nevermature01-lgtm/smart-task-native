@@ -169,6 +169,21 @@ const DetailsScreen = () => {
     const taskCreationDate = task.createdAt?.toDate();
     const formattedTaskDateTime = taskCreationDate ? `${taskCreationDate.getDate()}-${taskCreationDate.toLocaleString('default', { month: 'short' })}-${taskCreationDate.getFullYear()}, ${taskCreationDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : '';
 
+    let formattedTaskAssignmentDateTime = '';
+    if (taskCreationDate) {
+        const dateString = taskCreationDate.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+        });
+        const timeString = taskCreationDate.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+        formattedTaskAssignmentDateTime = `${dateString} at ${timeString}`;
+    }
+
 
     return (
         <View style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -185,7 +200,7 @@ const DetailsScreen = () => {
                 <Text style={styles.headerTitle}>Details</Text>
             </View>
 
-            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={100}>
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
                 <View style={{ flex: 1, position: 'relative' }}>
                     <ScrollView 
                         ref={scrollViewRef}
@@ -225,7 +240,18 @@ const DetailsScreen = () => {
                                     </TouchableOpacity>
                                 )}
                             </View>
-                            {/* Assignment details... */}
+                            <View style={{marginTop: 8, alignItems: 'flex-start'}}>
+                                <View style={styles.assignee}>
+                                    <Text style={styles.assigneeName}>{task.assignedByName}</Text>
+                                </View>
+                                <View style={{flexDirection: 'row', alignItems: 'center', marginVertical: 4, marginLeft: 16}}>
+                                    <MaterialIcons name="arrow-downward" size={24} color="#6B7280" />
+                                    <Text style={styles.assignmentDate}>{formattedTaskAssignmentDateTime}</Text>
+                                </View>
+                                <View style={styles.assignee}>
+                                    <Text style={styles.assigneeName}>{task.assignedToName}</Text>
+                                </View>
+                            </View>
                         </View>
 
                         {/* Steps */}
@@ -283,30 +309,43 @@ const DetailsScreen = () => {
                         )}
                     </ScrollView>
                     
-                    {isCompleted && <CompletedScreen />} 
-                </View>
-
-                {!isCompleted && (
-                    <View style={styles.footerContainer}>
-                         <View style={styles.swipeToCompleteButton}>
-                            <GestureDetector gesture={gesture}>
-                                <Animated.View style={[styles.swipeableCircle, animatedStyle]} />
-                            </GestureDetector>
-                            <Text style={styles.swipeToCompleteText}>Swipe to Complete</Text>
-                        </View>
-                        <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
-                            <TextInput 
-                                style={styles.messageInput} 
-                                placeholder="Message..." 
-                                value={messageText}
-                                onChangeText={setMessageText}
-                            />
-                            <TouchableOpacity onPress={handleSendMessage}>
-                                <Feather name="send" size={24} color={messageText.trim() === '' ? '#999' : '#000'} />
+                    {isCompleted && (
+                        <View style={styles.completedOverlay}>
+                            <Feather name="check-circle" size={64} color="white" />
+                            <Text style={styles.completedOverlayText}>Task Completed</Text>
+                            <TouchableOpacity onPress={() => setReopenModalVisible(true)}>
+                                <Text style={styles.unlockText}>Reopen Task</Text>
                             </TouchableOpacity>
                         </View>
-                    </View>
-                )}
+                    )}
+
+                    {!isCompleted && (
+                        <View style={styles.footerContainer}>
+                             <View style={styles.swipeToCompleteButton}>
+                                <GestureDetector gesture={gesture}>
+                                    <Animated.View style={[styles.swipeableCircle, animatedStyle]}>
+                                        <View style={{flexDirection: 'row'}}>
+                                            <Feather name="chevron-right" size={24} color="white" />
+                                            <Feather name="chevron-right" size={24} color="white" style={{marginLeft: -15}} />
+                                        </View>
+                                    </Animated.View>
+                                </GestureDetector>
+                                <Text style={styles.swipeToCompleteText}>Swipe to Complete</Text>
+                            </View>
+                            <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
+                                <TextInput 
+                                    style={styles.messageInput} 
+                                    placeholder="Message..." 
+                                    value={messageText}
+                                    onChangeText={setMessageText}
+                                />
+                                <TouchableOpacity onPress={handleSendMessage}>
+                                    <Feather name="send" size={24} color={messageText.trim() === '' ? '#999' : '#000'} />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
+                </View>
             </KeyboardAvoidingView>
 
             {/* Modals */}
@@ -361,15 +400,27 @@ const styles = StyleSheet.create({
     },
     headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1F2937' },
     container: { flex: 1, paddingHorizontal: 16, },
-    taskInfoContainer: { marginBottom: 16 },
+    taskInfoContainer: { marginBottom: 16, marginTop: 20 },
     taskTitleContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4, },
     taskTitle: { fontSize: 20, fontWeight: 'bold', flex: 1, marginRight: 16, },
     priorityContainer: { alignItems: 'center', },
     priorityText: { fontSize: 14, fontWeight: 'bold', color: '#EF4444', marginTop: 4, },
     taskSubtitle: { fontSize: 16, color: '#6B7280', marginBottom: 4, },
     taskDate: { fontSize: 14, color: '#6B7280', },
+    assignmentDate: { fontSize: 12, color: '#6B7280', marginLeft: 8 },
     actionButton: { padding: 8, },
     deleteButton: { backgroundColor: 'red', borderRadius: 5, },
+    assignee: {
+        backgroundColor: '#f3f4f6',
+        borderRadius: 8,
+        padding: 12,
+        alignSelf: 'flex-start',
+    },
+    assigneeName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1F2937',
+    },
     assignedToContainer: { marginBottom: 16, },
     assignedToHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, },
     assignedToTitle: { fontSize: 16, fontWeight: 'bold', },
@@ -399,7 +450,7 @@ const styles = StyleSheet.create({
     playButton: { justifyContent: 'center', alignItems: 'center', width: 40, height: 40, },
 
     // Footer & Swipe
-    footerContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, },
+    footerContainer: { position: 'absolute', bottom: 20, left: 0, right: 0, },
     swipeToCompleteButton: { backgroundColor: '#E5E7EB', height: 60, borderRadius: 30, justifyContent: 'center', marginHorizontal: 20, marginBottom: 10, },
     swipeableCircle: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#2563EB', position: 'absolute', left: 5, top: 5, justifyContent: 'center', alignItems: 'center', zIndex: 2, },
     swipeToCompleteText: { fontSize: 16, fontWeight: 'bold', color: '#374151', alignSelf: 'center', zIndex: 1, },

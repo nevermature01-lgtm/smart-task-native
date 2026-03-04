@@ -182,7 +182,13 @@ const TaskDetailsScreen = () => {
                 </Animated.View>
             )}
             <View style={[styles.header, { paddingTop: insets.top }]}>
-                <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
+                <TouchableOpacity style={styles.headerButton} onPress={() => {
+                    if (router.canGoBack()) {
+                        router.back();
+                    } else {
+                        router.replace('/home');
+                    }
+                }}>
                     <Feather name="chevron-left" size={24} color="#1F2937" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>New Task</Text>
@@ -190,7 +196,7 @@ const TaskDetailsScreen = () => {
             </View>
 
             <ScrollView style={styles.contentContainer} keyboardShouldPersistTaps="handled">
-                <View style={styles.inputGroup}>
+                <View style={[styles.inputGroup, {marginTop: 20}]}>
                     <Text style={styles.label}>Task Name</Text>
                     <TextInput
                         style={styles.input}
@@ -398,7 +404,8 @@ const styles = StyleSheet.create({
         padding: 12,
         borderRadius: 10,
         borderWidth: 1,
-        borderColor: '#E5E7EB'
+        borderColor: '#E5E7EB',
+        marginTop: 10,
     },
     stepNumber: {
         fontSize: 14,
@@ -421,7 +428,8 @@ const styles = StyleSheet.create({
         padding: 12,
         borderRadius: 10,
         borderWidth: 1,
-        borderColor: '#E5E7EB'
+        borderColor: '#E5E7EB',
+        marginTop: 10,
     },
     checkbox: {
         width: 22,
