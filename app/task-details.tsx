@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Alert, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { MaterialIcons, Feather } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, collection, addDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const ChecklistItem = ({ item, onToggle, onTextChange, onRemove }) => (
     <View style={styles.checklistItem}>
         <TouchableOpacity onPress={onToggle} style={[styles.checkbox, item.completed && styles.checkboxCompleted]}>
-            {item.completed && <Feather name="check" size={14} color="#fff" />}
+            {item.completed && <Feather name="check" size={16} color="#fff" />}
         </TouchableOpacity>
         <TextInput
             style={[styles.checklistInput, item.completed && styles.checklistInputCompleted]}
@@ -19,14 +20,14 @@ const ChecklistItem = ({ item, onToggle, onTextChange, onRemove }) => (
             placeholderTextColor="#9CA3AF"
         />
         <TouchableOpacity onPress={onRemove} style={styles.removeButton}>
-            <MaterialIcons name="close" size={20} color="#9CA3AF" />
+            <Feather name="x" size={20} color="#9CA3AF" />
         </TouchableOpacity>
     </View>
 );
 
 const StepItem = ({ item, onTextChange, index, onRemove }) => (
      <View style={styles.stepItem}>
-        <Text style={styles.stepNumber}>{index + 1}.</Text>
+        <Text style={styles.stepNumber}>{index + 1}</Text>
         <TextInput
             style={styles.stepInput}
             value={item.text}
@@ -36,11 +37,14 @@ const StepItem = ({ item, onTextChange, index, onRemove }) => (
             multiline
         />
         <TouchableOpacity onPress={onRemove} style={styles.removeButton}>
-            <MaterialIcons name="close" size={20} color="#9CA3AF" />
+            <Feather name="x" size={20} color="#9CA3AF" />
         </TouchableOpacity>
     </View>
 )
 
+const { width: screenWidth } = Dimensions.get('window');
+const priorityButtonWidth = 60;
+const spacerWidth = (screenWidth - priorityButtonWidth) / 2;
 
 const TaskDetailsScreen = () => {
     const router = useRouter();
@@ -52,6 +56,7 @@ const TaskDetailsScreen = () => {
     const [steps, setSteps] = useState([{ id: 1, text: ''}]);
     const [checklist, setChecklist] = useState([{ id: 1, text: '', completed: false }]);
     const [priority, setPriority] = useState(5);
+    const scrollViewRef = useRef(null);
 
     const auth = getAuth();
     const db = getFirestore();
@@ -104,8 +109,8 @@ const TaskDetailsScreen = () => {
             await addDoc(collection(db, "tasks"), {
                 name: taskName,
                 description,
-                steps,
-                checklist,
+                steps: steps.filter(s => s.text.trim() !== ''),
+                checklist: checklist.filter(c => c.text.trim() !== ''),
                 priority,
                 assignedToId: memberId,
                 assignedToName: memberName,
@@ -116,50 +121,55 @@ const TaskDetailsScreen = () => {
                 status: 'pending',
             });
 
-            Alert.alert("Success", "Task created successfully!");
+            Alert.alert("Success", "Task assigned successfully!");
             router.back();
         } catch (error) {
             console.error("Error creating task: ", error);
             Alert.alert("Error", "An error occurred while creating the task.");
         }
     };
-    
+
+    const handlePriorityScroll = (event) => {
+        const x = event.nativeEvent.contentOffset.x;
+        const newPriority = Math.round(x / priorityButtonWidth) + 1;
+        if (newPriority >= 1 && newPriority <= 10) {
+            setPriority(newPriority);
+        }
+    };
 
     return (
         <KeyboardAvoidingView 
-            style={{ flex: 1, backgroundColor: '#f8f6f6' }} 
+            style={{ flex: 1, backgroundColor: '#F9FAFB' }} 
             behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-            <View style={[styles.header, { paddingTop: insets.top }]}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                    <MaterialIcons name="arrow-back" size={24} color="#1F2937" />
+            <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+                <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
+                    <Feather name="chevron-left" size={24} color="#1F2937" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>New Task</Text>
-                <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
-                    <MaterialIcons name="close" size={24} color="#1F2937" />
-                </TouchableOpacity>
+                <View style={{width: 40}} />
             </View>
 
             <ScrollView style={styles.contentContainer} keyboardShouldPersistTaps="handled">
-                <View style={styles.assigneeContainer}>
-                    <Text style={styles.label}>Assigning to</Text>
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Task Name</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={taskName}
+                        onChangeText={setTaskName}
+                        placeholder="e.g., Develop the new API"
+                        placeholderTextColor="#9CA3AF"
+                    />
+                </View>
+                
+                 <View style={styles.assigneeContainer}>
+                    <Text style={styles.label}>Assign To</Text>
                     <View style={styles.assigneePill}>
                          <View style={styles.avatar}>
                             <Text style={styles.avatarText}>{memberName?.charAt(0).toUpperCase()}</Text>
                         </View>
                         <Text style={styles.assigneeName}>{memberName}</Text>
                     </View>
-                </View>
-
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Name of Task</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={taskName}
-                        onChangeText={setTaskName}
-                        placeholder="e.g., Design the new homepage"
-                        placeholderTextColor="#9CA3AF"
-                    />
                 </View>
 
                 <View style={styles.inputGroup}>
@@ -175,7 +185,7 @@ const TaskDetailsScreen = () => {
                 </View>
 
                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Steps</Text>
+                    <Text style={styles.label}>Steps to Complete</Text>
                     {steps.map((item, index) => (
                         <StepItem 
                             key={item.id}
@@ -186,7 +196,7 @@ const TaskDetailsScreen = () => {
                         />
                     ))}
                     <TouchableOpacity style={styles.addButton} onPress={addStep}>
-                         <MaterialIcons name="add" size={16} color="#4B5563" />
+                         <Feather name="plus-circle" size={18} color="#6B7280" />
                         <Text style={styles.addText}>Add Step</Text>
                     </TouchableOpacity>
                 </View>
@@ -203,25 +213,40 @@ const TaskDetailsScreen = () => {
                         />
                     ))}
                     <TouchableOpacity style={styles.addButton} onPress={addChecklistItem}>
-                         <MaterialIcons name="add" size={16} color="#4B5563" />
+                         <Feather name="plus-circle" size={18} color="#6B7280" />
                         <Text style={styles.addText}>Add Item</Text>
                     </TouchableOpacity>
                 </View>
 
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>Priority</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <ScrollView 
+                        ref={scrollViewRef}
+                        horizontal 
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={{ paddingHorizontal: spacerWidth }}
+                        decelerationRate="fast"
+                        snapToInterval={priorityButtonWidth}
+                        onMomentumScrollEnd={handlePriorityScroll}
+                    >
                         {[...Array(10)].map((_, i) => (
                             <TouchableOpacity
                                 key={i}
                                 style={[
                                     styles.priorityButton,
-                                    priority === i + 1 && styles.priorityButtonSelected,
+                                    {
+                                        width: priorityButtonWidth,
+                                        backgroundColor: priority === i + 1 ? '#3B82F6' : '#fff',
+                                        borderColor: priority === i + 1 ? '#3B82F6' : '#E5E7EB',
+                                    }
                                 ]}
-                                onPress={() => setPriority(i + 1)}>
+                                onPress={() => {
+                                    setPriority(i + 1);
+                                    scrollViewRef.current.scrollTo({ x: i * priorityButtonWidth, animated: true });
+                                }}>
                                 <Text style={[
                                     styles.priorityButtonText,
-                                    priority === i + 1 && styles.priorityButtonTextSelected
+                                    { color: priority === i + 1 ? '#fff' : '#374151' }
                                 ]}>
                                     {i + 1}
                                 </Text>
@@ -232,8 +257,13 @@ const TaskDetailsScreen = () => {
             </ScrollView>
 
             <View style={[styles.footer, { paddingBottom: insets.bottom > 0 ? insets.bottom : 20 }]}>
-                <TouchableOpacity style={styles.createButton} onPress={handleSaveTask}>
-                    <Text style={styles.createButtonText}>Create Task</Text>
+                <TouchableOpacity onPress={handleSaveTask}>
+                    <LinearGradient
+                        colors={['#3B82F6', '#2563EB']}
+                        style={styles.createButton}
+                    >
+                        <Text style={styles.createButtonText}>Assign Task</Text>
+                    </LinearGradient>
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>
@@ -244,143 +274,134 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'space-between',
         paddingHorizontal: 16,
-        paddingBottom: 12,
-        backgroundColor: 'white',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
-        position: 'relative',
-        marginTop: 20
+        paddingBottom: 16,
+        backgroundColor: '#FFFFFF',
     },
-    backButton: {
-        position: 'absolute',
-        left: 16,
-        top: 10, 
-        padding: 4,
-        zIndex: 1,
-    },
-    closeButton: {
-        position: 'absolute',
-        right: 16,
-        top: 10,
-        padding: 4,
-        zIndex: 1,
+    headerButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E5E7EB'
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: 'bold',
         color: '#1F2937',
     },
     contentContainer: {
         flex: 1,
         paddingHorizontal: 20,
+        paddingTop: 16
     },
     assigneeContainer: {
-        paddingVertical: 20, 
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
-        marginBottom: 20,
+        marginBottom: 24,
     },
     assigneePill: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: '#EFF6FF',
         borderRadius: 99,
-        padding: 6,
+        paddingVertical: 4,
+        paddingHorizontal: 12,
         alignSelf: 'flex-start',
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
     },
     avatar: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: '#BFDBFE',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 10,
+        marginRight: 8,
     },
     avatarText: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
         color: '#2563EB',
     },
     assigneeName: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#1F2937',
-        marginRight: 6,
+        color: '#1E40AF',
     },
     label: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#374151',
-        marginBottom: 12,
+        color: '#4B5563',
+        marginBottom: 8,
     },
     inputGroup: {
         marginBottom: 24,
     },
     input: {
         backgroundColor: '#fff',
-        borderRadius: 10,
-        padding: 14,
+        borderRadius: 12,
+        padding: 16,
         fontSize: 16,
         color: '#1F2937',
         borderWidth: 1,
         borderColor: '#E5E7EB',
     },
     textarea: {
-        height: 100,
+        height: 120,
         textAlignVertical: 'top',
     },
     stepItem: {
         flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 10,
+        alignItems: 'flex-start',
+        marginBottom: 12,
+        backgroundColor: '#fff',
+        padding: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#E5E7EB'
     },
     stepNumber: {
-        fontSize: 16,
+        fontSize: 14,
         lineHeight: 24, 
-        fontWeight: '600',
-        color: '#6B7280',
+        fontWeight: 'bold',
+        color: '#3B82F6',
         marginRight: 8,
     },
     stepInput: {
         flex: 1,
         fontSize: 16,
         color: '#374151',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
-        paddingVertical: 8,
+        paddingVertical: 0,
     },
     checklistItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 10,
+        marginBottom: 12,
+        backgroundColor: '#fff',
+        padding: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#E5E7EB'
     },
     checkbox: {
-        width: 20,
-        height: 20,
-        borderRadius: 5,
+        width: 22,
+        height: 22,
+        borderRadius: 6,
         borderWidth: 2,
         borderColor: '#D1D5DB',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
-        backgroundColor: '#fff'
     },
     checkboxCompleted: {
-        backgroundColor: '#2563EB',
-        borderColor: '#2563EB',
+        backgroundColor: '#3B82F6',
+        borderColor: '#3B82F6',
     },
     checklistInput: {
         flex: 1,
         fontSize: 16,
         color: '#374151',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
-        paddingVertical: 4,
     },
     checklistInputCompleted: {
         textDecorationLine: 'line-through',
@@ -389,13 +410,14 @@ const styles = StyleSheet.create({
     addButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 10,
-        padding: 6,
+        marginTop: 4,
+        padding: 8,
+        alignSelf: 'flex-start',
     },
     addText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#4B5563',
+        color: '#6B7280',
         marginLeft: 6
     },
     removeButton: {
@@ -403,43 +425,40 @@ const styles = StyleSheet.create({
         marginLeft: 8,
     },
     priorityButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        height: 60,
+        borderRadius: 30,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#D1D5DB',
-        marginRight: 10,
-    },
-    priorityButtonSelected: {
-        backgroundColor: '#2563EB',
-        borderColor: '#2563EB',
+        borderWidth: 2,
+        marginHorizontal: 0,
     },
     priorityButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#374151',
-    },
-    priorityButtonTextSelected: {
-        color: '#fff',
+        fontSize: 20,
+        fontWeight: 'bold',
     },
     footer: {
-        backgroundColor: '#fff',
+        backgroundColor: '#FFFFFF',
         paddingHorizontal: 20,
         paddingTop: 10,
         borderTopWidth: 1,
         borderTopColor: '#E5E7EB',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -5 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
     },
     createButton: {
-        backgroundColor: '#2563EB',
         padding: 16,
-        borderRadius: 12,
+        borderRadius: 14,
         alignItems: 'center',
+        shadowColor: '#3B82F6',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
     },
     createButtonText: {
         color: '#fff',
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold',
     },
 });
