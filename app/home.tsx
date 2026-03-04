@@ -40,24 +40,56 @@ const ActionButton = ({ icon, label, color, bg }) => (
   </View>
 );
 
-const TaskCard = ({ taskName, priority, onPress }) => {
-    const priorityColor = {
-        High: '#EF4444',
-        Medium: '#F97316',
-        Low: '#22C55E'
+const TaskCard = ({ task, onPress }) => {
+    const { name, priority, dueDate, createdAt } = task;
+
+    const getPriorityColor = (p) => {
+        const priorityValue = Number(p);
+        switch (priorityValue) {
+            case 1:
+                return '#EF4444'; // High
+            case 2:
+                return '#F97316'; // Medium
+            case 3:
+                return '#22C55E'; // Low
+            default:
+                return '#6B7280'; // Other priorities
+        }
+    };
+
+    const priorityColor = getPriorityColor(priority);
+
+    const formatDate = (dueTimestamp, createdTimestamp) => {
+        const timestamp = dueTimestamp || createdTimestamp;
+        if (!timestamp || !timestamp.toDate) return 'No date specified';
+        
+        const date = timestamp.toDate();
+
+        const dateString = date.toLocaleDateString('en-US', { 
+            month: 'long', 
+            day: 'numeric', 
+            year: 'numeric' 
+        });
+        const timeString = date.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+        });
+
+        return `${dateString} at ${timeString}`;
     };
 
     return (
         <TouchableOpacity style={styles.taskCard} onPress={onPress}>
-            <View>
-                <Text style={styles.taskName}>{taskName}</Text>
-                <Text style={{ ...styles.taskPriority, color: priorityColor[priority] || '#6B7280' }}>
-                    {priority} Priority
-                </Text>
-             </View>
-            <Feather name="chevron-right" size={24} color="#9CA3AF" />
+            <View style={styles.taskInfoContainer}>
+                <Text style={styles.taskName} numberOfLines={1}>{name}</Text>
+                <Text style={styles.taskDueDate}>{formatDate(dueDate, createdAt)}</Text>
+            </View>
+            <View style={[styles.priorityBadge, { backgroundColor: `${priorityColor}20` }]}>
+                <Text style={[styles.priorityText, { color: priorityColor }]}>{`P${priority}`}</Text>
+            </View>
         </TouchableOpacity>
-    )
+    );
 };
 
 const HomeScreen = () => {
@@ -150,7 +182,7 @@ const HomeScreen = () => {
   };
 
   const handleTaskPress = (taskId) => {
-    router.push(`/details?taskId=${taskId}`);
+    router.push(`/task-details?taskId=${taskId}`);
   };
 
   return (
@@ -205,7 +237,7 @@ const HomeScreen = () => {
 
           <View style={{paddingHorizontal: 24, marginTop: 16, gap: 12}}>
             {tasks.map(task => (
-                <TaskCard key={task.id} taskName={task.name} priority={task.priority} onPress={() => handleTaskPress(task.id)} />
+                <TaskCard key={task.id} task={task} onPress={() => handleTaskPress(task.id)} />
             ))}
           </View>
 
@@ -442,24 +474,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   taskCard: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: 'rgba(0, 0, 0, 0.05)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  taskInfoContainer: {
+    flexShrink: 1,
+    marginRight: 10
   },
   taskName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: '#1F2937',
+    marginBottom: 4,
   },
-  taskPriority: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginTop: 4,
+  taskDueDate: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  priorityBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  priorityText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
 
