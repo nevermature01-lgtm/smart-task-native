@@ -41,6 +41,7 @@ const CustomDrawerContent = ({ closeMenu, user }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={styles.gridPattern} />
       <TouchableOpacity style={styles.closeButton} onPress={closeMenu}>
           <Feather name="x" size={20} color="#4B5563" />
       </TouchableOpacity>
@@ -62,18 +63,18 @@ const CustomDrawerContent = ({ closeMenu, user }) => {
           return (
             <TouchableOpacity
               key={item.href}
-              style={[styles.menuItem, isActive && styles.activeMenuItem(item.color)]}
+              style={[styles.menuItemCard, isActive && styles.activeMenuItem(item.color)]}
               onPress={() => handleNavigation(item.href)}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
-              <View style={[styles.iconContainer, isActive && styles.activeIconContainer(item.color)]}>
+              <View style={[styles.iconContainer, isActive && styles.activeIconContainer]}>
                 <Feather
                   name={item.icon}
                   size={22}
-                  color={isActive ? '#FFFFFF' : '#4B5563'}
+                  color={isActive ? '#FFFFFF' : item.color}
                 />
               </View>
-              <Text style={[styles.menuItemText, isActive && styles.activeMenuItemText(item.color)]}>
+              <Text style={[styles.menuItemText, isActive && styles.activeMenuItemText]}>
                 {item.text}
               </Text>
             </TouchableOpacity>
@@ -85,12 +86,10 @@ const CustomDrawerContent = ({ closeMenu, user }) => {
         <TouchableOpacity
           style={styles.logoutButton}
           onPress={handleLogout}
-          activeOpacity={0.7}
+          activeOpacity={0.8}
         >
-          <View style={styles.iconContainer}>
-            <Feather name="log-out" size={22} color="#EF4444" />
-          </View>
-          <Text style={styles.logoutButtonText}>Logout</Text>
+            <Feather name="log-out" size={22} color="#FFFFFF" style={{marginRight: 12}} />
+            <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -101,6 +100,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  gridPattern: {
+      ...StyleSheet.absoluteFillObject,
+      opacity: 0.05,
   },
   closeButton: {
     position: 'absolute',
@@ -123,7 +126,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 30,
-    marginTop: 40,
+    marginTop: 30,
   },
   avatar: {
     width: 80,
@@ -156,42 +159,52 @@ const styles = StyleSheet.create({
   },
   menuItemsContainer: {
     flex: 1,
-    paddingVertical: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
-  menuItem: {
+  menuItemCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 25,
-    paddingVertical: 15,
-    marginVertical: 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
   },
-  activeMenuItem: (color) => ({}),
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 20,
-    backgroundColor: '#F3F4F6'
-  },
-  activeIconContainer: (color) => ({
+  activeMenuItem: (color) => ({
     backgroundColor: color,
     shadowColor: color,
-    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5
+    shadowRadius: 10,
+    elevation: 8,
   }),
+  iconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    backgroundColor: 'rgba(0,0,0,0.03)'
+  },
+  activeIconContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
   menuItemText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#374151',
   },
-  activeMenuItemText: (color) => ({
-    color: color,
+  activeMenuItemText: {
+    color: '#FFFFFF',
     fontWeight: 'bold',
-  }),
+  },
   footer: {
     paddingHorizontal: 20,
     paddingBottom: 20,
@@ -199,13 +212,20 @@ const styles = StyleSheet.create({
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 15,
-    paddingHorizontal: 5,
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   logoutButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#EF4444',
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
 });
 
