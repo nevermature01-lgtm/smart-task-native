@@ -216,11 +216,11 @@ const HomeScreen = () => {
                     <View>
                         <Text style={styles.sectionTitle}>Actions</Text>
                         <View style={styles.actionsSlider}>
-                            <ActionButton icon="layers" label="Stage 1" color="#ec4899" bg="#fce7f3" />
-                            <Feather name="arrow-right" size={16} color="#9CA3AF" />
                             <TouchableOpacity onPress={() => router.push('/leads')}>
-                                <ActionButton icon="user" label="Stage 2" color="#a78bfa" bg="#f5f3ff" />
+                                <ActionButton icon="layers" label="Stage 1" color="#ec4899" bg="#fce7f3" />
                             </TouchableOpacity>
+                            <Feather name="arrow-right" size={16} color="#9CA3AF" />
+                            <ActionButton icon="user" label="Stage 2" color="#a78bfa" bg="#f5f3ff" />
                             <Feather name="arrow-right" size={16} color="#9CA3AF" />
                             <TouchableOpacity onPress={() => router.push('/projects')}>
                                 <ActionButton icon="clipboard" label="Stage 3" color="#60a5fa" bg="#eff6ff" />

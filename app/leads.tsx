@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -60,8 +59,8 @@ const LeadsScreen = () => {
           <View style={styles.leadsListSection}>
             <View style={styles.leadsListHeader}>
               <Text style={styles.leadsListTitle}>Recent Leads (24)</Text>
-              <TouchableOpacity style={styles.createLeadButton}>
-                <Feather name="plus-circle" size={16} color="#fc6027" />
+              <TouchableOpacity style={styles.createLeadButton} onPress={() => router.push('/create-lead')}>
+                <Feather name="plus-circle" size={16} color="#0a7ea4" />
                 <Text style={styles.createLeadButtonText}>Create Lead</Text>
               </TouchableOpacity>
             </View>
@@ -69,8 +68,8 @@ const LeadsScreen = () => {
             <View style={styles.leadCard}>
               <View style={styles.leadCardHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={[styles.leadAvatar, { backgroundColor: '#FFEDD5'}]}>
-                    <Text style={[styles.leadAvatarText, { color: '#F97316'}]}>AK</Text>
+                  <View style={[styles.leadAvatar, { backgroundColor: '#E0F2F7'}]}>
+                    <Text style={[styles.leadAvatarText, { color: '#0a7ea4'}]}>AK</Text>
                   </View>
                   <View>
                     <Text style={styles.leadName}>Alex Karev</Text>
@@ -98,8 +97,8 @@ const LeadsScreen = () => {
                   <TouchableOpacity style={styles.leadActionButton}>
                     <Feather name="message-square" size={18} color="#4B5563" />
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.leadActionButton, { backgroundColor: 'rgba(252, 96, 39, 0.1)' }]}>
-                    <Feather name="phone" size={18} color="#fc6027" />
+                  <TouchableOpacity style={[styles.leadActionButton, { backgroundColor: 'rgba(10, 126, 164, 0.1)' }]}>
+                    <Feather name="phone" size={18} color="#0a7ea4" />
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.leadActionButton}>
                     <Feather name="more-vertical" size={18} color="#4B5563" />
@@ -139,8 +138,8 @@ const LeadsScreen = () => {
                    <TouchableOpacity style={styles.leadActionButton}>
                     <Feather name="message-square" size={18} color="#4B5563" />
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.leadActionButton, { backgroundColor: 'rgba(252, 96, 39, 0.1)' }]}>
-                    <Feather name="phone" size={18} color="#fc6027" />
+                  <TouchableOpacity style={[styles.leadActionButton, { backgroundColor: 'rgba(10, 126, 164, 0.1)' }]}>
+                    <Feather name="phone" size={18} color="#0a7ea4" />
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.leadActionButton}>
                     <Feather name="more-vertical" size={18} color="#4B5563" />
@@ -156,7 +155,7 @@ const LeadsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f6f5' },
+  container: { flex: 1, backgroundColor: '#f9fafb' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -189,7 +188,7 @@ const styles = StyleSheet.create({
   filterButton: { backgroundColor: 'white', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#F3F4F6' },
   quickFilters: { marginVertical: 16, flexDirection: 'row', gap: 8 },
   filterChip: { backgroundColor: 'white', paddingHorizontal: 20, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: '#E5E7EB' },
-  activeFilterChip: { backgroundColor: '#fc6027', borderColor: '#fc6027' },
+  activeFilterChip: { backgroundColor: '#0a7ea4', borderColor: '#0a7ea4' },
   filterChipText: { fontSize: 14, fontWeight: '500', color: '#4B5563' },
   activeFilterChipText: { color: 'white' },
   leadsListSection: { marginTop: 24 },
@@ -199,13 +198,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(252, 96, 39, 0.1)',
+    backgroundColor: 'rgba(10, 126, 164, 0.1)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
   },
   createLeadButtonText: {
-    color: '#fc6027',
+    color: '#0a7ea4',
     fontWeight: 'bold',
     fontSize: 12,
   },
