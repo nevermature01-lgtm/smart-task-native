@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Linking, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Linking, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 
-const LeadDetailsScreen = () => {
+const FinalCustomerDetailsScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams();
@@ -73,8 +73,8 @@ const LeadDetailsScreen = () => {
         <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
           <Feather name="chevron-left" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lead Details</Text>
-        <TouchableOpacity style={styles.headerButton} onPress={() => router.push(`/edit-lead?id=${id}`)}>
+        <Text style={styles.headerTitle}>Final Customer Details</Text>
+        <TouchableOpacity style={styles.headerButton} onPress={() => router.push(`/edit-final-customer?id=${id}`)}>
             <Feather name="edit-2" size={20} color="#1F2937" />
         </TouchableOpacity>
       </View>
@@ -110,12 +110,6 @@ const LeadDetailsScreen = () => {
                 <Text style={styles.detailLabel}>Remark</Text>
                 <Text style={styles.detailValue}>{lead.remark}</Text>
             </View>
-             {lead.assignedTo && lead.assignedTo.length > 0 && (
-                <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Assigned To</Text>
-                    <Text style={styles.detailValue}>{lead.assignedTo.map(u => u.name).join(', ')}</Text>
-                </View>
-            )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -180,4 +174,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default LeadDetailsScreen;
+export default FinalCustomerDetailsScreen;

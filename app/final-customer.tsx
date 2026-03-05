@@ -111,7 +111,7 @@ const FinalCustomerScreen = () => {
     if (!selectedLead) return;
 
     Alert.alert(
-        "Remove Lead",
+        "Remove Customer",
         `Are you sure you want to remove ${selectedLead.customerName}?`,
         [
             { text: "Cancel", style: "cancel", onPress: closeMenu },
@@ -121,10 +121,10 @@ const FinalCustomerScreen = () => {
                 onPress: async () => {
                     try {
                         await deleteDoc(doc(db, 'leads', selectedLead.id));
-                        Alert.alert("Success", "Lead has been removed.");
+                        Alert.alert("Success", "Customer has been removed.");
                         closeMenu();
                     } catch (error) {
-                        Alert.alert("Error", "Failed to remove lead. Please try again.");
+                        Alert.alert("Error", "Failed to remove customer. Please try again.");
                     }
                 }
             }
@@ -160,7 +160,7 @@ const FinalCustomerScreen = () => {
     const formattedCreationDate = createdAtDate ? createdAtDate.toLocaleDateString('en-GB') : 'N/A';
 
     return (
-        <TouchableOpacity onPress={() => router.push(`/lead-details?id=${item.id}&from=final-customer`)}>
+        <TouchableOpacity onPress={() => router.push(`/final-customer-details?id=${item.id}`)}>
             <View style={styles.leadCard}>
                 <View style={styles.leadCardHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
@@ -185,7 +185,10 @@ const FinalCustomerScreen = () => {
                     </View>
                 </View>
                 <View style={styles.leadCardFooter}>
-                    <View />
+                    <View style={styles.assigneeInfo}>
+                        <Text style={styles.assigneeLabel}>Assigned to:</Text>
+                        <Text style={styles.assigneeName} numberOfLines={1}>{item.assignedTo ? item.assignedTo.map(u => u.name).join(', ') : 'N/A'}</Text>
+                    </View>
                     <View style={styles.leadActions}>
                         <TouchableOpacity style={[styles.leadActionButton, { backgroundColor: 'rgba(10, 126, 164, 0.1)' }]} onPress={() => handleCall(item.contactNumber)}>
                             <Feather name="phone" size={18} color="#0a7ea4" />
@@ -271,10 +274,14 @@ const FinalCustomerScreen = () => {
                     <Feather name="send" size={20} color="#4B5563" />
                     <Text style={styles.menuItemText}>Forward to Site Visit</Text>
                 </TouchableOpacity>
+                <TouchableOpacity style={styles.menuItem} onPress={() => { router.push(`/edit-final-customer?id=${selectedLead.id}`); closeMenu(); }}>
+                    <Feather name="edit" size={20} color="#4B5563" />
+                    <Text style={styles.menuItemText}>Edit Details</Text>
+                </TouchableOpacity>
                 <View style={styles.menuDivider} />
                 <TouchableOpacity style={[styles.menuItem, styles.destructiveMenuItem]} onPress={handleRemoveLead}>
                     <Feather name="trash-2" size={20} color="#DC2626" />
-                    <Text style={[styles.menuItemText, styles.destructiveMenuItemText]}>Remove Lead</Text>
+                    <Text style={[styles.menuItemText, styles.destructiveMenuItemText]}>Remove Customer</Text>
                 </TouchableOpacity>
             </View>
         </TouchableOpacity>
@@ -371,6 +378,9 @@ const styles = StyleSheet.create({
   leadStatLabel: { fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase', marginBottom: 2 },
   leadStatValue: { fontSize: 14, fontWeight: 'bold', color: '#374151' },
   leadCardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
+  assigneeInfo: { flexShrink: 1, marginRight: 10 },
+  assigneeLabel: { fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase' },
+  assigneeName: { fontSize: 12, fontWeight: 'bold', color: '#374151' },
   leadActions: { flexDirection: 'row', gap: 8 },
   leadActionButton: { width: 32, height: 32, borderRadius: 12, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   emptyStateContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 100 },

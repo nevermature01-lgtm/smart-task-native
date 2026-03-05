@@ -272,7 +272,7 @@ const LeadsScreen = () => {
                     <Feather name="send" size={20} color="#4B5563" />
                     <Text style={styles.menuItemText}>Forward to Final Customer</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuItem} onPress={() => { router.push(`/customer-details?id=${selectedLead.id}&from=leads`); closeMenu(); }}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => { router.push(`/edit-lead?id=${selectedLead.id}`); closeMenu(); }}>
                     <Feather name="edit" size={20} color="#4B5563" />
                     <Text style={styles.menuItemText}>Edit Details</Text>
                 </TouchableOpacity>
