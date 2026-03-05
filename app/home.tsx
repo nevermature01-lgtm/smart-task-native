@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Animated } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Modal, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
@@ -91,6 +91,10 @@ const HomeScreen = () => {
     let unsubscribeTasks = () => {};
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      if (unsubscribeTasks) {
+        unsubscribeTasks();
+      }
+
       if (currentUser) {
         setUser(currentUser);
         const userDocRef = doc(db, 'users', currentUser.uid);
@@ -120,13 +124,15 @@ const HomeScreen = () => {
           tasksQuery = query(tasksCollectionRef, where('teamId', '==', account.id));
         } else {
           setTeamDetails(null);
-          tasksQuery = query(tasksCollectionRef, where('assignedToId', '==', currentUser.uid));
+          tasksQuery = query(tasksCollectionRef, where('assignedToId', '==', currentUser.uid), where('teamId', '==', null));
         }
 
-        unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
-          const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setTasks(tasksData);
-        });
+        if (tasksQuery) {
+            unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
+              const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+              setTasks(tasksData);
+            });
+        }
 
       } else {
         setUser(null);
@@ -139,7 +145,9 @@ const HomeScreen = () => {
 
     return () => {
       unsubscribeAuth();
-      unsubscribeTasks();
+      if (unsubscribeTasks) {
+        unsubscribeTasks();
+      }
       if (toastTimeout.current) {
         clearTimeout(toastTimeout.current);
       }
@@ -174,63 +182,67 @@ const HomeScreen = () => {
       <StatusBar style={isMenuVisible ? "light" : "dark"} backgroundColor="transparent" translucent={true} />
       <CustomToast visible={toastConfig.visible} message={toastConfig.message} type={toastConfig.type} />
       <View style={styles.mainContainer}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
-          <View style={styles.header}>
-            <HamburgerMenu onPress={toggleMenu} />
-            <View style={{alignItems: 'center'}}>
-                {activeAccount?.type === 'personal' && (
-                  <Text style={styles.accountType}>Personal Account</Text>
-                )}
-                {activeAccount?.type === 'team' && teamDetails && (
-                  <View style={styles.teamInfoContainer}>
-                    <Text style={styles.accountType}>Team name: {teamDetails.name}</Text>
-                    <TouchableOpacity style={styles.teamCodeContainer} onPress={() => handleCopyCode(teamDetails.code)}>
-                      <Text style={styles.teamCodeText}>Team code: {teamDetails.code}</Text>
-                      <Feather name="copy" size={12} color="#6B7280" />
-                    </TouchableOpacity>
-                  </View>
-                )}
-            </View>
-            <View style={{width: 48}}/>
-          </View>
+        <FlatList
+            data={tasks}
+            keyExtractor={(item) => item.id}
+            showsVerticalScrollIndicator={false}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+            ListHeaderComponent={
+                <>
+                    <View style={styles.header}>
+                        <HamburgerMenu onPress={toggleMenu} />
+                        <View style={{ alignItems: 'center' }}>
+                            {activeAccount?.type === 'personal' && (
+                                <Text style={styles.accountType}>Personal Account</Text>
+                            )}
+                            {activeAccount?.type === 'team' && teamDetails && (
+                                <View style={styles.teamInfoContainer}>
+                                    <Text style={styles.accountType}>Team name: {teamDetails.name}</Text>
+                                    <TouchableOpacity style={styles.teamCodeContainer} onPress={() => handleCopyCode(teamDetails.code)}>
+                                        <Text style={styles.teamCodeText}>Team code: {teamDetails.code}</Text>
+                                        <Feather name="copy" size={12} color="#6B7280" />
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+                        </View>
+                        <View style={{ width: 48 }} />
+                    </View>
 
-          <View style={styles.greetingSection}>
-            <Text style={styles.mainTitle}>Hi, {userName} 👋</Text>
-          </View>
+                    <View style={styles.greetingSection}>
+                        <Text style={styles.mainTitle}>Hi, {userName} 👋</Text>
+                    </View>
 
-          <View>
-            <Text style={styles.sectionTitle}>Actions</Text>
-            <View style={styles.actionsSlider}>
-                <ActionButton icon="layers" label="Stage 1" color="#ec4899" bg="#fce7f3" />
-                <Feather name="arrow-right" size={20} color="#9CA3AF" />
-                <TouchableOpacity onPress={() => router.push('/leads')}>
-                    <ActionButton icon="user" label="Stage 2" color="#a78bfa" bg="#f5f3ff" />
-                </TouchableOpacity>
-                <Feather name="arrow-right" size={20} color="#9CA3AF" />
-                <TouchableOpacity onPress={() => router.push('/projects')}>
-                    <ActionButton icon="clipboard" label="Stage 3" color="#60a5fa" bg="#eff6ff" />
-                </TouchableOpacity>
-                <Feather name="arrow-right" size={20} color="#9CA3AF" />
-                <ActionButton icon="dollar-sign" label="Stage 4" color="#fb923c" bg="#fff7ed" />
-            </View>
-          </View>
+                    <View>
+                        <Text style={styles.sectionTitle}>Actions</Text>
+                        <View style={styles.actionsSlider}>
+                            <ActionButton icon="layers" label="Stage 1" color="#ec4899" bg="#fce7f3" />
+                            <Feather name="arrow-right" size={20} color="#9CA3AF" />
+                            <TouchableOpacity onPress={() => router.push('/leads')}>
+                                <ActionButton icon="user" label="Stage 2" color="#a78bfa" bg="#f5f3ff" />
+                            </TouchableOpacity>
+                            <Feather name="arrow-right" size={20} color="#9CA3AF" />
+                            <TouchableOpacity onPress={() => router.push('/projects')}>
+                                <ActionButton icon="clipboard" label="Stage 3" color="#60a5fa" bg="#eff6ff" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
 
-          <View style={styles.primaryActions}>
-            <LinearGradient
-              colors={['#2563EB', '#1D4ED8']}
-              style={styles.taskBar}
-            >
-              <Text style={styles.taskTitle}>Ongoing Tasks</Text>
-            </LinearGradient>
-          </View>
-
-          <View style={{paddingHorizontal: 24, marginTop: 16, gap: 12}}>
-            {tasks.map(task => (
-                <TaskCard key={task.id} task={task} onPress={() => handleTaskPress(task.id)} />
-            ))}
-          </View>
-
-        </ScrollView>
+                    <View style={styles.primaryActions}>
+                        <LinearGradient
+                            colors={['#2563EB', '#1D4ED8']}
+                            style={styles.taskBar}
+                        >
+                            <Text style={styles.taskTitle}>Ongoing Tasks</Text>
+                        </LinearGradient>
+                    </View>
+                    <View style={{ height: 16 }} />
+                </>
+            }
+            renderItem={({ item }) => (
+                <TaskCard task={item} onPress={() => handleTaskPress(item.id)} />
+            )}
+        />
         <TouchableOpacity style={styles.fab} onPress={() => router.push('/assign-task')}>
             <LinearGradient
                 colors={['#2563EB', '#1D4ED8']}
@@ -259,10 +271,8 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   body: { flex: 1, backgroundColor: '#f9fafb' },
   mainContainer: {
-    maxWidth: 448,
-    marginHorizontal: 'auto',
     backgroundColor: 'white',
-    minHeight: '100%',
+    flex: 1,
     position: 'relative',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
@@ -409,7 +419,7 @@ const styles = StyleSheet.create({
   },
   actionsSlider: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     paddingHorizontal: 12,
     alignItems: 'center',
   },
@@ -444,21 +454,20 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    bottom: 60,
-    right: 30,
-    shadowColor: '#1D4ED8',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 10,
+    right: 20,
+    bottom: 30,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    zIndex: 100,
   },
   fabGradient: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -476,6 +485,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 5,
     elevation: 2,
+    marginHorizontal: 24,
+    marginBottom: 12,
   },
   taskInfoContainer: {
     flexShrink: 1,
