@@ -33,7 +33,7 @@ const ActionButton = ({ icon, label, color, bg }) => (
   <View style={styles.actionItem}>
     <View style={[styles.actionButton, styles.customShadow]}>
       <View style={[styles.actionIconContainer, { backgroundColor: bg }]}>
-        <Feather name={icon} size={24} color={color} />
+        <Feather name={icon} size={20} color={color} />
       </View>
     </View>
     <Text style={styles.actionLabel}>{label}</Text>
@@ -217,14 +217,28 @@ const HomeScreen = () => {
                         <Text style={styles.sectionTitle}>Actions</Text>
                         <View style={styles.actionsSlider}>
                             <ActionButton icon="layers" label="Stage 1" color="#ec4899" bg="#fce7f3" />
-                            <Feather name="arrow-right" size={20} color="#9CA3AF" />
+                            <Feather name="arrow-right" size={16} color="#9CA3AF" />
                             <TouchableOpacity onPress={() => router.push('/leads')}>
                                 <ActionButton icon="user" label="Stage 2" color="#a78bfa" bg="#f5f3ff" />
                             </TouchableOpacity>
-                            <Feather name="arrow-right" size={20} color="#9CA3AF" />
+                            <Feather name="arrow-right" size={16} color="#9CA3AF" />
                             <TouchableOpacity onPress={() => router.push('/projects')}>
                                 <ActionButton icon="clipboard" label="Stage 3" color="#60a5fa" bg="#eff6ff" />
                             </TouchableOpacity>
+                            <Feather name="arrow-right" size={16} color="#9CA3AF" />
+                            <ActionButton icon="dollar-sign" label="Stage 4" color="#fb923c" bg="#fff7ed" />
+                        </View>
+                        <View style={{ alignItems: 'flex-end', paddingRight: 39, marginVertical: 4 }}>
+                            <Feather name="arrow-down" size={20} color="#9CA3AF" />
+                        </View>
+                        <View style={styles.actionsSlider}>
+                            <ActionButton icon="archive" label="Stage 8" color="#EF4444" bg="#FEE2E2" />
+                            <Feather name="arrow-left" size={16} color="#9CA3AF" />
+                            <ActionButton icon="check-square" label="Stage 7" color="#8B5CF6" bg="#EDE9FE" />
+                            <Feather name="arrow-left" size={16} color="#9CA3AF" />
+                            <ActionButton icon="briefcase" label="Stage 6" color="#F59E0B" bg="#FEF3C7" />
+                            <Feather name="arrow-left" size={16} color="#9CA3AF" />
+                            <ActionButton icon="award" label="Stage 5" color="#10B981" bg="#D1FAE5" />
                         </View>
                     </View>
 
@@ -419,8 +433,8 @@ const styles = StyleSheet.create({
   },
   actionsSlider: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 12,
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
     alignItems: 'center',
   },
   actionItem: {
@@ -428,21 +442,21 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   actionButton: {
-    width: 60,
-    height: 60,
+    width: 50,
+    height: 50,
     backgroundColor: '#f9fafb',
-    borderRadius: 18,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionLabel: { fontSize: 12, fontWeight: '500', color: '#4b5563' },
+  actionLabel: { fontSize: 11, fontWeight: '500', color: '#4b5563' },
   menuOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
