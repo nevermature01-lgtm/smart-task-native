@@ -236,11 +236,17 @@ const HomeScreen = () => {
                             <Feather name="arrow-down" size={20} color="#9CA3AF" />
                         </View>
                         <View style={styles.actionsSlider}>
-                            <ActionButton icon="archive" label="Stage 8" color="#EF4444" bg="#FEE2E2" />
+                            <TouchableOpacity onPress={() => router.push('/feedback')}>
+                                <ActionButton icon="archive" label="Stage 8" color="#EF4444" bg="#FEE2E2" />
+                            </TouchableOpacity>
                             <Feather name="arrow-left" size={16} color="#9CA3AF" />
-                            <ActionButton icon="check-square" label="Stage 7" color="#8B5CF6" bg="#EDE9FE" />
+                            <TouchableOpacity onPress={() => router.push('/work-complete')}>
+                                <ActionButton icon="check-square" label="Stage 7" color="#8B5CF6" bg="#EDE9FE" />
+                            </TouchableOpacity>
                             <Feather name="arrow-left" size={16} color="#9CA3AF" />
-                            <ActionButton icon="briefcase" label="Stage 6" color="#F59E0B" bg="#FEF3C7" />
+                            <TouchableOpacity onPress={() => router.push('/dispatch')}>
+                                <ActionButton icon="briefcase" label="Stage 6" color="#F59E0B" bg="#FEF3C7" />
+                            </TouchableOpacity>
                             <Feather name="arrow-left" size={16} color="#9CA3AF" />
                              <TouchableOpacity onPress={() => router.push('/project-foam')}>
                                 <ActionButton icon="award" label="Stage 5" color="#10B981" bg="#D1FAE5" />

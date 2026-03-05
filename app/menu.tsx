@@ -11,7 +11,7 @@ import { setStatusBarStyle, setStatusBarHidden } from 'expo-status-bar';
 const menuItems = [
   { href: '/home', icon: 'home', text: 'Home', color: '#2563EB' },
   { href: '/switch-account', icon: 'users', text: 'Switch Account', color: '#10B981' },
-  { href: '/theme', icon: 'droplet', text: 'Theme', color: '#8B5CF6' },
+  { href: '/attendance', icon: 'calendar', text: 'Attendance', color: '#8B5CF6' },
   { href: '/settings', icon: 'settings', text: 'Settings', color: '#6366F1' },
 ];
 
