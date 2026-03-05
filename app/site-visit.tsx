@@ -111,7 +111,7 @@ const SiteVisitScreen = () => {
     if (!selectedLead) return;
 
     Alert.alert(
-        "Remove Lead",
+        "Remove Visit Site",
         `Are you sure you want to remove ${selectedLead.customerName}?`,
         [
             { text: "Cancel", style: "cancel", onPress: closeMenu },
@@ -121,10 +121,10 @@ const SiteVisitScreen = () => {
                 onPress: async () => {
                     try {
                         await deleteDoc(doc(db, 'leads', selectedLead.id));
-                        Alert.alert("Success", "Lead has been removed.");
+                        Alert.alert("Success", "Visit Site has been removed.");
                         closeMenu();
                     } catch (error) {
-                        Alert.alert("Error", "Failed to remove lead. Please try again.");
+                        Alert.alert("Error", "Failed to remove visit site. Please try again.");
                     }
                 }
             }
@@ -160,7 +160,7 @@ const SiteVisitScreen = () => {
     const formattedCreationDate = createdAtDate ? createdAtDate.toLocaleDateString('en-GB') : 'N/A';
 
     return (
-        <TouchableOpacity onPress={() => router.push(`/lead-details?id=${item.id}&from=site-visit`)}>
+        <TouchableOpacity onPress={() => router.push(`/site-visit-details?id=${item.id}`)}>
             <View style={styles.leadCard}>
                 <View style={styles.leadCardHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
@@ -267,10 +267,14 @@ const SiteVisitScreen = () => {
                     <Feather name="send" size={20} color="#4B5563" />
                     <Text style={styles.menuItemText}>Forward to Stage 4</Text>
                 </TouchableOpacity>
+                <TouchableOpacity style={styles.menuItem} onPress={() => { router.push(`/edit-site-visit?id=${selectedLead.id}`); closeMenu(); }}>
+                    <Feather name="edit" size={20} color="#4B5563" />
+                    <Text style={styles.menuItemText}>Edit Details</Text>
+                </TouchableOpacity>
                 <View style={styles.menuDivider} />
                 <TouchableOpacity style={[styles.menuItem, styles.destructiveMenuItem]} onPress={handleRemoveLead}>
                     <Feather name="trash-2" size={20} color="#DC2626" />
-                    <Text style={[styles.menuItemText, styles.destructiveMenuItemText]}>Remove Lead</Text>
+                    <Text style={[styles.menuItemText, styles.destructiveMenuItemText]}>Remove Visit Site</Text>
                 </TouchableOpacity>
             </View>
         </TouchableOpacity>
