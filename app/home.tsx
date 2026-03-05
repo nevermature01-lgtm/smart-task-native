@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
@@ -117,33 +117,16 @@ const HomeScreen = () => {
           if (teamDoc.exists()) {
             setTeamDetails(teamDoc.data());
           }
-
-          const teamMembersRef = collection(db, 'team_members');
-          const memberQuery = query(teamMembersRef, where("teamId", "==", account.id), where("userId", "==", currentUser.uid));
-          const memberSnapshot = await getDocs(memberQuery);
-
-          let userRole = 'member';
-          if (!memberSnapshot.empty) {
-            userRole = memberSnapshot.docs[0].data().role;
-          }
-
-          if (userRole === 'admin') {
-            tasksQuery = query(tasksCollectionRef, where('teamId', '==', account.id));
-          } else {
-            tasksQuery = query(tasksCollectionRef, where('teamId', '==', account.id), where('assignedToId', '==', currentUser.uid));
-          }
-
+          tasksQuery = query(tasksCollectionRef, where('teamId', '==', account.id));
         } else {
           setTeamDetails(null);
-          tasksQuery = query(tasksCollectionRef, where('assignedToId', '==', currentUser.uid), where('teamId', '==', null));
+          tasksQuery = query(tasksCollectionRef, where('assignedToId', '==', currentUser.uid));
         }
 
-        if (tasksQuery) {
-            unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
-                const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setTasks(tasksData);
-            });
-        }
+        unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
+          const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setTasks(tasksData);
+        });
 
       } else {
         setUser(null);
@@ -151,17 +134,12 @@ const HomeScreen = () => {
         setActiveAccount(null);
         setTeamDetails(null);
         setTasks([]);
-        if (unsubscribeTasks) {
-            unsubscribeTasks();
-        }
       }
     });
 
     return () => {
       unsubscribeAuth();
-      if (unsubscribeTasks) {
-        unsubscribeTasks();
-      }
+      unsubscribeTasks();
       if (toastTimeout.current) {
         clearTimeout(toastTimeout.current);
       }
