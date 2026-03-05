@@ -6,7 +6,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 
-const SiteVisitDetailsScreen = () => {
+const ProjectDetailFoamScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams();
@@ -54,7 +54,7 @@ const SiteVisitDetailsScreen = () => {
   if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#0a7ea4" />
+        <ActivityIndicator size="large" color="#10B981" />
       </View>
     );
   }
@@ -73,8 +73,8 @@ const SiteVisitDetailsScreen = () => {
         <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
           <Feather name="chevron-left" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Site Visit Details</Text>
-        <TouchableOpacity style={styles.headerButton} onPress={() => router.push(`/edit-site-visit?id=${id}`)}>
+        <Text style={styles.headerTitle}>Project Detail Foam</Text>
+        <TouchableOpacity style={styles.headerButton} onPress={() => router.push(`/edit-project-foam-details?id=${id}`)}>
             <Feather name="edit-2" size={20} color="#1F2937" />
         </TouchableOpacity>
       </View>
@@ -110,14 +110,19 @@ const SiteVisitDetailsScreen = () => {
                 <Text style={styles.detailLabel}>Remark</Text>
                 <Text style={styles.detailValue}>{visit.remark}</Text>
             </View>
-            {visit.measurementImages && visit.measurementImages.length > 0 && (
+            {visit.approvalFormURL && (
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Measurement Photos</Text>
-                <View style={styles.imageContainer}>
-                  {visit.measurementImages.map((uri, index) => (
-                    <Image key={index} source={{ uri }} style={styles.image} />
-                  ))}
-                </View>
+                <Text style={styles.detailLabel}>Customer Approval Form</Text>
+                {visit.approvalFormURL.includes('.pdf') ? (
+                  <TouchableOpacity onPress={() => Linking.openURL(visit.approvalFormURL)}>
+                    <View style={styles.pdfPreview}>
+                        <Feather name="file" size={40} color="#10B981" />
+                        <Text style={styles.pdfName} numberOfLines={1}>{visit.approvalFormURL.split('F').pop().split('?')[0]}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ) : (
+                  <Image source={{ uri: visit.approvalFormURL }} style={styles.image} />
+                )}
               </View>
             )}
         </View>
@@ -179,21 +184,30 @@ const styles = StyleSheet.create({
         color: '#1F2937',
     },
     linkValue: {
-        color: '#0a7ea4',
+        color: '#10B981',
         textDecorationLine: 'underline',
     },
-    imageContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      marginTop: 10,
-    },
     image: {
-      width: 100,
-      height: 100,
+      width: '100%',
+      height: 200,
       borderRadius: 8,
-      marginRight: 10,
-      marginBottom: 10,
+      marginTop: 8,
     },
+    pdfPreview: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F9FAFB',
+        padding: 16,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        marginTop: 8
+    },
+    pdfName: {
+        marginLeft: 12,
+        fontSize: 14,
+        flex: 1
+    }
 });
 
-export default SiteVisitDetailsScreen;
+export default ProjectDetailFoamScreen;

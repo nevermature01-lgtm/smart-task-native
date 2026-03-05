@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Platform, Modal, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Platform, Modal, ActivityIndicator, Alert, Image } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { db } from '../firebase';
+import { db, storage } from '../firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-
-const sources = ["Social Media", "Walk-in", "Random"];
+import * as ImagePicker from 'expo-image-picker';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 
 const EditSiteVisitScreen = () => {
   const router = useRouter();
@@ -20,15 +20,25 @@ const EditSiteVisitScreen = () => {
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [remark, setRemark] = useState('');
-  const [source, setSource] = useState('Social Media');
-  const [isSourceModalVisible, setSourceModalVisible] = useState(false);
+  const [images, setImages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
 
   useEffect(() => {
+    (async () => {
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          alert('Sorry, we need camera roll permissions to make this work!');
+        }
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
     if (id) {
-      const leadRef = doc(db, 'leads', id);
-      getDoc(leadRef).then(docSnap => {
+      const visitRef = doc(db, 'leads', id);
+      getDoc(visitRef).then(docSnap => {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setCustomerName(data.customerName);
@@ -36,12 +46,37 @@ const EditSiteVisitScreen = () => {
           setContactNumber(data.contactNumber);
           setDate(new Date(data.followUpDate));
           setRemark(data.remark);
-          setSource(data.source);
+          setImages(data.measurementImages || []);
         }
         setIsFetching(false);
       });
     }
   }, [id]);
+
+  const handleImagePick = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.cancelled) {
+      setImages([...images, result.uri]);
+    }
+  };
+
+  const handleCamera = async () => {
+    let result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.cancelled) {
+      setImages([...images, result.uri]);
+    }
+  };
 
   const handleUpdateDetails = async () => {
     if (!customerName.trim() || !contactNumber.trim()) {
@@ -51,17 +86,18 @@ const EditSiteVisitScreen = () => {
 
     setIsLoading(true);
     try {
-      const leadRef = doc(db, 'leads', id);
+      const imageUrls = await uploadImages(images);
+      const visitRef = doc(db, 'leads', id);
       let dataToUpdate = {
         customerName,
         address,
         contactNumber,
         followUpDate: date.toISOString().split('T')[0],
         remark,
-        source,
+        measurementImages: imageUrls,
       };
 
-      await updateDoc(leadRef, dataToUpdate);
+      await updateDoc(visitRef, dataToUpdate);
       Alert.alert("Success", "Site visit details have been updated successfully.");
       router.back();
     } catch (error) {
@@ -72,16 +108,25 @@ const EditSiteVisitScreen = () => {
     }
   };
 
+  const uploadImages = async (uris) => {
+    const uploadTasks = uris.map(async (uri) => {
+      if (uri.startsWith('http')) return uri; // Already uploaded
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const filename = uri.substring(uri.lastIndexOf('/') + 1);
+      const storageRef = ref(storage, `measurement_images/${id}/${filename}`);
+      const uploadTask = uploadBytesResumable(storageRef, blob);
+      await uploadTask;
+      return getDownloadURL(storageRef);
+    });
+    return Promise.all(uploadTasks);
+  }
+
   const onDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
     setShowDatePicker(Platform.OS === 'ios');
     setDate(currentDate);
   };
-
-  const handleSelectSource = (selectedSource) => {
-      setSource(selectedSource);
-      setSourceModalVisible(false);
-  }
 
   if (isFetching) {
     return <ActivityIndicator style={{flex: 1, justifyContent: 'center', alignItems: 'center'}} size="large" color="#0a7ea4" />
@@ -153,12 +198,29 @@ const EditSiteVisitScreen = () => {
                     multiline
                 />
             </View>
+
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Source</Text>
-                 <TouchableOpacity style={styles.pickerButton} onPress={() => setSourceModalVisible(true)}>
-                    <Text style={styles.pickerButtonText}>{source}</Text>
-                    <Feather name="chevron-down" size={20} color="#9CA3AF" />
+              <Text style={styles.label}>Measurement Photos</Text>
+              <View style={styles.imageContainer}>
+                {images.map((uri, index) => (
+                  <View key={index} style={styles.imageWrapper}>
+                    <Image source={{ uri }} style={styles.image} />
+                    <TouchableOpacity style={styles.removeImageButton} onPress={() => setImages(images.filter((_, i) => i !== index))}>
+                      <Feather name="x" size={18} color="white" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.imageButtons}>
+                <TouchableOpacity style={styles.imageButton} onPress={handleImagePick}>
+                  <Feather name="image" size={20} color="#374151" />
+                  <Text style={styles.imageButtonText}>Gallery</Text>
                 </TouchableOpacity>
+                <TouchableOpacity style={styles.imageButton} onPress={handleCamera}>
+                  <Feather name="camera" size={20} color="#374151" />
+                  <Text style={styles.imageButtonText}>Camera</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
              <TouchableOpacity style={[styles.saveButton, isLoading && styles.saveButtonDisabled]} onPress={handleUpdateDetails} disabled={isLoading}>
@@ -166,25 +228,6 @@ const EditSiteVisitScreen = () => {
             </TouchableOpacity>
         </View>
       </ScrollView>
-
-       <Modal
-            animationType="fade"
-            transparent={true}
-            visible={isSourceModalVisible}
-            onRequestClose={() => setSourceModalVisible(false)}
-        >
-            <TouchableOpacity style={styles.modalOverlay} onPress={() => setSourceModalVisible(false)} activeOpacity={1}>
-                <View style={styles.modalContent}>
-                    <Text style={styles.modalTitle}>Select a Source</Text>
-                    {sources.map((item, index) => (
-                        <TouchableOpacity key={index} style={styles.modalItem} onPress={() => handleSelectSource(item)}>
-                            <Text style={styles.modalItemText}>{item}</Text>
-                            {source === item && <Feather name="check" size={20} color="#0a7ea4" />} 
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            </TouchableOpacity>
-        </Modal>
     </SafeAreaView>
   );
 };
@@ -269,21 +312,45 @@ const styles = StyleSheet.create({
       height: 100,
       textAlignVertical: 'top'
   },
-  pickerButton: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      backgroundColor: '#F9FAFB',
-      borderWidth: 1,
-      borderColor: '#E5E7EB',
-      borderRadius: 8,
-      paddingVertical: 12,
-      paddingHorizontal: 16,
+  imageContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 10,
   },
-  pickerButtonText: {
-      fontSize: 14,
-      color: '#374151',
-      flex: 1,
+  imageWrapper: {
+    position: 'relative',
+    marginRight: 10,
+    marginBottom: 10,
+  },
+  image: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 12,
+    padding: 3,
+  },
+  imageButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  imageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  imageButtonText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#374151',
   },
   saveButton: {
     backgroundColor: '#0a7ea4',
@@ -299,58 +366,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      justifyContent: 'center',
-      alignItems: 'center',
-  },
-  modalContent: {
-      backgroundColor: 'white',
-      borderRadius: 12,
-      padding: 20,
-      width: '90%',
-      maxHeight: '80%',
-      shadowColor: "#000",
-      shadowOffset: {
-          width: 0,
-          height: 2,
-      },
-      shadowOpacity: 0.25,
-      shadowRadius: 4,
-      elevation: 5,
-  },
-  modalTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: '#1F2937',
-      marginBottom: 20,
-      textAlign: 'center',
-  },
-  modalItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: 15,
-      borderBottomWidth: 1,
-      borderBottomColor: '#F3F4F6',
-  },
-  modalItemText: {
-      fontSize: 16,
-      color: '#374151',
-  },
-  doneButton: {
-    backgroundColor: '#0a7ea4',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  doneButtonText: {
-      color: 'white',
-      fontSize: 16,
-      fontWeight: 'bold',
   },
 });
 

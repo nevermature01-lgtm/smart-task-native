@@ -6,7 +6,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 
-const SiteVisitDetailsScreen = () => {
+const CustomerApprovalDetailsScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams();
@@ -54,7 +54,7 @@ const SiteVisitDetailsScreen = () => {
   if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#0a7ea4" />
+        <ActivityIndicator size="large" color="#FB923C" />
       </View>
     );
   }
@@ -73,8 +73,8 @@ const SiteVisitDetailsScreen = () => {
         <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
           <Feather name="chevron-left" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Site Visit Details</Text>
-        <TouchableOpacity style={styles.headerButton} onPress={() => router.push(`/edit-site-visit?id=${id}`)}>
+        <Text style={styles.headerTitle}>Customer Approval Details</Text>
+        <TouchableOpacity style={styles.headerButton} onPress={() => router.push(`/edit-customer-details?id=${id}`)}>
             <Feather name="edit-2" size={20} color="#1F2937" />
         </TouchableOpacity>
       </View>
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
         color: '#1F2937',
     },
     linkValue: {
-        color: '#0a7ea4',
+        color: '#FB923C',
         textDecorationLine: 'underline',
     },
     imageContainer: {
@@ -196,4 +196,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default SiteVisitDetailsScreen;
+export default CustomerApprovalDetailsScreen;

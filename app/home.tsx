@@ -228,7 +228,9 @@ const HomeScreen = () => {
                                 <ActionButton icon="clipboard" label="Stage 3" color="#60a5fa" bg="#eff6ff" />
                             </TouchableOpacity>
                             <Feather name="arrow-right" size={16} color="#9CA3AF" />
-                            <ActionButton icon="dollar-sign" label="Stage 4" color="#fb923c" bg="#fff7ed" />
+                            <TouchableOpacity onPress={() => router.push('/customer-approval')}>
+                                <ActionButton icon="dollar-sign" label="Stage 4" color="#fb923c" bg="#fff7ed" />
+                            </TouchableOpacity>
                         </View>
                         <View style={{ alignItems: 'flex-end', paddingRight: 39, marginVertical: 4 }}>
                             <Feather name="arrow-down" size={20} color="#9CA3AF" />
@@ -240,7 +242,9 @@ const HomeScreen = () => {
                             <Feather name="arrow-left" size={16} color="#9CA3AF" />
                             <ActionButton icon="briefcase" label="Stage 6" color="#F59E0B" bg="#FEF3C7" />
                             <Feather name="arrow-left" size={16} color="#9CA3AF" />
-                            <ActionButton icon="award" label="Stage 5" color="#10B981" bg="#D1FAE5" />
+                             <TouchableOpacity onPress={() => router.push('/project-foam')}>
+                                <ActionButton icon="award" label="Stage 5" color="#10B981" bg="#D1FAE5" />
+                            </TouchableOpacity>
                         </View>
                     </View>
 
