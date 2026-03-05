@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Platform, Modal, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { db } from '../firebase';
-import { addDoc, collection, onSnapshot, query } from 'firebase/firestore';
+import { addDoc, collection } from 'firebase/firestore';
 
 const sources = ["Social Media", "Walk-in", "Random"];
 
-const CreateLeadScreen = () => {
+const CreateFinalCustomerScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   
@@ -22,30 +22,10 @@ const CreateLeadScreen = () => {
   const [source, setSource] = useState('Social Media');
   const [isSourceModalVisible, setSourceModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [users, setUsers] = useState([]);
-  const [selectedUsers, setSelectedUsers] = useState([]);
-  const [isUserModalVisible, setUserModalVisible] = useState(false);
-
-  useEffect(() => {
-    const q = query(collection(db, "users"));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const usersData = [];
-      querySnapshot.forEach((doc) => {
-        usersData.push({ ...doc.data(), id: doc.id });
-      });
-      setUsers(usersData);
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   const handleSaveLead = async () => {
     if (!customerName.trim() || !contactNumber.trim()) {
         Alert.alert("Missing Information", "Please fill in both Customer Name and Contact Number.");
-        return;
-    }
-    if (selectedUsers.length === 0) {
-        Alert.alert("Missing Information", "Please assign the lead to at least one user.");
         return;
     }
 
@@ -59,8 +39,7 @@ const CreateLeadScreen = () => {
         remark,
         source,
         createdAt: new Date(),
-        assignedTo: selectedUsers.map(user => ({ id: user.id, name: `${user.firstName} ${user.lastName}`})),
-        stage: 'Stage 1'
+        stage: 'Stage 2',
       });
       Alert.alert("Success", "Lead has been saved successfully.");
       router.back();
@@ -83,35 +62,17 @@ const CreateLeadScreen = () => {
       setSourceModalVisible(false);
   }
 
-  const handleSelectUser = (user) => {
-      setSelectedUsers(prevSelectedUsers => {
-          const isSelected = prevSelectedUsers.find(u => u.id === user.id);
-          if (isSelected) {
-              return prevSelectedUsers.filter(u => u.id !== user.id);
-          } else {
-              return [...prevSelectedUsers, user];
-          }
-      });
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
             <Feather name="chevron-left" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create Lead</Text>
+        <Text style={styles.headerTitle}>Create Final Customer</Text>
         <View style={{width: 36}} />
       </View>
       <ScrollView contentContainerStyle={styles.mainContent}>
         <View style={styles.form}>
-            <View style={styles.inputGroup}>
-                <Text style={styles.label}>Assign To</Text>
-                 <TouchableOpacity style={styles.pickerButton} onPress={() => setUserModalVisible(true)}>
-                    <Text style={styles.pickerButtonText} numberOfLines={1}>{selectedUsers.length > 0 ? selectedUsers.map(u => `${u.firstName} ${u.lastName}`).join(', ') : 'Select users'}</Text>
-                    <Feather name="chevron-down" size={20} color="#9CA3AF" />
-                </TouchableOpacity>
-            </View>
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Customer Name</Text>
                 <TextInput
@@ -196,30 +157,6 @@ const CreateLeadScreen = () => {
                             {source === item && <Feather name="check" size={20} color="#0a7ea4" />} 
                         </TouchableOpacity>
                     ))}
-                </View>
-            </TouchableOpacity>
-        </Modal>
-
-        <Modal
-            animationType="fade"
-            transparent={true}
-            visible={isUserModalVisible}
-            onRequestClose={() => setUserModalVisible(false)}
-        >
-            <TouchableOpacity style={styles.modalOverlay} activeOpacity={1}>
-                <View style={styles.modalContent}>
-                    <Text style={styles.modalTitle}>Assign to</Text>
-                    <ScrollView>
-                        {users.map((item, index) => (
-                            <TouchableOpacity key={index} style={styles.modalItem} onPress={() => handleSelectUser(item)}>
-                                <Text style={styles.modalItemText}>{`${item.firstName} ${item.lastName}`}</Text>
-                                {selectedUsers.find(u => u.id === item.id) && <Feather name="check" size={20} color="#0a7ea4" />} 
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                     <TouchableOpacity style={styles.doneButton} onPress={() => setUserModalVisible(false)}>
-                        <Text style={styles.doneButtonText}>Done</Text>
-                    </TouchableOpacity>
                 </View>
             </TouchableOpacity>
         </Modal>
@@ -321,7 +258,6 @@ const styles = StyleSheet.create({
   pickerButtonText: {
       fontSize: 14,
       color: '#374151',
-      flex: 1,
   },
   saveButton: {
     backgroundColor: '#0a7ea4',
@@ -349,7 +285,6 @@ const styles = StyleSheet.create({
       borderRadius: 12,
       padding: 20,
       width: '90%',
-      maxHeight: '80%',
       shadowColor: "#000",
       shadowOffset: {
           width: 0,
@@ -378,18 +313,6 @@ const styles = StyleSheet.create({
       fontSize: 16,
       color: '#374151',
   },
-   doneButton: {
-        backgroundColor: '#0a7ea4',
-        paddingVertical: 14,
-        borderRadius: 12,
-        alignItems: 'center',
-        marginTop: 20,
-    },
-    doneButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
 });
 
-export default CreateLeadScreen;
+export default CreateFinalCustomerScreen;

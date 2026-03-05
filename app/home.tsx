@@ -220,9 +220,11 @@ const HomeScreen = () => {
                                 <ActionButton icon="layers" label="Stage 1" color="#ec4899" bg="#fce7f3" />
                             </TouchableOpacity>
                             <Feather name="arrow-right" size={16} color="#9CA3AF" />
-                            <ActionButton icon="user" label="Stage 2" color="#a78bfa" bg="#f5f3ff" />
+                            <TouchableOpacity onPress={() => router.push('/final-customer')}>
+                                <ActionButton icon="user" label="Stage 2" color="#a78bfa" bg="#f5f3ff" />
+                            </TouchableOpacity>
                             <Feather name="arrow-right" size={16} color="#9CA3AF" />
-                            <TouchableOpacity onPress={() => router.push('/projects')}>
+                            <TouchableOpacity onPress={() => router.push('/site-visit')}>
                                 <ActionButton icon="clipboard" label="Stage 3" color="#60a5fa" bg="#eff6ff" />
                             </TouchableOpacity>
                             <Feather name="arrow-right" size={16} color="#9CA3AF" />

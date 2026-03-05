@@ -4,9 +4,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, where } from 'firebase/firestore';
 
-const LeadsScreen = () => {
+const SiteVisitScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [leads, setLeads] = useState([]);
@@ -21,7 +21,7 @@ const LeadsScreen = () => {
 
   useEffect(() => {
     setIsLoading(true);
-    const q = query(collection(db, "leads"), orderBy("followUpDate", "desc"));
+    const q = query(collection(db, "leads"), where("stage", "==", "Stage 3"));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const leadsData = [];
@@ -45,6 +45,8 @@ const LeadsScreen = () => {
         });
       }
       
+      monthFilteredLeads.sort((a,b) => new Date(b.followUpDate) - new Date(a.followUpDate));
+
       setLeads(monthFilteredLeads);
       setIsLoading(false);
     }, (error) => {
@@ -130,12 +132,12 @@ const LeadsScreen = () => {
     );
   };
 
-  const handleForwardToStage2 = async () => {
+  const handleForwardToStage4 = async () => {
       if (!selectedLead) return;
       try {
           const leadRef = doc(db, 'leads', selectedLead.id);
-          await updateDoc(leadRef, { stage: 'Stage 2' });
-          Alert.alert("Success", "Lead has been forwarded to Stage 2.");
+          await updateDoc(leadRef, { stage: 'Stage 4' });
+          Alert.alert("Success", "Lead has been forwarded to Stage 4.");
           closeMenu();
       } catch (error) {
           Alert.alert("Error", "Failed to update lead. Please try again.");
@@ -158,7 +160,7 @@ const LeadsScreen = () => {
     const formattedCreationDate = createdAtDate ? createdAtDate.toLocaleDateString('en-GB') : 'N/A';
 
     return (
-        <TouchableOpacity onPress={() => router.push(`/lead-details?id=${item.id}`)}>
+        <TouchableOpacity onPress={() => router.push(`/lead-details?id=${item.id}&from=site-visit`)}>
             <View style={styles.leadCard}>
                 <View style={styles.leadCardHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
@@ -183,10 +185,7 @@ const LeadsScreen = () => {
                     </View>
                 </View>
                 <View style={styles.leadCardFooter}>
-                    <View style={styles.assigneeInfo}>
-                        <Text style={styles.assigneeLabel}>Assigned to:</Text>
-                        <Text style={styles.assigneeName} numberOfLines={1}>{item.assignedTo ? item.assignedTo.map(u => u.name).join(', ') : 'N/A'}</Text>
-                    </View>
+                    <View />
                     <View style={styles.leadActions}>
                         <TouchableOpacity style={[styles.leadActionButton, { backgroundColor: 'rgba(10, 126, 164, 0.1)' }]} onPress={() => handleCall(item.contactNumber)}>
                             <Feather name="phone" size={18} color="#0a7ea4" />
@@ -207,7 +206,7 @@ const LeadsScreen = () => {
         <TouchableOpacity style={styles.headerButton} onPress={() => router.canGoBack() ? router.back() : router.replace('/home')}>
             <Feather name="chevron-left" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Leads</Text>
+        <Text style={styles.headerTitle}>Site Visit</Text>
         <View style={{width: 36}} />
       </View>
       <View style={styles.mainContent}>
@@ -234,11 +233,7 @@ const LeadsScreen = () => {
 
           <View style={styles.leadsListSection}>
               <View style={styles.leadsListHeader}>
-                  <Text style={styles.leadsListTitle}>All Leads ({filteredLeads.length})</Text>
-                  <TouchableOpacity style={styles.createLeadButton} onPress={() => router.push('/create-lead')}>
-                      <Feather name="plus-circle" size={16} color="#0a7ea4" />
-                      <Text style={styles.createLeadButtonText}>Create Lead</Text>
-                  </TouchableOpacity>
+                  <Text style={styles.leadsListTitle}>Site Visits ({filteredLeads.length})</Text>
               </View>
 
               {isLoading ? (
@@ -252,8 +247,8 @@ const LeadsScreen = () => {
                       contentContainerStyle={{ paddingBottom: 150 }}
                       ListEmptyComponent={() => (
                           <View style={styles.emptyStateContainer}>
-                              <Text style={styles.emptyStateText}>No leads found for this period.</Text>
-                              <Text style={styles.emptyStateSubText}>Try selecting a different month or create a new lead.</Text>
+                              <Text style={styles.emptyStateText}>No site visits found for this period.</Text>
+                              <Text style={styles.emptyStateSubText}>Try selecting a different month.</Text>
                           </View>
                       )}
                   />
@@ -268,13 +263,9 @@ const LeadsScreen = () => {
       >
         <TouchableOpacity style={styles.modalOverlay} onPress={closeMenu} activeOpacity={1}>
             <View style={styles.menuContainer}>
-                <TouchableOpacity style={styles.menuItem} onPress={handleForwardToStage2}>
+                <TouchableOpacity style={styles.menuItem} onPress={handleForwardToStage4}>
                     <Feather name="send" size={20} color="#4B5563" />
-                    <Text style={styles.menuItemText}>Forward to Final Customer</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.menuItem} onPress={() => { router.push(`/customer-details?id=${selectedLead.id}&from=leads`); closeMenu(); }}>
-                    <Feather name="edit" size={20} color="#4B5563" />
-                    <Text style={styles.menuItemText}>Edit Details</Text>
+                    <Text style={styles.menuItemText}>Forward to Stage 4</Text>
                 </TouchableOpacity>
                 <View style={styles.menuDivider} />
                 <TouchableOpacity style={[styles.menuItem, styles.destructiveMenuItem]} onPress={handleRemoveLead}>
@@ -350,37 +341,20 @@ const styles = StyleSheet.create({
   leadsListSection: { flex: 1, marginTop: 24 },
   leadsListHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   leadsListTitle: { color: '#6B7280', fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase' },
-  createLeadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(10, 126, 164, 0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  createLeadButtonText: {
-    color: '#0a7ea4',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  leadCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E5E7EB' },
+  leadCard: { backgroundColor: '#EBF8FF', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#000000' },
   leadCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   leadAvatar: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   leadAvatarText: { fontSize: 18, fontWeight: 'bold' },
   leadName: { fontWeight: 'bold', color: '#111827', fontSize: 16 },
   leadCompany: { fontSize: 12, color: '#6B7280' },
   stageBadge: { backgroundColor: '#DBEAFE', color: '#2563EB', fontSize: 10, fontWeight: 'bold', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, overflow: 'hidden' },
-  leadCardBody: { flexDirection: 'row', gap: 16, paddingVertical: 12, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#F3F4F6' },
+  leadCardBody: { flexDirection: 'row', gap: 16, paddingVertical: 12, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#FFFFFF' },
   leadStat: { flex: 1 },
   leadStatLabel: { fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase', marginBottom: 2 },
   leadStatValue: { fontSize: 14, fontWeight: 'bold', color: '#374151' },
   leadCardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
-  assigneeInfo: { flexShrink: 1, marginRight: 10 },
-  assigneeLabel: { fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase' },
-  assigneeName: { fontSize: 12, fontWeight: 'bold', color: '#374151' },
   leadActions: { flexDirection: 'row', gap: 8 },
-  leadActionButton: { width: 32, height: 32, borderRadius: 12, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
+  leadActionButton: { width: 32, height: 32, borderRadius: 12, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   emptyStateContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 100 },
   emptyStateText: { fontSize: 18, fontWeight: '600', color: '#4B5563' },
   emptyStateSubText: { fontSize: 14, color: '#9CA3AF', marginTop: 8 },
@@ -445,4 +419,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LeadsScreen;
+export default SiteVisitScreen;

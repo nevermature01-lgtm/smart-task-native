@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Platform, Modal, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Platform, Modal, ActivityIndicator, Alert, Image } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { db } from '../firebase';
-import { addDoc, collection, onSnapshot, query } from 'firebase/firestore';
+import { db, storage } from '../firebase';
+import { doc, getDoc, updateDoc, collection, onSnapshot, query } from 'firebase/firestore';
+import * as ImagePicker from 'expo-image-picker';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 
 const sources = ["Social Media", "Walk-in", "Random"];
 
-const CreateLeadScreen = () => {
+const CustomerDetailsScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { id, from } = useLocalSearchParams();
   
   const [customerName, setCustomerName] = useState('');
   const [address, setAddress] = useState('');
@@ -22,6 +25,9 @@ const CreateLeadScreen = () => {
   const [source, setSource] = useState('Social Media');
   const [isSourceModalVisible, setSourceModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
+  const [measurements, setMeasurements] = useState([]);
+  const [uploading, setUploading] = useState(false);
   const [users, setUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [isUserModalVisible, setUserModalVisible] = useState(false);
@@ -39,38 +45,138 @@ const CreateLeadScreen = () => {
     return () => unsubscribe();
   }, []);
 
-  const handleSaveLead = async () => {
+  useEffect(() => {
+    (async () => {
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          alert('Sorry, we need camera roll permissions to make this work!');
+        }
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (id) {
+      const leadRef = doc(db, 'leads', id);
+      getDoc(leadRef).then(docSnap => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setCustomerName(data.customerName);
+          setAddress(data.address);
+          setContactNumber(data.contactNumber);
+          setDate(new Date(data.followUpDate));
+          setRemark(data.remark);
+          setSource(data.source);
+          setMeasurements(data.measurements || []);
+          if (data.assignedTo) {
+            const assignedUsers = data.assignedTo.map(assigned => ({
+                id: assigned.id,
+                firstName: assigned.name.split(' ')[0],
+                lastName: assigned.name.split(' ').slice(1).join(' ')
+            }));
+            setSelectedUsers(assignedUsers);
+        }
+        }
+        setIsFetching(false);
+      });
+    }
+  }, [id]);
+
+  const handleUpdateDetails = async () => {
     if (!customerName.trim() || !contactNumber.trim()) {
         Alert.alert("Missing Information", "Please fill in both Customer Name and Contact Number.");
         return;
     }
-    if (selectedUsers.length === 0) {
+    if (from === 'leads' && selectedUsers.length === 0) {
         Alert.alert("Missing Information", "Please assign the lead to at least one user.");
         return;
     }
 
     setIsLoading(true);
     try {
-      await addDoc(collection(db, "leads"), {
+      const leadRef = doc(db, 'leads', id);
+      let dataToUpdate = {
         customerName,
         address,
         contactNumber,
         followUpDate: date.toISOString().split('T')[0],
         remark,
         source,
-        createdAt: new Date(),
-        assignedTo: selectedUsers.map(user => ({ id: user.id, name: `${user.firstName} ${user.lastName}`})),
-        stage: 'Stage 1'
-      });
-      Alert.alert("Success", "Lead has been saved successfully.");
+      };
+
+      if (from !== 'leads') {
+        dataToUpdate.measurements = measurements;
+      } else {
+        dataToUpdate.assignedTo = selectedUsers.map(user => ({ id: user.id, name: `${user.firstName} ${user.lastName}`}));
+      }
+
+      await updateDoc(leadRef, dataToUpdate);
+      Alert.alert("Success", "Customer details have been updated successfully.");
       router.back();
     } catch (error) {
-      console.error("Error adding document: ", error);
-      Alert.alert("Error", "There was an error saving the lead. Please try again.");
+      console.error("Error updating document: ", error);
+      Alert.alert("Error", "There was an error updating the customer details. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  const pickImage = async (useCamera) => {
+    let result;
+    const options = {
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+    };
+
+    if (useCamera) {
+      const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
+      if (cameraStatus.status !== 'granted') {
+          Alert.alert("Permission Denied", "You need to grant camera permissions to take a photo.");
+          return;
+      }
+      result = await ImagePicker.launchCameraAsync(options);
+    } else {
+      result = await ImagePicker.launchImageLibraryAsync({
+        ...options,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      });
+    }
+
+    if (!result.cancelled) {
+      uploadImage(result.uri);
+    }
+  };
+
+  const uploadImage = async (uri) => {
+    setUploading(true);
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const storageRef = ref(storage, `measurements/${id}/${new Date().getTime()}`);
+    const uploadTask = uploadBytesResumable(storageRef, blob);
+
+    uploadTask.on('state_changed',
+      (snapshot) => { },
+      (error) => {
+        console.error(error);
+        setUploading(false);
+        Alert.alert("Upload Error", "Failed to upload image.");
+      },
+      () => {
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          setMeasurements([...measurements, downloadURL]);
+          setUploading(false);
+        });
+      }
+    );
+  };
+
+    const removeImage = (index) => {
+        const newMeasurements = [...measurements];
+        newMeasurements.splice(index, 1);
+        setMeasurements(newMeasurements);
+    };
 
   const onDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || date;
@@ -84,14 +190,18 @@ const CreateLeadScreen = () => {
   }
 
   const handleSelectUser = (user) => {
-      setSelectedUsers(prevSelectedUsers => {
-          const isSelected = prevSelectedUsers.find(u => u.id === user.id);
-          if (isSelected) {
-              return prevSelectedUsers.filter(u => u.id !== user.id);
-          } else {
-              return [...prevSelectedUsers, user];
-          }
-      });
+    setSelectedUsers(prevSelectedUsers => {
+        const isSelected = prevSelectedUsers.find(u => u.id === user.id);
+        if (isSelected) {
+            return prevSelectedUsers.filter(u => u.id !== user.id);
+        } else {
+            return [...prevSelectedUsers, user];
+        }
+    });
+  }
+
+  if (isFetching) {
+    return <ActivityIndicator style={{flex: 1, justifyContent: 'center', alignItems: 'center'}} size="large" color="#0a7ea4" />
   }
 
   return (
@@ -100,18 +210,20 @@ const CreateLeadScreen = () => {
         <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
             <Feather name="chevron-left" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create Lead</Text>
+        <Text style={styles.headerTitle}>Customer Details</Text>
         <View style={{width: 36}} />
       </View>
       <ScrollView contentContainerStyle={styles.mainContent}>
         <View style={styles.form}>
-            <View style={styles.inputGroup}>
-                <Text style={styles.label}>Assign To</Text>
-                 <TouchableOpacity style={styles.pickerButton} onPress={() => setUserModalVisible(true)}>
-                    <Text style={styles.pickerButtonText} numberOfLines={1}>{selectedUsers.length > 0 ? selectedUsers.map(u => `${u.firstName} ${u.lastName}`).join(', ') : 'Select users'}</Text>
-                    <Feather name="chevron-down" size={20} color="#9CA3AF" />
-                </TouchableOpacity>
-            </View>
+            {from === 'leads' && (
+                 <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Assign To</Text>
+                    <TouchableOpacity style={styles.pickerButton} onPress={() => setUserModalVisible(true)}>
+                        <Text style={styles.pickerButtonText} numberOfLines={1}>{selectedUsers.length > 0 ? selectedUsers.map(u => `${u.firstName} ${u.lastName}`).join(', ') : 'Select users'}</Text>
+                        <Feather name="chevron-down" size={20} color="#9CA3AF" />
+                    </TouchableOpacity>
+                </View>
+            )}
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Customer Name</Text>
                 <TextInput
@@ -175,8 +287,35 @@ const CreateLeadScreen = () => {
                 </TouchableOpacity>
             </View>
 
-             <TouchableOpacity style={[styles.saveButton, isLoading && styles.saveButtonDisabled]} onPress={handleSaveLead} disabled={isLoading}>
-                {isLoading ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Save Lead</Text>}
+            {from !== 'leads' && (
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Measurements</Text>
+                    <View style={styles.measurementsContainer}>
+                        {measurements.map((uri, index) => (
+                            <View key={index} style={styles.imageContainer}>
+                                <Image source={{ uri }} style={styles.image} />
+                                <TouchableOpacity onPress={() => removeImage(index)} style={styles.removeImageButton}>
+                                    <Feather name="x" size={16} color="white" />
+                                </TouchableOpacity>
+                            </View>
+                        ))}
+                        {uploading && <ActivityIndicator size="large" color="#0a7ea4" />}
+                    </View>
+                    <View style={styles.imageButtonsContainer}>
+                        <TouchableOpacity style={styles.imageButton} onPress={() => pickImage(false)}>
+                            <Feather name="image" size={20} color="#0a7ea4" />
+                            <Text style={styles.imageButtonText}>Add from Gallery</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.imageButton} onPress={() => pickImage(true)}>
+                            <Feather name="camera" size={20} color="#0a7ea4" />
+                            <Text style={styles.imageButtonText}>Take Photo</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            )}
+
+             <TouchableOpacity style={[styles.saveButton, isLoading && styles.saveButtonDisabled]} onPress={handleUpdateDetails} disabled={isLoading}>
+                {isLoading ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Update Details</Text>}
             </TouchableOpacity>
         </View>
       </ScrollView>
@@ -199,14 +338,13 @@ const CreateLeadScreen = () => {
                 </View>
             </TouchableOpacity>
         </Modal>
-
         <Modal
             animationType="fade"
             transparent={true}
             visible={isUserModalVisible}
             onRequestClose={() => setUserModalVisible(false)}
         >
-            <TouchableOpacity style={styles.modalOverlay} activeOpacity={1}>
+            <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setUserModalVisible(false)}>
                 <View style={styles.modalContent}>
                     <Text style={styles.modalTitle}>Assign to</Text>
                     <ScrollView>
@@ -378,18 +516,58 @@ const styles = StyleSheet.create({
       fontSize: 16,
       color: '#374151',
   },
-   doneButton: {
-        backgroundColor: '#0a7ea4',
-        paddingVertical: 14,
-        borderRadius: 12,
-        alignItems: 'center',
-        marginTop: 20,
-    },
-    doneButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
+  measurementsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  imageContainer: {
+    position: 'relative',
+  },
+  image: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 12,
+    padding: 2,
+  },
+  imageButtonsContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
+  imageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  imageButtonText: {
+    fontSize: 14,
+    color: '#0a7ea4',
+    fontWeight: '600',
+  },
+  doneButton: {
+    backgroundColor: '#0a7ea4',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  doneButtonText: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: 'bold',
+  },
 });
 
-export default CreateLeadScreen;
+export default CustomerDetailsScreen;
