@@ -33,7 +33,7 @@ const ActionButton = ({ icon, label, color, bg }) => (
   <View style={styles.actionItem}>
     <View style={[styles.actionButton, styles.customShadow]}>
       <View style={[styles.actionIconContainer, { backgroundColor: bg }]}>
-        <Feather name={icon} size={32} color={color} />
+        <Feather name={icon} size={24} color={color} />
       </View>
     </View>
     <Text style={styles.actionLabel}>{label}</Text>
@@ -41,23 +41,7 @@ const ActionButton = ({ icon, label, color, bg }) => (
 );
 
 const TaskCard = ({ task, onPress }) => {
-    const { name, priority, dueDate, createdAt } = task;
-
-    const getPriorityColor = (p) => {
-        const priorityValue = Number(p);
-        switch (priorityValue) {
-            case 1:
-                return '#EF4444'; // High
-            case 2:
-                return '#F97316'; // Medium
-            case 3:
-                return '#22C55E'; // Low
-            default:
-                return '#6B7280'; // Other priorities
-        }
-    };
-
-    const priorityColor = getPriorityColor(priority);
+    const { name, dueDate, createdAt, stage } = task;
 
     const formatDate = (dueTimestamp, createdTimestamp) => {
         const timestamp = dueTimestamp || createdTimestamp;
@@ -85,8 +69,8 @@ const TaskCard = ({ task, onPress }) => {
                 <Text style={styles.taskName} numberOfLines={1}>{name}</Text>
                 <Text style={styles.taskDueDate}>{formatDate(dueDate, createdAt)}</Text>
             </View>
-            <View style={[styles.priorityBadge, { backgroundColor: `${priorityColor}20` }]}>
-                <Text style={[styles.priorityText, { color: priorityColor }]}>{`P${priority}`}</Text>
+            <View style={styles.stageBadge}>
+                <Text style={styles.stageText}>{stage || 'Stage 1'}</Text>
             </View>
         </TouchableOpacity>
     );
@@ -239,12 +223,17 @@ const HomeScreen = () => {
           <View>
             <Text style={styles.sectionTitle}>Actions</Text>
             <View style={styles.actionsSlider}>
-              <ActionButton icon="check-square" label="Tasks" color="#ec4899" bg="#fce7f3" />
-              <TouchableOpacity onPress={() => router.push('/leads')}>
-                <ActionButton icon="users" label="Leads" color="#a78bfa" bg="#f5f3ff" />
-              </TouchableOpacity>
-              <ActionButton icon="briefcase" label="Projects" color="#60a5fa" bg="#eff6ff" />
-              <ActionButton icon="dollar-sign" label="Finance" color="#fb923c" bg="#fff7ed" />
+                <ActionButton icon="layers" label="Stage 1" color="#ec4899" bg="#fce7f3" />
+                <Feather name="arrow-right" size={20} color="#9CA3AF" />
+                <TouchableOpacity onPress={() => router.push('/leads')}>
+                    <ActionButton icon="user" label="Stage 2" color="#a78bfa" bg="#f5f3ff" />
+                </TouchableOpacity>
+                <Feather name="arrow-right" size={20} color="#9CA3AF" />
+                <TouchableOpacity onPress={() => router.push('/projects')}>
+                    <ActionButton icon="clipboard" label="Stage 3" color="#60a5fa" bg="#eff6ff" />
+                </TouchableOpacity>
+                <Feather name="arrow-right" size={20} color="#9CA3AF" />
+                <ActionButton icon="dollar-sign" label="Stage 4" color="#fb923c" bg="#fff7ed" />
             </View>
           </View>
 
@@ -442,30 +431,30 @@ const styles = StyleSheet.create({
   },
   actionsSlider: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    gap: 16,
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    alignItems: 'center',
   },
   actionItem: {
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
   },
   actionButton: {
-    width: 80,
-    height: 80,
+    width: 60,
+    height: 60,
     backgroundColor: '#f9fafb',
-    borderRadius: 24,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionLabel: { fontSize: 14, fontWeight: '500', color: '#4b5563' },
+  actionLabel: { fontSize: 12, fontWeight: '500', color: '#4b5563' },
   menuOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -524,16 +513,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
   },
-  priorityBadge: {
+  stageBadge: {
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
+    backgroundColor: '#E0E7FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  priorityText: {
+  stageText: {
     fontSize: 12,
     fontWeight: '700',
+    color: '#4338CA',
   },
 });
 
