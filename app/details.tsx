@@ -10,7 +10,6 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
 
 const storage = getStorage(undefined, "gs://smart-task-app-84eef.firebasestorage.app");
 
@@ -31,6 +30,8 @@ const DetailsScreen = () => {
     const [attachmentModalVisible, setAttachmentModalVisible] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [fullScreenImageUri, setFullScreenImageUri] = useState(null);
+    const [isFullScreenImageVisible, setIsFullScreenImageVisible] = useState(false);
     const scrollViewRef = useRef(null);
 
     useEffect(() => {
@@ -179,16 +180,14 @@ const DetailsScreen = () => {
       if (fromCamera) {
           await ImagePicker.requestCameraPermissionsAsync();
           result = await ImagePicker.launchCameraAsync({
-              allowsEditing: true,
-              aspect: [4, 3],
+              allowsEditing: false,
               quality: 1,
           });
       } else {
           await ImagePicker.requestMediaLibraryPermissionsAsync();
           result = await ImagePicker.launchImageLibraryAsync({
               mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: true,
-              aspect: [4, 3],
+              allowsEditing: false,
               quality: 1,
           });
       }
@@ -198,12 +197,15 @@ const DetailsScreen = () => {
       }
   };
 
-  const pickDocument = async () => {
-      let result = await DocumentPicker.getDocumentAsync({type: "application/pdf"});
-      if (result.type === 'success') {
-          handleSendFile(result.uri, result.name, 'pdf');
-      }
-  };
+    const openFullScreenImage = (uri) => {
+        setFullScreenImageUri(uri);
+        setIsFullScreenImageVisible(true);
+    };
+
+    const closeFullScreenImage = () => {
+        setIsFullScreenImageVisible(false);
+        setFullScreenImageUri(null);
+    };
 
     const toggleChecklistItemCompletion = async (index) => {
         const newChecklist = [...checklist];
@@ -394,7 +396,10 @@ const DetailsScreen = () => {
                              ]}>
                                  <Text style={styles.messageSender}>{msg.senderName}</Text>
                                   {msg.type === 'text' && <Text style={styles.messageText}>{msg.text}</Text>}
-                                  {msg.type === 'image' && <Image source={{ uri: msg.fileUrl }} style={{ width: 180, height: 180, borderRadius: 8 }} />}
+                                  {msg.type === 'image' && 
+                                    <TouchableOpacity onPress={() => openFullScreenImage(msg.fileUrl)}>
+                                        <Image source={{ uri: msg.fileUrl }} style={{ width: 180, height: 180, borderRadius: 8 }} />
+                                    </TouchableOpacity>}
                                   {msg.type === 'pdf' && <TouchableOpacity onPress={() => Linking.openURL(msg.fileUrl)}><Text>📄 Open PDF</Text></TouchableOpacity>}
                              </View>
                          ))}
@@ -446,6 +451,14 @@ const DetailsScreen = () => {
             )}
 
             {/* Modals */}
+            <Modal visible={isFullScreenImageVisible} transparent={true} onRequestClose={closeFullScreenImage}>
+                <View style={styles.fullScreenImageContainer}>
+                    <Image source={{ uri: fullScreenImageUri }} style={styles.fullScreenImage} resizeMode="contain" />
+                    <TouchableOpacity style={styles.closeButton} onPress={closeFullScreenImage}>
+                        <Text style={styles.closeButtonText}>Close</Text>
+                    </TouchableOpacity>
+                </View>
+            </Modal>
             <Modal transparent={true} visible={attachmentModalVisible} onRequestClose={() => setAttachmentModalVisible(false)}>
                  <View style={styles.attachmentModalContainer}>
                     <View style={styles.attachmentModalView}>
@@ -461,10 +474,6 @@ const DetailsScreen = () => {
                             <TouchableOpacity style={styles.attachmentButton} onPress={() => pickImage(false)}>
                                 <Feather name="image" size={30} color="#fff" />
                                 <Text style={styles.attachmentButtonText}>Gallery</Text>
-                            </TouchableOpacity>
-                             <TouchableOpacity style={styles.attachmentButton} onPress={pickDocument}>
-                                <Feather name="file" size={30} color="#fff" />
-                                <Text style={styles.attachmentButtonText}>PDF</Text>
                             </TouchableOpacity>
                           </View>
                         )}
@@ -635,6 +644,28 @@ const styles = StyleSheet.create({
     attachmentButtonText: {
         color: '#fff',
         marginTop: 5
+    },
+    fullScreenImageContainer: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    fullScreenImage: {
+        width: '100%',
+        height: '100%'
+    },
+    closeButton: {
+        position: 'absolute',
+        top: 40,
+        right: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+        padding: 10,
+        borderRadius: 5
+    },
+    closeButtonText: {
+        color: 'black',
+        fontSize: 16,
     }
 });
 
