@@ -4,13 +4,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { doc, deleteDoc, updateDoc, onSnapshot, collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, getDoc } from 'firebase/firestore';
-import { db, auth, storage } from '../firebase';
+import { db, auth } from '../firebase';
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+
+const storage = getStorage(undefined, "gs://smart-task-app-84eef.firebasestorage.app");
 
 const DetailsScreen = () => {
     const router = useRouter();
@@ -120,46 +122,57 @@ const DetailsScreen = () => {
         }
     };
 
-    const handleSendFile = async (uri, name, type) => {
-      if (!uri || !taskId || !currentUserName) return;
-      const currentUser = auth.currentUser;
-      if (!currentUser) return;
-
-      setUploading(true);
-      try {
-          const response = await fetch(uri);
+    const uploadFileToFirebase = async (fileUri, fileName, type) => {
+        try {
+          const response = await fetch(fileUri);
           const blob = await response.blob();
-          const storageRef = ref(storage, `tasks/${taskId}/${name}`);
-          const uploadTask = uploadBytesResumable(storageRef, blob);
+      
+          const filePath = `task_uploads/${Date.now()}_${fileName}`;
+          const storageRef = ref(storage, filePath);
+      
+          await uploadBytes(storageRef, blob);
+      
+          const downloadURL = await getDownloadURL(storageRef);
+      
+          return {
+            url: downloadURL,
+            type: type,
+            name: fileName
+          };
+      
+        } catch (error) {
+          console.error("Upload failed:", error);
+          throw error;
+        }
+      };
 
-          uploadTask.on('state_changed', 
-              (snapshot) => {
-                  // Progress function
-              },
-              (error) => {
-                  console.error("Upload failed: ", error);
-                  setUploading(false);
-              },
-              () => {
-                  getDownloadURL(uploadTask.snapshot.ref).then(async (downloadURL) => {
-                      await addDoc(collection(db, 'tasks', taskId, 'messages'), {
-                          senderId: currentUser.uid,
-                          senderName: currentUserName,
-                          createdAt: serverTimestamp(),
-                          type: type,
-                          url: downloadURL,
-                          name: name
-                      });
-                      setUploading(false);
-                      setAttachmentModalVisible(false);
-                  });
-              }
-          );
-      } catch (error) {
-          console.error("Error sending file: ", error);
-          setUploading(false);
-      }
-  };
+    const handleSendFile = async (uri, name, type) => {
+        if (!uri || !taskId || !currentUserName) return;
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
+  
+        setUploading(true);
+        try {
+            const uploadResult = await uploadFileToFirebase(uri, name, type);
+            
+            const message = {
+                senderId: currentUser.uid,
+                senderName: currentUserName,
+                createdAt: serverTimestamp(),
+                type: uploadResult.type,
+                fileUrl: uploadResult.url,
+                name: uploadResult.name
+            };
+
+            await addDoc(collection(db, 'tasks', taskId, 'messages'), message);
+
+        } catch (error) {
+            console.error("Error sending file: ", error);
+        } finally {
+            setUploading(false);
+            setAttachmentModalVisible(false);
+        }
+    };
 
   const pickImage = async (fromCamera) => {
       let result;
@@ -186,7 +199,7 @@ const DetailsScreen = () => {
   };
 
   const pickDocument = async () => {
-      let result = await DocumentPicker.getDocumentAsync({});
+      let result = await DocumentPicker.getDocumentAsync({type: "application/pdf"});
       if (result.type === 'success') {
           handleSendFile(result.uri, result.name, 'pdf');
       }
@@ -381,8 +394,8 @@ const DetailsScreen = () => {
                              ]}>
                                  <Text style={styles.messageSender}>{msg.senderName}</Text>
                                   {msg.type === 'text' && <Text style={styles.messageText}>{msg.text}</Text>}
-                                  {msg.type === 'image' && <Image source={{ uri: msg.url }} style={{ width: 200, height: 200, borderRadius: 10, marginTop: 4 }} />}
-                                  {msg.type === 'pdf' && <TouchableOpacity onPress={() => Linking.openURL(msg.url)}><View style={{flexDirection: 'row', alignItems: 'center'}}><Feather name="file-text" size={24} color="#333" /><Text style={{color: '#333', marginLeft: 8}}>{msg.name}</Text></View></TouchableOpacity>}
+                                  {msg.type === 'image' && <Image source={{ uri: msg.fileUrl }} style={{ width: 180, height: 180, borderRadius: 8 }} />}
+                                  {msg.type === 'pdf' && <TouchableOpacity onPress={() => Linking.openURL(msg.fileUrl)}><Text>📄 Open PDF</Text></TouchableOpacity>}
                              </View>
                          ))}
                     </View>
