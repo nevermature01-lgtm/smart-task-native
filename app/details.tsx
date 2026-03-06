@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Modal, Keyboard, Platform, KeyboardAvoidingView, Image, Button, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +32,7 @@ const DetailsScreen = () => {
     const [attachmentModalVisible, setAttachmentModalVisible] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [fullScreenImage, setFullScreenImage] = useState(null);
     const scrollViewRef = useRef(null);
 
     useEffect(() => {
@@ -179,16 +181,12 @@ const DetailsScreen = () => {
       if (fromCamera) {
           await ImagePicker.requestCameraPermissionsAsync();
           result = await ImagePicker.launchCameraAsync({
-              allowsEditing: true,
-              aspect: [4, 3],
               quality: 1,
           });
       } else {
           await ImagePicker.requestMediaLibraryPermissionsAsync();
           result = await ImagePicker.launchImageLibraryAsync({
               mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: true,
-              aspect: [4, 3],
               quality: 1,
           });
       }
@@ -239,7 +237,9 @@ const DetailsScreen = () => {
             setIsDeleting(false);
         }
     };
-
+    const handleImagePress = (imageUrl) => {
+        setFullScreenImage(imageUrl);
+    };
     const SWIPE_THRESHOLD = 150;
     const translateX = useSharedValue(0);
     const animatedStyle = useAnimatedStyle(() => ({ transform: [{ translateX: translateX.value }] }));
@@ -394,7 +394,11 @@ const DetailsScreen = () => {
                              ]}>
                                  <Text style={styles.messageSender}>{msg.senderName}</Text>
                                   {msg.type === 'text' && <Text style={styles.messageText}>{msg.text}</Text>}
-                                  {msg.type === 'image' && <Image source={{ uri: msg.fileUrl }} style={{ width: 180, height: 180, borderRadius: 8 }} />}
+                                  {msg.type === 'image' && 
+                                  <TouchableOpacity onPress={() => handleImagePress(msg.fileUrl)}>
+                                  <Image source={{ uri: msg.fileUrl }} style={{ width: 180, height: 180, borderRadius: 8 }} />
+                                  </TouchableOpacity>
+                                  }
                                   {msg.type === 'pdf' && <TouchableOpacity onPress={() => Linking.openURL(msg.fileUrl)}><Text>📄 Open PDF</Text></TouchableOpacity>}
                              </View>
                          ))}
@@ -498,6 +502,27 @@ const DetailsScreen = () => {
                     </View>
                 </View>
             </Modal>
+            {fullScreenImage && (
+                <Modal
+                    transparent={true}
+                    visible={!!fullScreenImage}
+                    onRequestClose={() => setFullScreenImage(null)}
+                >
+                    <View style={styles.fullScreenContainer}>
+                        <TouchableOpacity 
+                            style={styles.fullScreenCloseButton} 
+                            onPress={() => setFullScreenImage(null)}
+                        >
+                            <Feather name="x" size={30} color="#fff" />
+                        </TouchableOpacity>
+                        <Image 
+                            source={{ uri: fullScreenImage }} 
+                            style={styles.fullScreenImage} 
+                            resizeMode="contain" 
+                        />
+                    </View>
+                </Modal>
+            )}
         </View>
     );
 };
@@ -635,7 +660,23 @@ const styles = StyleSheet.create({
     attachmentButtonText: {
         color: '#fff',
         marginTop: 5
-    }
+    },
+    fullScreenContainer: {
+        flex: 1,
+        backgroundColor: '#000',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    fullScreenImage: {
+        width: '100%',
+        height: '80%',
+    },
+    fullScreenCloseButton: {
+        position: 'absolute',
+        top: 40,
+        right: 20,
+        zIndex: 1,
+    },
 });
 
 export default DetailsScreen;
