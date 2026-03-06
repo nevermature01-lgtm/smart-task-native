@@ -268,7 +268,7 @@ const ManageMembersScreen = () => {
                             <Text style={styles.modalTitle}>{selectedMember.name}</Text>
                             {selectedMember.role === 'admin' ? (
                                 <TouchableOpacity style={styles.modalButton} onPress={() => prepareConfirmation('removeAdmin')}>
-                                    <MaterialCommunityIcons name="crown-off-outline" size={22} color="#1F2937" />
+                                    <MaterialCommunityIcons name="crown-off" size={22} color="#1F2937" />
                                     <Text style={styles.modalButtonText}>Remove as Admin</Text>
                                 </TouchableOpacity>
                             ) : (

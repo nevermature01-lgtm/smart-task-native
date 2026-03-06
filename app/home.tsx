@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
@@ -41,7 +41,7 @@ const ActionButton = ({ icon, label, color, bg }) => (
 );
 
 const TaskCard = ({ task, onPress }) => {
-    const { name, dueDate, createdAt, stage } = task;
+    const { name, dueDate, createdAt, priority } = task;
 
     const formatDate = (dueTimestamp, createdTimestamp) => {
         const timestamp = dueTimestamp || createdTimestamp;
@@ -63,14 +63,33 @@ const TaskCard = ({ task, onPress }) => {
         return `${dateString} at ${timeString}`;
     };
 
+    const getPriorityStyles = (p) => {
+        switch (p) {
+            case 1:
+                return { badge: { backgroundColor: '#FEE2E2' }, text: { color: '#EF4444' } };
+            case 2:
+                return { badge: { backgroundColor: '#FFF7ED' }, text: { color: '#FB923C' } };
+            case 3:
+                return { badge: { backgroundColor: '#EFF6FF' }, text: { color: '#60A5FA' } };
+            case 4:
+                return { badge: { backgroundColor: '#D1FAE5' }, text: { color: '#10B981' } };
+            default:
+                return { badge: { backgroundColor: '#F3F4F6' }, text: { color: '#4B5563' } };
+        }
+    };
+
+    const priorityStyles = getPriorityStyles(priority);
+
     return (
         <TouchableOpacity style={styles.taskCard} onPress={onPress}>
             <View style={styles.taskInfoContainer}>
                 <Text style={styles.taskName} numberOfLines={1}>{name}</Text>
                 <Text style={styles.taskDueDate}>{formatDate(dueDate, createdAt)}</Text>
             </View>
-            <View style={styles.stageBadge}>
-                <Text style={styles.stageText}>{stage || 'Stage 1'}</Text>
+            <View style={[styles.stageBadge, priorityStyles.badge]}>
+                <Text style={[styles.stageText, priorityStyles.text]}>
+                    {priority ? `P${priority}` : 'N/A'}
+                </Text>
             </View>
         </TouchableOpacity>
     );
@@ -121,7 +140,21 @@ const HomeScreen = () => {
           if (teamDoc.exists()) {
             setTeamDetails(teamDoc.data());
           }
-          tasksQuery = query(tasksCollectionRef, where('teamId', '==', account.id));
+
+          const teamMembersRef = collection(db, 'team_members');
+          const memberQuery = query(teamMembersRef, where('teamId', '==', account.id), where('userId', '==', currentUser.uid));
+          const memberSnapshot = await getDocs(memberQuery);
+          let userRole = 'member';
+          if (!memberSnapshot.empty) {
+              userRole = memberSnapshot.docs[0].data().role;
+          }
+
+          if (userRole === 'admin') {
+            tasksQuery = query(tasksCollectionRef, where('teamId', '==', account.id));
+          } else {
+            tasksQuery = query(tasksCollectionRef, where('teamId', '==', account.id), where('assignedToId', '==', currentUser.uid));
+          }
+
         } else {
           setTeamDetails(null);
           tasksQuery = query(tasksCollectionRef, where('assignedToId', '==', currentUser.uid), where('teamId', '==', null));
@@ -130,6 +163,7 @@ const HomeScreen = () => {
         if (tasksQuery) {
             unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
               const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+              tasksData.sort((a, b) => (a.priority || 99) - (b.priority || 99));
               setTasks(tasksData);
             });
         }
@@ -481,7 +515,7 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 20,
-    bottom: 30,
+    bottom: 40,
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -532,14 +566,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
-    backgroundColor: '#E0E7FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
   stageText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#4338CA',
   },
 });
 

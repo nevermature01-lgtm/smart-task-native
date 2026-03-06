@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
@@ -32,6 +32,7 @@ const AssignTaskScreen = () => {
     const [loading, setLoading] = useState(true);
     const [currentUserRole, setCurrentUserRole] = useState('member');
     const [teamId, setTeamId] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         const fetchTeamData = async () => {
@@ -61,10 +62,16 @@ const AssignTaskScreen = () => {
                             const userDocRef = doc(db, 'users', userId);
                             const userDoc = await getDoc(userDocRef);
                             if (userDoc.exists()) {
-                                members.push({ id: userDoc.id, name: userDoc.data().firstName });
+                                members.push({ id: userDoc.id, name: userDoc.data().firstName, role: memberData.role });
                             }
                         }
                         
+                        members.sort((a, b) => {
+                            if (a.role === 'admin' && b.role !== 'admin') return -1;
+                            if (a.role !== 'admin' && b.role === 'admin') return 1;
+                            return a.name.localeCompare(b.name);
+                        });
+
                         setTeamMembers(members);
                         setCurrentUserRole(userRole);
                     } else {
@@ -104,6 +111,10 @@ const AssignTaskScreen = () => {
         }
     };
 
+    const filteredMembers = teamMembers.filter(member =>
+        member.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     const renderContent = () => {
         if (loading) {
             return <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 20 }}/>;
@@ -114,7 +125,7 @@ const AssignTaskScreen = () => {
         }
 
         return (
-             <ScrollView style={styles.content}>
+             <ScrollView style={styles.content} keyboardShouldPersistTaps='handled'>
                 <View style={styles.sectionHeader}>
                     <Text style={styles.title}>Assign to:</Text>
                     <TouchableOpacity style={styles.manageMembersLink} onPress={() => router.push('/manage-members')}>
@@ -122,7 +133,17 @@ const AssignTaskScreen = () => {
                         <Text style={styles.manageMembersLinkText}>Manage members</Text>
                     </TouchableOpacity>
                 </View>
-                {teamMembers.map(member => (
+                <View style={styles.searchContainer}>
+                    <Feather name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search members..."
+                        placeholderTextColor="#9CA3AF"
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                    />
+                </View>
+                {filteredMembers.map(member => (
                     <MemberCard 
                         key={member.id} 
                         member={member} 
@@ -248,7 +269,26 @@ const styles = StyleSheet.create({
         marginTop: 8,
         textAlign: 'center',
         lineHeight: 24,
-    }
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    searchIcon: {
+        marginRight: 8,
+    },
+    searchInput: {
+        flex: 1,
+        height: 44,
+        fontSize: 16,
+        color: '#1F2937',
+    },
 });
 
 export default AssignTaskScreen;
