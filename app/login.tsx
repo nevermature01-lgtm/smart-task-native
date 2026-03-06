@@ -98,7 +98,12 @@ const LoginScreen = () => {
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
         const user = userCredential.user;
-        router.replace('/home');
+        if (user.emailVerified) {
+          router.replace('/home');
+        } else {
+          setError('Please verify your email before logging in. A verification link has been sent to your email address.');
+          auth.signOut();
+        }
       })
       .catch((error) => {
         if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
