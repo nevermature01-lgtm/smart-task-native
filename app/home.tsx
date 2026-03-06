@@ -150,14 +150,14 @@ const HomeScreen = () => {
           }
 
           if (userRole === 'admin') {
-            tasksQuery = query(tasksCollectionRef, where('teamId', '==', account.id));
+            tasksQuery = query(tasksCollectionRef, where('teamId', '==', account.id), where('status', '!=', 'completed'));
           } else {
-            tasksQuery = query(tasksCollectionRef, where('teamId', '==', account.id), where('assignedToId', '==', currentUser.uid));
+            tasksQuery = query(tasksCollectionRef, where('teamId', '==', account.id), where('assignedToId', '==', currentUser.uid), where('status', '!=', 'completed'));
           }
 
         } else {
           setTeamDetails(null);
-          tasksQuery = query(tasksCollectionRef, where('assignedToId', '==', currentUser.uid), where('teamId', '==', null));
+          tasksQuery = query(tasksCollectionRef, where('assignedToId', '==', currentUser.uid), where('teamId', '==', null), where('status', '!=', 'completed'));
         }
 
         if (tasksQuery) {
@@ -295,6 +295,12 @@ const HomeScreen = () => {
                         >
                             <Text style={styles.taskTitle}>Ongoing Tasks</Text>
                         </LinearGradient>
+                    </View>
+                    <View style={styles.completedTasksContainer}>
+                        <TouchableOpacity style={styles.completedTasksButton} onPress={() => router.push('/completed-tasks')}>
+                            <Feather name="check-square" size={16} color="#4B5563" style={{ marginRight: 4 }} />
+                            <Text style={styles.completedTasksButtonText}>Completed Tasks</Text>
+                        </TouchableOpacity>
                     </View>
                     <View style={{ height: 16 }} />
                 </>
@@ -572,6 +578,26 @@ const styles = StyleSheet.create({
   stageText: {
     fontSize: 12,
     fontWeight: '700',
+  },
+  completedTasksContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    marginTop: 8,
+  },
+  completedTasksButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+  },
+  completedTasksButtonText: {
+    color: '#4B5563',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 
