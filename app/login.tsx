@@ -4,7 +4,7 @@
 // Any UI, layout, spacing, or logic change is forbidden.
 // =====================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,9 +16,10 @@ import {
   TextInput,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth } from '../firebase';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
+import Toast from 'react-native-toast-message';
 
 const COLORS = {
   primary: '#2563EB',
@@ -91,6 +92,20 @@ const LoginScreen = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const params = useLocalSearchParams();
+
+  useEffect(() => {
+    if (params.from === 'signup') {
+      Toast.show({
+        type: 'success',
+        text1: 'Verification Email Sent',
+        text2: 'Please check your inbox and verify your email to login.',
+        visibilityTime: 5000,
+      });
+      router.replace('/login');
+    }
+  }, [params]);
+
 
   const handleLogin = () => {
     setLoading(true);
@@ -101,8 +116,10 @@ const LoginScreen = () => {
         if (user.emailVerified) {
           router.replace('/home');
         } else {
-          setError('Please verify your email before logging in. A verification link has been sent to your email address.');
-          auth.signOut();
+          sendEmailVerification(user).then(() => {
+            setError('Your email is not verified. We have sent you a new verification link. Please check your inbox.');
+            auth.signOut();
+          });
         }
       })
       .catch((error) => {

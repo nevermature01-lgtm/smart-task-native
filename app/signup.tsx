@@ -107,13 +107,7 @@ const SignupScreen = () => {
             lastName: lastName,
             email: email
           });
-          Toast.show({
-            type: 'success',
-            text1: 'Success',
-            text2: 'A verification email has been sent to your email address. Please verify your email before logging in.',
-            visibilityTime: 5000
-          });
-          router.replace('/login');
+          router.replace({ pathname: '/login', params: { from: 'signup' } });
         });
       })
       .catch((error) => {

@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFocusEffect } from "@react-navigation/native";
 import * as NavigationBar from "expo-navigation-bar";
 import * as SystemUI from "expo-system-ui";
+import Toast from 'react-native-toast-message';
 
 const InitialLayout = () => {
     const [user, setUser] = useState(null);
@@ -31,10 +32,13 @@ const InitialLayout = () => {
 
         const isPublicRoute = segments.length === 0 || ['login', 'signup', 'forgot-password'].includes(segments[0]);
 
-        if (user && isPublicRoute) {
+        if (user && user.emailVerified && isPublicRoute) {
             router.replace('/home');
         } else if (!user && !isPublicRoute) {
             router.replace('/');
+        } else if (user && !user.emailVerified && !isPublicRoute) {
+            auth.signOut();
+            router.replace('/login');
         }
     }, [user, segments, initializing]);
 
@@ -69,6 +73,7 @@ export default function RootLayout() {
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
             <InitialLayout />
+            <Toast />
         </GestureHandlerRootView>
     );
 }
