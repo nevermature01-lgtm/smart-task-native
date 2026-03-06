@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -85,7 +84,7 @@ const SwitchAccountScreen = () => {
     const [newTeamName, setNewTeamName] = useState('');
     const [user, setUser] = useState({ name: "John Doe" });
     const [teams, setTeams] = useState([]);
-    const [activeAccount, setActiveAccount] = useState(null);
+    const [activeAccount, setActiveAccount] = useState({ type: 'personal' });
     const [isCreatingTeam, setIsCreatingTeam] = useState(false);
     const [isJoiningTeam, setIsJoiningTeam] = useState(false);
     const [toastConfig, setToastConfig] = useState({ visible: false, message: '', type: 'success' });
@@ -118,8 +117,6 @@ const SwitchAccountScreen = () => {
                 const storedActiveAccount = await AsyncStorage.getItem('activeAccount');
                 if (storedActiveAccount) {
                     setActiveAccount(JSON.parse(storedActiveAccount));
-                } else {
-                    setActiveAccount({ type: 'personal' });
                 }
             }
         };
