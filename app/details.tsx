@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Modal, Keyboard, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Modal, Keyboard, Platform, KeyboardAvoidingView, Image, Button, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { doc, deleteDoc, updateDoc, onSnapshot, collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, getDoc } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { db, auth, storage } from '../firebase';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 const DetailsScreen = () => {
     const router = useRouter();
@@ -23,7 +26,9 @@ const DetailsScreen = () => {
     const [isCompleted, setIsCompleted] = useState(false);
     const [reopenModalVisible, setReopenModalVisible] = useState(false);
     const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+    const [attachmentModalVisible, setAttachmentModalVisible] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const scrollViewRef = useRef(null);
 
     useEffect(() => {
@@ -114,6 +119,78 @@ const DetailsScreen = () => {
             console.error("Error sending message: ", error);
         }
     };
+
+    const handleSendFile = async (uri, name, type) => {
+      if (!uri || !taskId || !currentUserName) return;
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+
+      setUploading(true);
+      try {
+          const response = await fetch(uri);
+          const blob = await response.blob();
+          const storageRef = ref(storage, `tasks/${taskId}/${name}`);
+          const uploadTask = uploadBytesResumable(storageRef, blob);
+
+          uploadTask.on('state_changed', 
+              (snapshot) => {
+                  // Progress function
+              },
+              (error) => {
+                  console.error("Upload failed: ", error);
+                  setUploading(false);
+              },
+              () => {
+                  getDownloadURL(uploadTask.snapshot.ref).then(async (downloadURL) => {
+                      await addDoc(collection(db, 'tasks', taskId, 'messages'), {
+                          senderId: currentUser.uid,
+                          senderName: currentUserName,
+                          createdAt: serverTimestamp(),
+                          type: type,
+                          url: downloadURL,
+                          name: name
+                      });
+                      setUploading(false);
+                      setAttachmentModalVisible(false);
+                  });
+              }
+          );
+      } catch (error) {
+          console.error("Error sending file: ", error);
+          setUploading(false);
+      }
+  };
+
+  const pickImage = async (fromCamera) => {
+      let result;
+      if (fromCamera) {
+          await ImagePicker.requestCameraPermissionsAsync();
+          result = await ImagePicker.launchCameraAsync({
+              allowsEditing: true,
+              aspect: [4, 3],
+              quality: 1,
+          });
+      } else {
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+          result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              aspect: [4, 3],
+              quality: 1,
+          });
+      }
+
+      if (!result.cancelled) {
+        handleSendFile(result.assets[0].uri, result.assets[0].uri.split('/').pop(), 'image');
+      }
+  };
+
+  const pickDocument = async () => {
+      let result = await DocumentPicker.getDocumentAsync({});
+      if (result.type === 'success') {
+          handleSendFile(result.uri, result.name, 'pdf');
+      }
+  };
 
     const toggleChecklistItemCompletion = async (index) => {
         const newChecklist = [...checklist];
@@ -303,7 +380,9 @@ const DetailsScreen = () => {
                                  msg.senderId === auth.currentUser.uid ? styles.myMessageBubble : styles.theirMessageBubble
                              ]}>
                                  <Text style={styles.messageSender}>{msg.senderName}</Text>
-                                 {msg.type === 'text' && <Text style={styles.messageText}>{msg.text}</Text>}
+                                  {msg.type === 'text' && <Text style={styles.messageText}>{msg.text}</Text>}
+                                  {msg.type === 'image' && <Image source={{ uri: msg.url }} style={{ width: 200, height: 200, borderRadius: 10, marginTop: 4 }} />}
+                                  {msg.type === 'pdf' && <TouchableOpacity onPress={() => Linking.openURL(msg.url)}><View style={{flexDirection: 'row', alignItems: 'center'}}><Feather name="file-text" size={24} color="#333" /><Text style={{color: '#333', marginLeft: 8}}>{msg.name}</Text></View></TouchableOpacity>}
                              </View>
                          ))}
                     </View>
@@ -323,6 +402,9 @@ const DetailsScreen = () => {
                             <Text style={styles.swipeToCompleteText}>Swipe to Complete</Text>
                         </View>
                         <View style={styles.messageContainer}>
+                             <TouchableOpacity onPress={() => setAttachmentModalVisible(true)}>
+                                <MaterialIcons name="attach-file" size={24} color="#000" style={{marginRight: 8}}/>
+                            </TouchableOpacity>
                             <TextInput
                                 placeholder="Message..."
                                 style={styles.messageInput}
@@ -351,6 +433,34 @@ const DetailsScreen = () => {
             )}
 
             {/* Modals */}
+            <Modal transparent={true} visible={attachmentModalVisible} onRequestClose={() => setAttachmentModalVisible(false)}>
+                 <View style={styles.attachmentModalContainer}>
+                    <View style={styles.attachmentModalView}>
+                        <Text style={styles.modalText}>Send Attachment</Text>
+                        {uploading ? (
+                          <ActivityIndicator size="large" color="#0000ff" />
+                        ) : (
+                          <View style={styles.attachmentButtons}>
+                            <TouchableOpacity style={styles.attachmentButton} onPress={() => pickImage(true)}>
+                                <Feather name="camera" size={30} color="#fff" />
+                                <Text style={styles.attachmentButtonText}>Camera</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.attachmentButton} onPress={() => pickImage(false)}>
+                                <Feather name="image" size={30} color="#fff" />
+                                <Text style={styles.attachmentButtonText}>Gallery</Text>
+                            </TouchableOpacity>
+                             <TouchableOpacity style={styles.attachmentButton} onPress={pickDocument}>
+                                <Feather name="file" size={30} color="#fff" />
+                                <Text style={styles.attachmentButtonText}>PDF</Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                        <TouchableOpacity style={{marginTop: 20}} onPress={() => setAttachmentModalVisible(false)}>
+                            <Text style={{color: '#fff', fontSize: 16}}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
             <Modal transparent={true} visible={reopenModalVisible} onRequestClose={() => setReopenModalVisible(false)}>
                 <View style={styles.modalContainer}>
                     <View style={styles.modalView}>
@@ -487,7 +597,32 @@ const styles = StyleSheet.create({
     modalText: { marginBottom: 15, textAlign: 'center', fontSize: 18, fontWeight: 'bold', },
     modalButtons: { flexDirection: 'row', justifyContent: 'space-around', width: '100%', },
     modalButton: { borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20, elevation: 2, marginHorizontal: 5, minWidth: 100, alignItems: 'center' },
-    modalButtonText: { color: 'white', fontWeight: 'bold', textAlign: 'center', fontSize: 16, }
+    modalButtonText: { color: 'white', fontWeight: 'bold', textAlign: 'center', fontSize: 16, },
+    attachmentModalContainer: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    attachmentModalView: {
+        backgroundColor: '#1F2937',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 35,
+        alignItems: 'center',
+    },
+    attachmentButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        width: '100%',
+        marginBottom: 20
+    },
+    attachmentButton: {
+        alignItems: 'center'
+    },
+    attachmentButtonText: {
+        color: '#fff',
+        marginTop: 5
+    }
 });
 
 export default DetailsScreen;
