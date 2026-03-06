@@ -1,317 +1,160 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Alert, Dimensions, Animated } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
-import { getAuth } from 'firebase/auth';
-import { getFirestore, collection, addDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { LinearGradient } from 'expo-linear-gradient';
-
-const ChecklistItem = ({ item, onToggle, onTextChange, onRemove }) => (
-    <View style={styles.checklistItem}>
-        <TouchableOpacity onPress={onToggle} style={[styles.checkbox, item.completed && styles.checkboxCompleted]}>
-            {item.completed && <Feather name="check" size={16} color="#fff" />}
-        </TouchableOpacity>
-        <TextInput
-            style={[styles.checklistInput, item.completed && styles.checklistInputCompleted]}
-            value={item.text}
-            onChangeText={onTextChange}
-            placeholder="Add a checklist item..."
-            placeholderTextColor="#9CA3AF"
-        />
-        <TouchableOpacity onPress={onRemove} style={styles.removeButton}>
-            <Feather name="x" size={20} color="#9CA3AF" />
-        </TouchableOpacity>
-    </View>
-);
-
-const StepItem = ({ item, onTextChange, index, onRemove }) => (
-     <View style={styles.stepItem}>
-        <Text style={styles.stepNumber}>{index + 1}</Text>
-        <TextInput
-            style={styles.stepInput}
-            value={item.text}
-            onChangeText={onTextChange}
-            placeholder="Describe this step"
-            placeholderTextColor="#9CA3AF"
-            multiline
-        />
-        <TouchableOpacity onPress={onRemove} style={styles.removeButton}>
-            <Feather name="x" size={20} color="#9CA3AF" />
-        </TouchableOpacity>
-    </View>
-)
-
-const { width: screenWidth } = Dimensions.get('window');
-const priorityButtonWidth = 60;
-const spacerWidth = (screenWidth - priorityButtonWidth) / 2;
+import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const TaskDetailsScreen = () => {
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const { memberName, memberId, teamId } = useLocalSearchParams();
-    
-    const [taskName, setTaskName] = useState('');
-    const [description, setDescription] = useState('');
-    const [steps, setSteps] = useState([{ id: 1, text: ''}]);
-    const [checklist, setChecklist] = useState([{ id: 1, text: '', completed: false }]);
-    const [priority, setPriority] = useState(5);
-    const scrollViewRef = useRef(null);
-    const [notification, setNotification] = useState(null);
-    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const { taskId } = useLocalSearchParams();
+    const [task, setTask] = useState(null);
+    const [taskSteps, setTaskSteps] = useState([]);
 
-    const auth = getAuth();
-    const db = getFirestore();
+    useEffect(() => {
+        const fetchTask = async () => {
+            const docRef = doc(db, 'tasks', taskId);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const taskData = docSnap.data();
+                setTask({ id: docSnap.id, ...taskData });
+                if (taskData.steps) {
+                    setTaskSteps(taskData.steps.map(step => ({ ...step, completed: step.completed || false })));
+                }
+            }
+        };
 
-    const showNotification = (message) => {
-        setNotification(message);
-        Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-        }).start();
+        if (taskId) {
+            fetchTask();
+        }
+    }, [taskId]);
 
-        setTimeout(() => {
-            hideNotification();
-        }, 3000);
-    };
+    const toggleStepCompletion = async (index) => {
+        const newSteps = [...taskSteps];
+        newSteps[index].completed = !newSteps[index].completed;
+        setTaskSteps(newSteps);
 
-    const hideNotification = () => {
-        Animated.timing(fadeAnim, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-        }).start(() => {
-            setNotification(null);
+        const taskRef = doc(db, 'tasks', taskId);
+        await updateDoc(taskRef, {
+            steps: newSteps
         });
     };
 
-    const addStep = () => {
-        setSteps([...steps, { id: Date.now(), text: ''}]);
-    };
+    if (!task) {
+        return null; // Or a loading indicator
+    }
 
-    const handleStepTextChange = (id, text) => {
-        setSteps(steps.map(item => (item.id === id ? { ...item, text } : item)));
-    };
-    
-    const removeStep = (id) => {
-        setSteps(steps.filter(item => item.id !== id));
-    };
+    const taskCreationDate = task.createdAt?.toDate();
+    let formattedTaskDateTime = '';
+    let formattedTaskDateOnly = '';
 
-    const addChecklistItem = () => {
-        setChecklist([...checklist, { id: Date.now(), text: '', completed: false }]);
-    };
+    if (taskCreationDate) {
+        const day = taskCreationDate.getDate();
+        const month = taskCreationDate.toLocaleString('default', { month: 'short' });
+        const year = taskCreationDate.getFullYear();
+        const time = taskCreationDate.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+        });
 
-    const toggleChecklistItem = (id) => {
-        setChecklist(checklist.map(item => (item.id === id ? { ...item, completed: !item.completed } : item)));
-    };
-
-    const handleChecklistTextChange = (id, text) => {
-        setChecklist(checklist.map(item => (item.id === id ? { ...item, text } : item)));
-    };
-
-    const removeChecklistItem = (id) => {
-        setChecklist(checklist.filter(item => item.id !== id));
-    };
-
-    const handleSaveTask = async () => {
-        const user = auth.currentUser;
-        if (!user) {
-            showNotification("You must be logged in to create a task.");
-            return;
-        }
-
-        if (!taskName.trim()) {
-            showNotification("Task name cannot be empty.");
-            return;
-        }
-
-        try {
-            const userDocRef = doc(db, 'users', user.uid);
-            const userDoc = await getDoc(userDocRef);
-            const assignedByName = userDoc.exists() ? userDoc.data().firstName : "Unknown User";
-
-            await addDoc(collection(db, "tasks"), {
-                name: taskName,
-                description,
-                steps: steps.filter(s => s.text.trim() !== ''),
-                checklist: checklist.filter(c => c.text.trim() !== ''),
-                priority,
-                assignedToId: memberId,
-                assignedToName: memberName,
-                assignedById: user.uid,
-                assignedByName,
-                teamId: teamId, 
-                createdAt: serverTimestamp(),
-                status: 'pending',
-            });
-
-            showNotification("Task assigned successfully!");
-            setTimeout(() => {
-                if (router.canGoBack()) {
-                    router.back();
-                } else {
-                    router.replace('/home');
-                }
-            }, 1000);
-        } catch (error) {
-            console.error("Error creating task: ", error);
-            showNotification("An error occurred while creating the task.");
-        }
-    };
-
-    const handlePriorityScroll = (event) => {
-        const x = event.nativeEvent.contentOffset.x;
-        const newPriority = Math.round(x / priorityButtonWidth) + 1;
-        if (newPriority >= 1 && newPriority <= 10) {
-            setPriority(newPriority);
-        }
-    };
+        formattedTaskDateTime = `${day}-${month}-${year}, ${time}`;
+        formattedTaskDateOnly = `${day}-${month}-${year}`;
+    }
 
     return (
-        <KeyboardAvoidingView 
-            style={{ flex: 1, backgroundColor: '#F9FAFB' }} 
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
-            {notification && (
-                <Animated.View style={[styles.notification, { opacity: fadeAnim, top: insets.top + 10 }]}>
-                    <Text style={styles.notificationText}>{notification}</Text>
-                    <TouchableOpacity onPress={hideNotification}>
-                        <Feather name="x" size={20} color="#fff" />
-                    </TouchableOpacity>
-                </Animated.View>
-            )}
+        <View style={{ flex: 1, backgroundColor: '#fff' }}>
             <View style={[styles.header, { paddingTop: insets.top }]}>
-                <TouchableOpacity style={styles.headerButton} onPress={() => {
-                    if (router.canGoBack()) {
-                        router.back();
-                    } else {
-                        router.replace('/home');
-                    }
-                }}>
-                    <Feather name="chevron-left" size={24} color="#1F2937" />
+                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                    <MaterialIcons name="arrow-back" size={24} color="#1F2937" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>New Task</Text>
-                <View style={{width: 36}} />
+                <Text style={styles.headerTitle}>Task details</Text>
             </View>
-
-            <ScrollView style={styles.contentContainer} keyboardShouldPersistTaps="handled">
-                <View style={[styles.inputGroup, {marginTop: 20}]}>
-                    <Text style={styles.label}>Task Name</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={taskName}
-                        onChangeText={setTaskName}
-                        placeholder="Enter your task name"
-                        placeholderTextColor="#9CA3AF"
-                    />
-                </View>
-                
-                 <View style={styles.assigneeContainer}>
-                    <Text style={styles.label}>Assign To</Text>
-                    <View style={styles.assigneePill}>
-                         <View style={styles.avatar}>
-                            <Text style={styles.avatarText}>{memberName?.charAt(0).toUpperCase()}</Text>
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={0}
+            >
+                <ScrollView
+                    style={styles.container}
+                    contentContainerStyle={{ flexGrow: 1 }}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <View style={styles.taskInfoContainer}>
+                        <View style={styles.taskTitleContainer}>
+                            <Text style={styles.taskTitle}>• {task.name}</Text>
+                            <View style={styles.priorityContainer}>
+                                <TouchableOpacity style={[styles.actionButton, styles.deleteButton]}>
+                                    <MaterialIcons name="delete" size={24} color="#fff" />
+                                </TouchableOpacity>
+                                <Text style={styles.priorityText}>P{task.priority}</Text>
+                            </View>
                         </View>
-                        <Text style={styles.assigneeName}>{memberName}</Text>
+                        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 4}}>
+                            <MaterialIcons name="subdirectory-arrow-right" size={16} color="#6B7280" style={{marginRight: 4}}/>
+                            <Text style={[styles.taskSubtitle, {marginBottom: 0}]}>{task.description}</Text>
+                        </View>
+                        <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                            <MaterialIcons name="calendar-today" size={14} color="#6B7280" style={{marginRight: 4}}/>
+                            <Text style={styles.taskDate}>{formattedTaskDateTime}</Text>
+                        </View>
                     </View>
-                </View>
 
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Description</Text>
-                    <TextInput
-                        style={[styles.input, styles.textarea]}
-                        value={description}
-                        onChangeText={setDescription}
-                        placeholder="Add more details about the task..."
-                        placeholderTextColor="#9CA3AF"
-                        multiline
-                    />
-                </View>
+                    <View style={styles.assignedToContainer}>
+                        <Text style={styles.assignedToTitle}>Assigned to:</Text>
+                        <View style={styles.assigneeContainer}>
+                            <View style={styles.assignee}>
+                                <Text style={styles.assigneeName}>{task.assignedByName}</Text>
+                            </View>
+                            <MaterialIcons name="arrow-downward" size={24} color="#6B7280" style={styles.arrow} />
+                            <View style={styles.assignee}>
+                                <Text style={styles.assigneeName}>{task.assignedToName}</Text>
+                            </View>
+                        </View>
+                    </View>
 
-                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Steps to Complete</Text>
-                    {steps.map((item, index) => (
-                        <StepItem 
-                            key={item.id}
-                            item={item}
-                            index={index}
-                            onTextChange={(text) => handleStepTextChange(item.id, text)}
-                            onRemove={() => removeStep(item.id)}
-                        />
-                    ))}
-                    <TouchableOpacity style={styles.addButton} onPress={addStep}>
-                         <Feather name="plus-circle" size={18} color="#6B7280" />
-                        <Text style={styles.addText}>Add Step</Text>
+                    {taskSteps.length > 0 && (
+                        <View style={styles.stepsContainer}>
+                            <Text style={styles.stepsTitle}>Steps</Text>
+                            {taskSteps.map((step, index) => (
+                                <TouchableOpacity
+                                    key={index}
+                                    style={styles.stepItem}
+                                    onPress={() => toggleStepCompletion(index)}
+                                >
+                                    <Text style={[styles.stepText, step.completed && styles.stepTextCompleted]}>
+                                        {index + 1}. {step.text}
+                                    </Text>
+                                    <View style={[styles.checkbox, step.completed && styles.checkboxCompleted]}>
+                                        {step.completed && (
+                                            <MaterialIcons name="check" size={18} color="white" />
+                                        )}
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
+
+                    <View style={styles.seenByContainer}>
+                        <Text style={styles.seenByTitle}>Seen by:-</Text>
+                        <Text style={styles.seenByEmpty}>-- Empty --</Text>
+                    </View>
+
+                    <TouchableOpacity style={styles.swipeToCompleteButton}>
+                        <Text style={styles.swipeToCompleteText}>Swipe to Complete</Text>
+                    </TouchableOpacity>
+                </ScrollView>
+
+                <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
+                    <TextInput style={styles.messageInput} placeholder="Message" />
+                    <TouchableOpacity>
+                        <MaterialIcons name="send" size={24} color="#000" />
                     </TouchableOpacity>
                 </View>
-
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Checklist</Text>
-                    {checklist.map(item => (
-                        <ChecklistItem 
-                            key={item.id}
-                            item={item}
-                            onToggle={() => toggleChecklistItem(item.id)}
-                            onTextChange={(text) => handleChecklistTextChange(item.id, text)}
-                            onRemove={() => removeChecklistItem(item.id)}
-                        />
-                    ))}
-                    <TouchableOpacity style={styles.addButton} onPress={addChecklistItem}>
-                         <Feather name="plus-circle" size={18} color="#6B7280" />
-                        <Text style={styles.addText}>Add Item</Text>
-                    </TouchableOpacity>
-                </View>
-
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Priority</Text>
-                    <ScrollView 
-                        ref={scrollViewRef}
-                        horizontal 
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={{ paddingHorizontal: spacerWidth }}
-                        decelerationRate="fast"
-                        snapToInterval={priorityButtonWidth}
-                        onMomentumScrollEnd={handlePriorityScroll}
-                    >
-                        {[...Array(10)].map((_, i) => (
-                            <TouchableOpacity
-                                key={i}
-                                style={[
-                                    styles.priorityButton,
-                                    {
-                                        width: priorityButtonWidth,
-                                        backgroundColor: priority === i + 1 ? '#3B82F6' : '#fff',
-                                        borderColor: priority === i + 1 ? '#3B82F6' : '#E5E7EB',
-                                    }
-                                ]}
-                                onPress={() => {
-                                    setPriority(i + 1);
-                                    scrollViewRef.current.scrollTo({ x: i * priorityButtonWidth, animated: true });
-                                }}>
-                                <Text style={[
-                                    styles.priorityButtonText,
-                                    { color: priority === i + 1 ? '#fff' : '#374151' }
-                                ]}>
-                                    {i + 1}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </View>
-            </ScrollView>
-
-            <View style={[styles.footer, { paddingBottom: insets.bottom > 0 ? insets.bottom : 20 }]}>
-                <TouchableOpacity onPress={handleSaveTask}>
-                    <LinearGradient
-                        colors={['#3B82F6', '#2563EB']}
-                        style={styles.createButton}
-                    >
-                        <Text style={styles.createButtonText}>Assign Task</Text>
-                    </LinearGradient>
-                </TouchableOpacity>
-            </View>
-        </KeyboardAvoidingView>
+            </KeyboardAvoidingView>
+        </View>
     );
 };
 
@@ -319,212 +162,175 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         paddingHorizontal: 16,
         paddingBottom: 12,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: 'white',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E7EB',
+        position: 'relative',
+        marginTop: 20
     },
-    headerButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#E5E7EB'
+    backButton: {
+        position: 'absolute',
+        left: 16,
+        padding: 4,
+        zIndex: 1
     },
     headerTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1F2937'
+    },
+    container: {
+        flex: 1,
+        padding: 16,
+    },
+    taskInfoContainer: {
+        marginBottom: 16,
+    },
+    taskTitleContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 4,
+    },
+    taskTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#1F2937',
-    },
-    contentContainer: {
         flex: 1,
-        paddingHorizontal: 20,
-        paddingTop: 16
+        marginRight: 16,
     },
-    assigneeContainer: {
-        marginBottom: 24,
-    },
-    assigneePill: {
-        flexDirection: 'row',
+    priorityContainer: {
         alignItems: 'center',
-        backgroundColor: '#EFF6FF',
-        borderRadius: 99,
-        paddingVertical: 4,
-        paddingHorizontal: 12,
-        alignSelf: 'flex-start',
     },
-    avatar: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: '#BFDBFE',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 8,
-    },
-    avatarText: {
+    priorityText: {
         fontSize: 14,
         fontWeight: 'bold',
-        color: '#2563EB',
+        color: '#EF4444',
+        marginTop: 4,
+    },
+    taskSubtitle: {
+        fontSize: 16,
+        color: '#6B7280',
+        marginBottom: 4,
+    },
+    taskDate: {
+        fontSize: 14,
+        color: '#6B7280',
+    },
+    actionButton: {
+        padding: 8,
+    },
+    deleteButton: {
+        backgroundColor: 'red',
+        borderRadius: 5,
+    },
+    assignedToContainer: {
+        marginBottom: 16,
+    },
+    assignedToTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 8,
+    },
+    assigneeContainer: {
+        alignItems: 'flex-start',
+    },
+    assignee: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
+        width: '100%',
     },
     assigneeName: {
         fontSize: 16,
-        fontWeight: '600',
-        color: '#1E40AF',
+        marginLeft: 16,
     },
-    label: {
+    assigneeDate: {
         fontSize: 14,
-        fontWeight: '600',
-        color: '#4B5563',
-        marginBottom: 8,
+        color: '#6B7280',
     },
-    inputGroup: {
-        marginBottom: 24,
+    arrow: {
+        marginVertical: 8,
+        marginLeft: 16,
     },
-    input: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        padding: 16,
+    stepsContainer: {
+        marginBottom: 16,
+    },
+    stepsTitle: {
         fontSize: 16,
-        color: '#1F2937',
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-    },
-    textarea: {
-        height: 120,
-        textAlignVertical: 'top',
+        fontWeight: 'bold',
+        marginBottom: 8,
     },
     stepItem: {
         flexDirection: 'row',
-        alignItems: 'flex-start',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         marginBottom: 12,
-        backgroundColor: '#fff',
-        padding: 12,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        marginTop: 10,
+        marginLeft: 16,
     },
-    stepNumber: {
-        fontSize: 14,
-        lineHeight: 24, 
-        fontWeight: 'bold',
-        color: '#3B82F6',
-        marginRight: 8,
-    },
-    stepInput: {
-        flex: 1,
+    stepText: {
         fontSize: 16,
         color: '#374151',
-        paddingVertical: 0,
+        flex: 1,
     },
-    checklistItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 12,
-        backgroundColor: '#fff',
-        padding: 12,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        marginTop: 10,
+    stepTextCompleted: {
+        textDecorationLine: 'line-through',
+        color: '#9CA3AF',
     },
     checkbox: {
-        width: 22,
-        height: 22,
+        width: 24,
+        height: 24,
         borderRadius: 6,
         borderWidth: 2,
         borderColor: '#D1D5DB',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
+        marginLeft: 16,
     },
     checkboxCompleted: {
-        backgroundColor: '#3B82F6',
-        borderColor: '#3B82F6',
+        backgroundColor: '#2563EB',
+        borderColor: '#2563EB',
     },
-    checklistInput: {
-        flex: 1,
+    seenByContainer: {
+        marginBottom: 16,
+    },
+    seenByTitle: {
         fontSize: 16,
-        color: '#374151',
+        fontWeight: 'bold',
+        marginBottom: 8,
     },
-    checklistInputCompleted: {
-        textDecorationLine: 'line-through',
-        color: '#9CA3AF',
-    },
-    addButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 4,
-        padding: 8,
-        alignSelf: 'flex-start',
-    },
-    addText: {
-        fontSize: 14,
-        fontWeight: '600',
+    seenByEmpty: {
+        fontStyle: 'italic',
         color: '#6B7280',
-        marginLeft: 6
     },
-    removeButton: {
-        padding: 4,
-        marginLeft: 8,
-    },
-    priorityButton: {
-        height: 60,
-        borderRadius: 30,
-        justifyContent: 'center',
+    swipeToCompleteButton: {
+        backgroundColor: '#E5E7EB',
+        padding: 16,
+        borderRadius: 5,
         alignItems: 'center',
-        borderWidth: 2,
-        marginHorizontal: 0,
+        marginBottom: 16,
     },
-    priorityButtonText: {
-        fontSize: 20,
+    swipeToCompleteText: {
+        fontSize: 16,
         fontWeight: 'bold',
     },
     footer: {
-        backgroundColor: '#FFFFFF',
-        paddingHorizontal: 20,
-        paddingTop: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
         borderTopWidth: 1,
         borderTopColor: '#E5E7EB',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -5 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
     },
-    createButton: {
-        padding: 16,
-        borderRadius: 14,
-        alignItems: 'center',
-        shadowColor: '#3B82F6',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-    },
-    createButtonText: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    notification: {
-        position: 'absolute',
-        left: 20,
-        right: 20,
-        backgroundColor: '#4B5563',
-        padding: 16,
-        borderRadius: 8,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        zIndex: 1000,
-        elevation: 5,
-    },
-    notificationText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
+    messageInput: {
+        flex: 1,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderRadius: 5,
+        padding: 8,
+        marginRight: 8,
     },
 });
 

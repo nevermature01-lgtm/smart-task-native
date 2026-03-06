@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Modal, Keyboard, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Modal, Keyboard, Platform, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
@@ -25,28 +25,6 @@ const DetailsScreen = () => {
     const [deleteModalVisible, setDeleteModalVisible] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const scrollViewRef = useRef(null);
-    const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-    useEffect(() => {
-        const keyboardDidShowListener = Keyboard.addListener(
-            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-            (e) => {
-                setKeyboardHeight(e.endCoordinates.height);
-                setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
-            }
-        );
-        const keyboardDidHideListener = Keyboard.addListener(
-            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-            () => {
-                setKeyboardHeight(0);
-            }
-        );
-
-        return () => {
-            keyboardDidHideListener.remove();
-            keyboardDidShowListener.remove();
-        };
-    }, []);
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -109,6 +87,7 @@ const DetailsScreen = () => {
                 fetchedMessages.push({ id: doc.id, ...doc.data() });
             });
             setMessages(fetchedMessages);
+            setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
         });
 
         return () => {
@@ -206,7 +185,6 @@ const DetailsScreen = () => {
         formattedTaskAssignmentDateTime = `${dateString} at ${timeString}`;
     }
 
-
     return (
         <View style={{ flex: 1, backgroundColor: '#fff' }}>
              <View style={[styles.header, { paddingTop: insets.top }]}>
@@ -222,123 +200,117 @@ const DetailsScreen = () => {
                 <Text style={styles.headerTitle}>Details</Text>
             </View>
 
-            <ScrollView
-                ref={scrollViewRef}
-                style={styles.container}
-                contentContainerStyle={{ paddingBottom: keyboardHeight > 0 ? 70 : 140 + insets.bottom }}
-                onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={0}
             >
-                {/* Task Details */}
-                <View style={styles.taskInfoContainer}>
-                    <View style={styles.taskTitleContainer}>
-                        <Text style={styles.taskTitle}>• {task.name}</Text>
-                        <View style={styles.priorityContainer}>
+                <ScrollView
+                    ref={scrollViewRef}
+                    style={styles.container}
+                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    {/* Task Details */}
+                    <View style={styles.taskInfoContainer}>
+                        <View style={styles.taskTitleContainer}>
+                            <Text style={styles.taskTitle}>• {task.name}</Text>
+                            <View style={styles.priorityContainer}>
+                                {currentUserRole === 'admin' && !isCompleted && (
+                                    <TouchableOpacity style={[styles.actionButton, styles.deleteButton]} onPress={() => setDeleteModalVisible(true)}>
+                                        <Feather name="trash-2" size={24} color="#fff" />
+                                    </TouchableOpacity>
+                                )}
+                                <Text style={styles.priorityText}>P{task.priority}</Text>
+                            </View>
+                        </View>
+                        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 4}}>
+                            <Feather name="corner-down-right" size={16} color="#6B7280" style={{marginRight: 4}}/>
+                            <Text style={[styles.taskSubtitle, {marginBottom: 0}]}>{task.description}</Text>
+                        </View>
+                        <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                            <Feather name="calendar" size={14} color="#6B7280" style={{marginRight: 4}}/>
+                            <Text style={styles.taskDate}>{formattedTaskDateTime}</Text>
+                        </View>
+                    </View>
+
+                    {/* Assignment Chain */}
+                    <View style={styles.assignedToContainer}>
+                        <View style={styles.assignedToHeader}>
+                            <Text style={styles.assignedToTitle}>Assigned to:</Text>
                             {currentUserRole === 'admin' && !isCompleted && (
-                                <TouchableOpacity style={[styles.actionButton, styles.deleteButton]} onPress={() => setDeleteModalVisible(true)}>
-                                    <Feather name="trash-2" size={24} color="#fff" />
+                                <TouchableOpacity style={styles.reassignButton} onPress={handleReassign}>
+                                    <Text style={styles.reassignButtonText}>Reassign</Text>
                                 </TouchableOpacity>
                             )}
-                            <Text style={styles.priorityText}>P{task.priority}</Text>
                         </View>
-                    </View>
-                    <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 4}}>
-                        <Feather name="corner-down-right" size={16} color="#6B7280" style={{marginRight: 4}}/>
-                        <Text style={[styles.taskSubtitle, {marginBottom: 0}]}>{task.description}</Text>
-                    </View>
-                    <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                        <Feather name="calendar" size={14} color="#6B7280" style={{marginRight: 4}}/>
-                        <Text style={styles.taskDate}>{formattedTaskDateTime}</Text>
-                    </View>
-                </View>
-
-                {/* Assignment Chain */}
-                <View style={styles.assignedToContainer}>
-                    <View style={styles.assignedToHeader}>
-                        <Text style={styles.assignedToTitle}>Assigned to:</Text>
-                        {currentUserRole === 'admin' && !isCompleted && (
-                            <TouchableOpacity style={styles.reassignButton} onPress={handleReassign}>
-                                <Text style={styles.reassignButtonText}>Reassign</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                    <View style={{marginTop: 8, alignItems: 'flex-start'}}>
-                        <View style={styles.assignee}>
-                            <Text style={styles.assigneeName}>{task.assignedByName}</Text>
-                        </View>
-                        <View style={{flexDirection: 'row', alignItems: 'center', marginVertical: 4, marginLeft: 16}}>
-                            <MaterialIcons name="arrow-downward" size={24} color="#6B7280" />
-                            <Text style={styles.assignmentDate}>{formattedTaskAssignmentDateTime}</Text>
-                        </View>
-                        <View style={styles.assignee}>
-                            <Text style={styles.assigneeName}>{task.assignedToName}</Text>
-                        </View>
-                    </View>
-                </View>
-
-                {/* Steps */}
-                {taskSteps.length > 0 && (
-                   <View style={styles.stepsContainer}>
-                        <Text style={styles.stepsTitle}>Steps</Text>
-                        <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}>
-                            <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                                {taskSteps.map((step, index) => (
-                                    <React.Fragment key={index}>
-                                        <View style={styles.stepItem}>
-                                            <Text style={styles.stepText}>{step.text}</Text>
-                                        </View>
-                                        {index < taskSteps.length - 1 && (
-                                            <Feather name="arrow-right" size={20} color="#6B7280" style={styles.arrow} />
-                                        )}
-                                    </React.Fragment>
-                                ))}
+                        <View style={{marginTop: 8, alignItems: 'flex-start'}}>
+                            <View style={styles.assignee}>
+                                <Text style={styles.assigneeName}>{task.assignedByName}</Text>
                             </View>
-                        </ScrollView>
+                            <View style={{flexDirection: 'row', alignItems: 'center', marginVertical: 4, marginLeft: 16}}>
+                                <MaterialIcons name="arrow-downward" size={24} color="#6B7280" />
+                                <Text style={styles.assignmentDate}>{formattedTaskAssignmentDateTime}</Text>
+                            </View>
+                            <View style={styles.assignee}>
+                                <Text style={styles.assigneeName}>{task.assignedToName}</Text>
+                            </View>
+                        </View>
                     </View>
-                )}
 
-                {/* Checklist */}
-                {checklist.length > 0 && (
-                    <View style={styles.checklistContainer}>
-                        <Text style={styles.checklistTitle}>Checklist</Text>
-                        {checklist.map((item, index) => (
-                            <TouchableOpacity key={index} style={styles.checklistItem} onPress={() => toggleChecklistItemCompletion(index)} disabled={isCompleted}>
-                                <Text style={[styles.checklistText, item.completed && styles.checklistTextCompleted]}>{item.text}</Text>
-                                <View style={[styles.checkbox, item.completed && styles.checkboxCompleted]}>
-                                    {item.completed && <Feather name="check" size={18} color="white" />}
+                    {/* Steps */}
+                    {taskSteps.length > 0 && (
+                       <View style={styles.stepsContainer}>
+                            <Text style={styles.stepsTitle}>Steps</Text>
+                            <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}>
+                                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                                    {taskSteps.map((step, index) => (
+                                        <React.Fragment key={index}>
+                                            <View style={styles.stepItem}>
+                                                <Text style={styles.stepText}>{step.text}</Text>
+                                            </View>
+                                            {index < taskSteps.length - 1 && (
+                                                <Feather name="arrow-right" size={20} color="#6B7280" style={styles.arrow} />
+                                            )}
+                                        </React.Fragment>
+                                    ))}
                                 </View>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
-                
-                {/* Messages */}
-                 <View style={styles.messagesContainer}>
-                     <Text style={styles.messagesTitle}>Messages</Text>
-                     {messages.map((msg) => (
-                         <View key={msg.id} style={[
-                             styles.messageBubble,
-                             msg.senderId === auth.currentUser.uid ? styles.myMessageBubble : styles.theirMessageBubble
-                         ]}>
-                             <Text style={styles.messageSender}>{msg.senderName}</Text>
-                             {msg.type === 'text' && <Text style={styles.messageText}>{msg.text}</Text>}
-                         </View>
-                     ))}
-                </View>
-            </ScrollView>
-            
-            {isCompleted && (
-                <View style={styles.completedOverlay}>
-                    <Feather name="check-circle" size={64} color="white" />
-                    <Text style={styles.completedOverlayText}>Task Completed</Text>
-                    <TouchableOpacity onPress={() => setReopenModalVisible(true)}>
-                        <Text style={styles.unlockText}>Reopen Task</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
+                            </ScrollView>
+                        </View>
+                    )}
 
-            {!isCompleted && (
-                <>
-                    {keyboardHeight === 0 && (
+                    {/* Checklist */}
+                    {checklist.length > 0 && (
+                        <View style={styles.checklistContainer}>
+                            <Text style={styles.checklistTitle}>Checklist</Text>
+                            {checklist.map((item, index) => (
+                                <TouchableOpacity key={index} style={styles.checklistItem} onPress={() => toggleChecklistItemCompletion(index)} disabled={isCompleted}>
+                                    <Text style={[styles.checklistText, item.completed && styles.checklistTextCompleted]}>{item.text}</Text>
+                                    <View style={[styles.checkbox, item.completed && styles.checkboxCompleted]}>
+                                        {item.completed && <Feather name="check" size={18} color="white" />}
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
+                    
+                    {/* Messages */}
+                     <View style={styles.messagesContainer}>
+                         <Text style={styles.messagesTitle}>Messages</Text>
+                         {messages.map((msg) => (
+                             <View key={msg.id} style={[
+                                 styles.messageBubble,
+                                 msg.senderId === auth.currentUser.uid ? styles.myMessageBubble : styles.theirMessageBubble
+                             ]}>
+                                 <Text style={styles.messageSender}>{msg.senderName}</Text>
+                                 {msg.type === 'text' && <Text style={styles.messageText}>{msg.text}</Text>}
+                             </View>
+                         ))}
+                    </View>
+                </ScrollView>
+                
+                {!isCompleted && (
+                     <View style={{ paddingBottom: insets.bottom, backgroundColor: "#fff" }}>
                         <View style={styles.swipeToCompleteButton}>
                             <GestureDetector gesture={gesture}>
                                 <Animated.View style={[styles.swipeableCircle, animatedStyle]}>
@@ -350,24 +322,36 @@ const DetailsScreen = () => {
                             </GestureDetector>
                             <Text style={styles.swipeToCompleteText}>Swipe to Complete</Text>
                         </View>
-                    )}
-                    <View style={[styles.messageContainer, { bottom: keyboardHeight > 0 ? (Platform.OS === 'ios' ? keyboardHeight : 0) : insets.bottom }]}>
-                        <TextInput
-                            style={styles.messageInput}
-                            placeholder="Message..."
-                            value={messageText}
-                            onChangeText={setMessageText}
-                        />
-                        <TouchableOpacity onPress={handleSendMessage}>
-                            <Feather name="send" size={24} color={messageText.trim() === '' ? '#999' : '#000'} />
-                        </TouchableOpacity>
+                        <View style={styles.messageContainer}>
+                            <TextInput
+                                placeholder="Message..."
+                                style={styles.messageInput}
+                                value={messageText}
+                                onChangeText={setMessageText}
+                            />
+                            <TouchableOpacity
+                                style={styles.sendButton}
+                                onPress={handleSendMessage}
+                            >
+                                <Feather name="send" size={24} color="#000" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                </>
+                )}
+            </KeyboardAvoidingView>
+            
+            {isCompleted && (
+                <View style={styles.completedOverlay}>
+                    <Feather name="check-circle" size={64} color="white" />
+                    <Text style={styles.completedOverlayText}>Task Completed</Text>
+                    <TouchableOpacity onPress={() => setReopenModalVisible(true)}>
+                        <Text style={styles.unlockText}>Reopen Task</Text>
+                    </TouchableOpacity>
+                </View>
             )}
 
-
             {/* Modals */}
-             <Modal transparent={true} visible={reopenModalVisible} onRequestClose={() => setReopenModalVisible(false)}>
+            <Modal transparent={true} visible={reopenModalVisible} onRequestClose={() => setReopenModalVisible(false)}>
                 <View style={styles.modalContainer}>
                     <View style={styles.modalView}>
                         <Text style={styles.modalText}>Reopen Task?</Text>
@@ -454,7 +438,7 @@ const styles = StyleSheet.create({
     checkboxCompleted: { backgroundColor: '#2563EB', borderColor: '#2563EB', },
 
     // Messages
-    messagesContainer: { marginTop: 20, },
+    messagesContainer: { marginTop: 20, paddingBottom: 20 },
     messagesTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 12, },
     messageBubble: { padding: 12, borderRadius: 12, marginBottom: 8, maxWidth: '80%', },
     myMessageBubble: { backgroundColor: '#d1e7ff', alignSelf: 'flex-end', },
@@ -465,31 +449,34 @@ const styles = StyleSheet.create({
 
     // Footer & Swipe
     swipeToCompleteButton: {
-        position: 'absolute',
-        bottom: 70,
-        left: 20,
-        right: 20,
+        marginHorizontal: 20,
         backgroundColor: '#E5E7EB',
         height: 60,
         borderRadius: 30,
         justifyContent: 'center',
+        marginBottom: 10,
     },
     swipeableCircle: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#2563EB', position: 'absolute', left: 5, top: 5, justifyContent: 'center', alignItems: 'center', zIndex: 2, },
     swipeToCompleteText: { fontSize: 16, fontWeight: 'bold', color: '#374151', alignSelf: 'center', zIndex: 1, },
     messageContainer: {
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "#fff",
-        borderTopWidth: 1,
-        borderColor: "#eee",
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 12,
-        paddingVertical: 8
+        flexDirection:"row",
+        alignItems:"center",
+        paddingHorizontal:12,
+        paddingVertical:8,
+        borderTopWidth:1,
+        borderColor:"#eee",
+        backgroundColor:"#fff"
     },
-    messageInput: { flex: 1, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12, marginRight: 8, backgroundColor: '#f1f0f0' },
+    messageInput: {
+        flex:1,
+        height:44,
+        backgroundColor:"#f2f2f2",
+        borderRadius:8,
+        paddingHorizontal:12
+    },
+    sendButton: {
+        marginLeft: 8
+    },
 
     // Overlays & Modals
     completedOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.7)', justifyContent: 'center', alignItems: 'center', zIndex: 10, },
