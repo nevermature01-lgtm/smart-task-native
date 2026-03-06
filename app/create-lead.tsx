@@ -5,7 +5,8 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { db } from '../firebase';
-import { addDoc, collection, onSnapshot, query } from 'firebase/firestore';
+import { addDoc, collection, onSnapshot, query, where, orderBy, doc, getDocs, getDoc } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const sources = ["Social Media", "Walk-in", "Random"];
 
@@ -25,18 +26,56 @@ const CreateLeadScreen = () => {
   const [users, setUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [isUserModalVisible, setUserModalVisible] = useState(false);
+  const [teamId, setTeamId] = useState(null);
+  const [stages, setStages] = useState([]);
 
   useEffect(() => {
-    const q = query(collection(db, "users"));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const usersData = [];
-      querySnapshot.forEach((doc) => {
-        usersData.push({ ...doc.data(), id: doc.id });
-      });
-      setUsers(usersData);
-    });
+    let unsubscribeStages = () => {};
 
-    return () => unsubscribe();
+    const fetchData = async () => {
+      try {
+        const activeAccountString = await AsyncStorage.getItem('activeAccount');
+        if (activeAccountString) {
+            const activeAccount = JSON.parse(activeAccountString);
+            setTeamId(activeAccount.id);
+
+            // Fetch stages
+            const stagesQuery = query(collection(db, "stages"), where("teamId", "==", activeAccount.id), orderBy("order", "asc"));
+            unsubscribeStages = onSnapshot(stagesQuery, (snapshot) => {
+                const stagesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setStages(stagesData);
+            }, (error) => console.error("Error fetching stages:", error));
+
+
+            // Fetch team members using the confirmed working logic from manage-members.tsx
+            const teamMembersQuery = query(collection(db, 'team_members'), where('teamId', '==', activeAccount.id));
+            const teamMembersSnapshot = await getDocs(teamMembersQuery);
+
+            const memberPromises = teamMembersSnapshot.docs.map(async (memberDoc) => {
+                const memberData = memberDoc.data();
+                if (!memberData.userId) return null;
+                const userDocRef = doc(db, 'users', memberData.userId);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    return { id: userDoc.id, ...userDoc.data() };
+                }
+                return null;
+            });
+            
+            const usersData = (await Promise.all(memberPromises)).filter(user => user !== null);
+            setUsers(usersData);
+        }
+      } catch (error) {
+        console.error("Error fetching team data: ", error);
+        Alert.alert("Error", "There was an error loading team data.");
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      unsubscribeStages();
+    };
   }, []);
 
   const handleSaveLead = async () => {
@@ -51,6 +90,7 @@ const CreateLeadScreen = () => {
 
     setIsLoading(true);
     try {
+      const initialStage = stages.length > 0 ? stages[0].name : 'Stage 1';
       await addDoc(collection(db, "leads"), {
         customerName,
         address,
@@ -60,7 +100,8 @@ const CreateLeadScreen = () => {
         source,
         createdAt: new Date(),
         assignedTo: selectedUsers.map(user => ({ id: user.id, name: `${user.firstName} ${user.lastName}`})),
-        stage: 'Stage 1'
+        stage: initialStage,
+        teamId,
       });
       Alert.alert("Success", "Lead has been saved successfully.");
       router.back();

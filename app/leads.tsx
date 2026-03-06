@@ -4,7 +4,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, where } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LeadsScreen = () => {
   const router = useRouter();
@@ -18,12 +19,28 @@ const LeadsScreen = () => {
   const [isSortModalVisible, setSortModalVisible] = useState(false);
   const [availableMonths, setAvailableMonths] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(null);
+  const [teamId, setTeamId] = useState(null);
+  const [stages, setStages] = useState([]);
+  const [nextStage, setNextStage] = useState(null);
 
   useEffect(() => {
-    setIsLoading(true);
-    const q = query(collection(db, "leads"), orderBy("followUpDate", "desc"));
+    const getTeamId = async () => {
+        const activeAccount = await AsyncStorage.getItem('activeAccount');
+        if (activeAccount) {
+            setTeamId(JSON.parse(activeAccount).id);
+        } else {
+            setIsLoading(false);
+        }
+    };
+    getTeamId();
+  }, []);
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+  useEffect(() => {
+    if (!teamId) return;
+    setIsLoading(true);
+
+    const leadsQuery = query(collection(db, "leads"), where("teamId", "==", teamId), orderBy("followUpDate", "desc"));
+    const unsubscribeLeads = onSnapshot(leadsQuery, (querySnapshot) => {
       const leadsData = [];
       querySnapshot.forEach((doc) => {
         leadsData.push({ ...doc.data(), id: doc.id });
@@ -33,12 +50,9 @@ const LeadsScreen = () => {
       if (selectedMonth) {
         const [year, monthStr] = selectedMonth.split('-');
         const month = parseInt(monthStr, 10);
-        
         const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-
-        const nextMonth = month === 12 ? 1 : month + 1;
-        const nextYear = month === 12 ? parseInt(year, 10) + 1 : parseInt(year, 10);
-        const endDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+        const nextMonthDate = new Date(year, month, 1);
+        const endDate = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
 
         monthFilteredLeads = leadsData.filter(lead => {
           return lead.followUpDate >= startDate && lead.followUpDate < endDate;
@@ -53,8 +67,17 @@ const LeadsScreen = () => {
         Alert.alert("Error", "Could not fetch leads.");
     });
 
-    return () => unsubscribe();
-  }, [selectedMonth]);
+    const stagesQuery = query(collection(db, "stages"), where("teamId", "==", teamId), orderBy("order", "asc"));
+    const unsubscribeStages = onSnapshot(stagesQuery, (snapshot) => {
+        const stagesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setStages(stagesData);
+    });
+
+    return () => {
+        unsubscribeLeads();
+        unsubscribeStages();
+    };
+  }, [selectedMonth, teamId]);
 
   useEffect(() => {
     const currentYear = new Date().getFullYear();
@@ -83,10 +106,10 @@ const LeadsScreen = () => {
       const url = `tel:${phoneNumber}`;
       Linking.canOpenURL(url)
         .then((supported) => {
-          if (supported) {
-            return Linking.openURL(url);
-          } else {
+          if (!supported) {
             Alert.alert("Error", "Unable to make a phone call.");
+          } else {
+            return Linking.openURL(url);
           }
         })
         .catch(() => Alert.alert("Error", "Unable to make a phone call."));
@@ -96,6 +119,12 @@ const LeadsScreen = () => {
   };
 
   const openMenu = (lead) => {
+      const currentStageIndex = stages.findIndex(s => s.name === lead.stage);
+      if (currentStageIndex !== -1 && currentStageIndex < stages.length - 1) {
+          setNextStage(stages[currentStageIndex + 1]);
+      } else {
+          setNextStage(null);
+      }
       setSelectedLead(lead);
       setMenuVisible(true);
   }
@@ -103,6 +132,7 @@ const LeadsScreen = () => {
   const closeMenu = () => {
       setMenuVisible(false);
       setSelectedLead(null);
+      setNextStage(null);
   }
 
   const handleRemoveLead = () => {
@@ -130,12 +160,12 @@ const LeadsScreen = () => {
     );
   };
 
-  const handleForwardToStage2 = async () => {
-      if (!selectedLead) return;
+  const handleMoveToNextStage = async () => {
+      if (!selectedLead || !nextStage) return;
       try {
           const leadRef = doc(db, 'leads', selectedLead.id);
-          await updateDoc(leadRef, { stage: 'Stage 2' });
-          Alert.alert("Success", "Lead has been forwarded to Stage 2.");
+          await updateDoc(leadRef, { stage: nextStage.name });
+          Alert.alert("Success", `Lead has been forwarded to ${nextStage.name}.`);
           closeMenu();
       } catch (error) {
           Alert.alert("Error", "Failed to update lead. Please try again.");
@@ -268,10 +298,12 @@ const LeadsScreen = () => {
       >
         <TouchableOpacity style={styles.modalOverlay} onPress={closeMenu} activeOpacity={1}>
             <View style={styles.menuContainer}>
-                <TouchableOpacity style={styles.menuItem} onPress={handleForwardToStage2}>
-                    <Feather name="send" size={20} color="#4B5563" />
-                    <Text style={styles.menuItemText}>Forward to Final Customer</Text>
-                </TouchableOpacity>
+                 {nextStage && (
+                    <TouchableOpacity style={styles.menuItem} onPress={handleMoveToNextStage}>
+                        <Feather name="send" size={20} color="#4B5563" />
+                        <Text style={styles.menuItemText}>Forward to {nextStage.name}</Text>
+                    </TouchableOpacity>
+                )}
                 <TouchableOpacity style={styles.menuItem} onPress={() => { router.push(`/edit-lead?id=${selectedLead.id}`); closeMenu(); }}>
                     <Feather name="edit" size={20} color="#4B5563" />
                     <Text style={styles.menuItemText}>Edit Details</Text>
