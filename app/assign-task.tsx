@@ -105,7 +105,7 @@ const AssignTaskScreen = () => {
             router.back();
         } else {
             router.push({
-                pathname: '/task-details',
+                pathname: '/create-task',
                 params: { memberId: member.id, memberName: member.name, teamId: teamId }
             });
         }

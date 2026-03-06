@@ -42,7 +42,7 @@ const StepItem = ({ item, onTextChange, index, onRemove }) => (
 )
 
 
-const TaskDetailsScreen = () => {
+const CreateTaskScreen = () => {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { memberName, memberId, teamId } = useLocalSearchParams();
@@ -443,4 +443,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default TaskDetailsScreen;
+export default CreateTaskScreen;
