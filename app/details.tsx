@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Modal, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Modal, Keyboard, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
@@ -28,17 +28,23 @@ const DetailsScreen = () => {
     const [keyboardHeight, setKeyboardHeight] = useState(0);
 
     useEffect(() => {
-        const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
-            setKeyboardHeight(e.endCoordinates.height);
-        });
-
-        const hideSub = Keyboard.addListener("keyboardDidHide", () => {
-            setKeyboardHeight(0);
-        });
+        const keyboardDidShowListener = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+            (e) => {
+                setKeyboardHeight(e.endCoordinates.height);
+                setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+            }
+        );
+        const keyboardDidHideListener = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+            () => {
+                setKeyboardHeight(0);
+            }
+        );
 
         return () => {
-            showSub.remove();
-            hideSub.remove();
+            keyboardDidHideListener.remove();
+            keyboardDidShowListener.remove();
         };
     }, []);
 
@@ -219,8 +225,8 @@ const DetailsScreen = () => {
             <ScrollView
                 ref={scrollViewRef}
                 style={styles.container}
-                contentContainerStyle={{ paddingBottom: 140 }}
-                onContentSizeChange={() => scrollViewRef.current.scrollToEnd({ animated: true })}
+                contentContainerStyle={{ paddingBottom: keyboardHeight > 0 ? 70 : 140 + insets.bottom }}
+                onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
             >
                 {/* Task Details */}
                 <View style={styles.taskInfoContainer}>
@@ -255,7 +261,7 @@ const DetailsScreen = () => {
                             </TouchableOpacity>
                         )}
                     </View>
-                    <View style={{marginTop: 8, alignItems: 'flex-start'}}>\
+                    <View style={{marginTop: 8, alignItems: 'flex-start'}}>
                         <View style={styles.assignee}>
                             <Text style={styles.assigneeName}>{task.assignedByName}</Text>
                         </View>
@@ -274,7 +280,7 @@ const DetailsScreen = () => {
                    <View style={styles.stepsContainer}>
                         <Text style={styles.stepsTitle}>Steps</Text>
                         <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}>
-                            <View style={{flexDirection: 'row', alignItems: 'center'}}>\
+                            <View style={{flexDirection: 'row', alignItems: 'center'}}>
                                 {taskSteps.map((step, index) => (
                                     <React.Fragment key={index}>
                                         <View style={styles.stepItem}>
@@ -297,7 +303,7 @@ const DetailsScreen = () => {
                         {checklist.map((item, index) => (
                             <TouchableOpacity key={index} style={styles.checklistItem} onPress={() => toggleChecklistItemCompletion(index)} disabled={isCompleted}>
                                 <Text style={[styles.checklistText, item.completed && styles.checklistTextCompleted]}>{item.text}</Text>
-                                <View style={[styles.checkbox, item.completed && styles.checkboxCompleted]}>\
+                                <View style={[styles.checkbox, item.completed && styles.checkboxCompleted]}>
                                     {item.completed && <Feather name="check" size={18} color="white" />}
                                 </View>
                             </TouchableOpacity>
@@ -336,7 +342,7 @@ const DetailsScreen = () => {
                         <View style={styles.swipeToCompleteButton}>
                             <GestureDetector gesture={gesture}>
                                 <Animated.View style={[styles.swipeableCircle, animatedStyle]}>
-                                    <View style={{flexDirection: 'row'}}>\
+                                    <View style={{flexDirection: 'row'}}>
                                         <Feather name="chevron-right" size={24} color="white" />
                                         <Feather name="chevron-right" size={24} color="white" style={{marginLeft: -15}} />
                                     </View>
@@ -345,7 +351,7 @@ const DetailsScreen = () => {
                             <Text style={styles.swipeToCompleteText}>Swipe to Complete</Text>
                         </View>
                     )}
-                    <View style={[styles.messageContainer, { bottom: keyboardHeight }]}>
+                    <View style={[styles.messageContainer, { bottom: keyboardHeight > 0 ? (Platform.OS === 'ios' ? keyboardHeight : 0) : insets.bottom }]}>
                         <TextInput
                             style={styles.messageInput}
                             placeholder="Message..."
@@ -428,11 +434,7 @@ const styles = StyleSheet.create({
         padding: 12,
         alignSelf: 'flex-start',
     },
-    assigneeName: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#1F2937',
-    },
+    assigneeName: { fontSize: 16, fontWeight: '600', color: '#1F2937', },
     assignedToContainer: { marginBottom: 16, },
     assignedToHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, },
     assignedToTitle: { fontSize: 16, fontWeight: 'bold', },

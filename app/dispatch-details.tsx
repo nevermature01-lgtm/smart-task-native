@@ -22,6 +22,7 @@ const DispatchDetailsScreen = () => {
           setVisit({ id: docSnap.id, ...docSnap.data() });
         } else {
           Alert.alert("Error", "Visit not found.");
+          setVisit(null);
         }
         setIsLoading(false);
       }, error => {
@@ -61,9 +62,18 @@ const DispatchDetailsScreen = () => {
 
   if (!visit) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Visit not found.</Text>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
+            <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
+              <Feather name="chevron-left" size={24} color="#1F2937" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Dispatch Details</Text>
+            <View style={{width: 36}} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text>Visit not found.</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -82,33 +92,33 @@ const DispatchDetailsScreen = () => {
         <View style={styles.detailCard}>
             <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Customer Name</Text>
-                <Text style={styles.detailValue}>{visit.customerName}</Text>
+                <Text style={styles.detailValue}>{visit.customerName || 'N/A'}</Text>
             </View>
             <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Address</Text>
-                <Text style={styles.detailValue}>{visit.address}</Text>
+                <Text style={styles.detailValue}>{visit.address || 'N/A'}</Text>
             </View>
             <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Contact Number</Text>
                 <TouchableOpacity onPress={() => handleCall(visit.contactNumber)}>
-                    <Text style={[styles.detailValue, styles.linkValue]}>{visit.contactNumber}</Text>
+                    <Text style={[styles.detailValue, styles.linkValue]}>{visit.contactNumber || 'N/A'}</Text>
                 </TouchableOpacity>
             </View>
             <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Follow-up Date</Text>
-                <Text style={styles.detailValue}>{visit.followUpDate}</Text>
+                <Text style={styles.detailValue}>{visit.followUpDate || 'N/A'}</Text>
             </View>
             <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Source</Text>
-                <Text style={styles.detailValue}>{visit.source}</Text>
+                <Text style={styles.detailValue}>{visit.source || 'N/A'}</Text>
             </View>
              <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Stage</Text>
-                <Text style={styles.detailValue}>{visit.stage}</Text>
+                <Text style={styles.detailValue}>{visit.stage || 'N/A'}</Text>
             </View>
             <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Remark</Text>
-                <Text style={styles.detailValue}>{visit.remark}</Text>
+                <Text style={styles.detailValue}>{visit.remark || 'N/A'}</Text>
             </View>
             {visit.approvalFormURL && (
               <View style={styles.detailRow}>
