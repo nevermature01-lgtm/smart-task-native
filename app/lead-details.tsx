@@ -26,7 +26,7 @@ const LeadDetailsScreen = () => {
         if (docSnap.exists()) {
           const leadData = { id: docSnap.id, ...docSnap.data() };
           setLead(leadData);
-          setIsCompleted(leadData.isCompleted || false);
+          setIsCompleted(leadData.stage === 'Completed');
         } else {
           Alert.alert("Error", "Lead not found.");
         }
@@ -68,13 +68,18 @@ const LeadDetailsScreen = () => {
   const toggleCompletion = async () => {
     if (!lead) return;
     const newStatus = !isCompleted;
+    const newStage = newStatus ? 'Completed' : 'Stage 8';
+
     setIsCompleted(newStatus);
 
     try {
         const leadRef = doc(db, 'leads', id);
         await updateDoc(leadRef, {
-            isCompleted: newStatus
+            stage: newStage,
         });
+        if (newStatus) {
+            router.back();
+        }
     } catch (error) {
         console.error("Error updating completion status: ", error);
         setIsCompleted(!newStatus);

@@ -282,6 +282,7 @@ const LeadsScreen = () => {
     if (stageParam === 'Stage 6') return 'Dispatch';
     if (stageParam === 'Stage 7') return 'Work completed';
     if (stageParam === 'Stage 8') return 'Feedback and Complaint';
+    if (stageParam === 'Completed') return 'All Customers';
     if (stageParam) return `(${stageParam}) Leads`;
     if (user && user.role !== 'admin') return 'My Leads';
     return 'All Leads';
@@ -296,6 +297,7 @@ const LeadsScreen = () => {
     if (stageParam === 'Stage 6') return 'Dispatch';
     if (stageParam === 'Stage 7') return 'Work completed';
     if (stageParam === 'Stage 8') return 'Feedback and Complaint';
+    if (stageParam === 'Completed') return 'All Customers';
     if (stageParam) return `Leads in ${stageParam}`;
     return 'All Leads';
   };
@@ -341,7 +343,7 @@ const LeadsScreen = () => {
                     </TouchableOpacity>
                   )}
                    {(stageParam === 'Stage 8') && (
-                    <TouchableOpacity style={styles.allCustomersButton} >
+                    <TouchableOpacity style={styles.allCustomersButton} onPress={() => router.push('/leads?stage=Completed')}>
                         <Text style={styles.allCustomersButtonText}>All Customers</Text>
                     </TouchableOpacity>
                   )}
@@ -479,18 +481,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 12,
   },
-   allCustomersButton: {
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        borderRadius: 16,
-        paddingVertical: 4,
-        paddingHorizontal: 12,
-    },
-    allCustomersButtonText: {
-        fontSize: 12,
-        color: '#374151',
-        fontWeight: '600',
-    },
+  allCustomersButton: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+  },
+  allCustomersButtonText: {
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '600',
+  },
   leadCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E5E7EB' },
   leadCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   leadAvatar: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
