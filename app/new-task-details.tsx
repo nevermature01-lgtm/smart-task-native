@@ -1,15 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image, ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image, ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { db, auth, storage } from '../firebase';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
+import * as ImagePicker from 'expo-image-picker';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import ImageView from 'react-native-image-viewing';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.7;
+
+const uriToBlob = (uri) => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = function () {
+        resolve(xhr.response);
+      };
+      xhr.onerror = function () {
+        reject(new Error("Blob conversion failed"));
+      };
+      xhr.responseType = "blob";
+      xhr.open("GET", uri, true);
+      xhr.send(null);
+    });
+  };
 
 const NewTaskDetailsScreen = () => {
     const insets = useSafeAreaInsets();
@@ -19,12 +37,17 @@ const NewTaskDetailsScreen = () => {
     const [loading, setLoading] = useState(true);
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
+    const [currentUserName, setCurrentUserName] = useState('');
+    const currentUser = auth.currentUser;
+    const [attachmentModalVisible, setAttachmentModalVisible] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [fullScreenImage, setFullScreenImage] = useState(null);
 
     const translateX = useSharedValue(0);
 
     useEffect(() => {
         let unsubscribe = () => {};
-        const fetchTask = async () => {
+        const fetchTaskAndMessages = async () => {
             if (taskId) {
                 const docRef = doc(db, 'tasks', taskId);
                 const docSnap = await getDoc(docRef);
@@ -40,12 +63,26 @@ const NewTaskDetailsScreen = () => {
                     const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     setMessages(msgs);
                 });
-
             }
             setLoading(false);
         };
 
-        fetchTask();
+        const fetchCurrentUserData = async () => {
+            if (auth.currentUser) {
+                const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    const fullName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
+                    setCurrentUserName(fullName || auth.currentUser.displayName || 'User');
+                } else {
+                    setCurrentUserName(auth.currentUser.displayName || 'User');
+                }
+            }
+        };
+
+        fetchTaskAndMessages();
+        fetchCurrentUserData();
+        
         return () => unsubscribe();
     }, [taskId]);
 
@@ -89,21 +126,74 @@ const NewTaskDetailsScreen = () => {
         setTask(prevTask => ({ ...prevTask, steps: newSteps }));
     };
 
-    const handleSendMessage = async () => {
-        if (newMessage.trim() === '' || !auth.currentUser) return;
+    const handleSendMessage = async (imageUrl = null) => {
+        if (!currentUser || !currentUserName) return;
+        if (newMessage.trim() === '' && !imageUrl) return;
 
-        const { uid, displayName, photoURL } = auth.currentUser;
+        const { uid, photoURL } = currentUser;
         const messagesRef = collection(db, 'tasks', taskId, 'messages');
         
-        await addDoc(messagesRef, {
-            text: newMessage,
+        const messageData = {
             createdAt: serverTimestamp(),
             userId: uid,
-            userName: displayName || 'User',
+            userName: currentUserName,
             userPhotoURL: photoURL || 'https://via.placeholder.com/40'
-        });
+        };
+
+        if (imageUrl) {
+            messageData.imageUrl = imageUrl;
+        } else {
+            messageData.text = newMessage;
+        }
+
+        await addDoc(messagesRef, messageData);
 
         setNewMessage('');
+    };
+
+    const pickImage = async (useCamera) => {
+        const { status } = useCamera 
+            ? await ImagePicker.requestCameraPermissionsAsync() 
+            : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+        if (status !== 'granted') {
+            alert('Sorry, we need camera roll permissions to make this work!');
+            return;
+        }
+
+        let result = useCamera
+            ? await ImagePicker.launchCameraAsync()
+            : await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: 'Images',
+                quality: 0.7,
+            });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+            setUploading(true);
+            setAttachmentModalVisible(false);
+            try {
+                const downloadURL = await uploadImage(result.assets[0].uri);
+                await handleSendMessage(downloadURL);
+            } catch (error) {
+                console.error("Error during image upload: ", error);
+                alert('Error uploading image.');
+            } finally {
+                setUploading(false);
+            }
+        }
+    };
+
+    const uploadImage = async (uri) => {
+        const blob = await uriToBlob(uri);
+        const filename = `images/${Date.now()}.jpg`;
+        const storageRef = ref(storage, filename);
+
+        await uploadBytes(storageRef, blob, {
+            contentType: "image/jpeg"
+        });
+
+        const downloadURL = await getDownloadURL(storageRef);
+        return downloadURL;
     };
 
     const handleReassignPress = () => {
@@ -243,17 +333,45 @@ const NewTaskDetailsScreen = () => {
 
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Messages</Text>
-                    {messages.map((msg) => (
-                        <View key={msg.id} style={styles.messageContainer}>
-                            <Image source={{ uri: msg.userPhotoURL }} style={styles.avatar} />
-                            <View style={styles.messageBubble}>
-                                <Text style={styles.messageUser}>{msg.userName}</Text>
-                                <Text style={styles.messageText}>{msg.text}</Text>
-                                <Text style={styles.messageTimestamp}>{formatDate(msg.createdAt)}</Text>
+                    {messages.map((msg) => {
+                        const isCurrentUser = msg.userId === currentUser?.uid;
+                        return (
+                            <View 
+                                key={msg.id} 
+                                style={[
+                                    styles.messageContainer, 
+                                    isCurrentUser ? styles.sentMessageContainer : styles.receivedMessageContainer
+                                ]}
+                            >
+                                {!isCurrentUser && <Image source={{ uri: msg.userPhotoURL }} style={styles.avatar} />}
+                                <View 
+                                    style={[
+                                        styles.messageBubble,
+                                        isCurrentUser ? styles.sentMessageBubble : styles.receivedMessageBubble
+                                    ]}
+                                >
+                                    <Text 
+                                        style={[
+                                            styles.messageUser,
+                                            { color: isCurrentUser ? 'white' : '#1F2937' }
+                                        ]}
+                                    >
+                                        {msg.userName}
+                                    </Text>
+                                    {msg.text ? (
+                                        <Text style={{color: isCurrentUser ? 'white' : '#374151'}}>{msg.text}</Text>
+                                    ) : msg.imageUrl ? (
+                                        <TouchableOpacity onPress={() => setFullScreenImage({ uri: msg.imageUrl })}>
+                                            <Image source={{ uri: msg.imageUrl }} style={styles.messageImage} />
+                                        </TouchableOpacity>
+                                    ) : null}
+                                    <Text style={[styles.messageTimestamp, { color: isCurrentUser ? '#A5B4FC' : '#9CA3AF' }]}>{formatDate(msg.createdAt)}</Text>
+                                </View>
                             </View>
-                        </View>
-                    ))}
+                        );
+                    })}
                 </View>
+
                  <View style={styles.swipeSection}>
                      <View style={styles.swipeContainer}>
                         <GestureDetector gesture={pan}>
@@ -268,15 +386,50 @@ const NewTaskDetailsScreen = () => {
 
             <View style={[styles.bottomBar, { paddingBottom: insets.bottom }]}>
                 <View style={styles.messageBar}>
-                    <TouchableOpacity>
+                    <TouchableOpacity onPress={() => setAttachmentModalVisible(true)}>
                         <MaterialIcons name="attach-file" size={24} color="#6B7280" />
                     </TouchableOpacity>
                     <TextInput style={styles.messageInput} placeholder="Add a comment..." value={newMessage} onChangeText={setNewMessage} />
-                    <TouchableOpacity onPress={handleSendMessage}>
+                    <TouchableOpacity onPress={() => handleSendMessage()}>
                         <MaterialIcons name="send" size={24} color="#2563EB" />
                     </TouchableOpacity>
                 </View>
             </View>
+
+            <Modal transparent={true} visible={attachmentModalVisible} onRequestClose={() => setAttachmentModalVisible(false)}>
+                <View style={styles.attachmentModalContainer}>
+                    <View style={styles.attachmentModalView}>
+                        <Text style={styles.modalText}>Send Attachment</Text>
+                        {uploading ? (
+                            <ActivityIndicator size="large" color="#2563EB" />
+                        ) : (
+                            <View style={styles.attachmentButtons}>
+                                <TouchableOpacity style={styles.attachmentButton} onPress={() => pickImage(true)}>
+                                    <Feather name="camera" size={30} color="#2563EB" />
+                                    <Text style={styles.attachmentButtonText}>Camera</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.attachmentButton} onPress={() => pickImage(false)}>
+                                    <Feather name="image" size={30} color="#2563EB" />
+                                    <Text style={styles.attachmentButtonText}>Gallery</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                        <TouchableOpacity style={{marginTop: 20}} onPress={() => setAttachmentModalVisible(false)}>
+                            <Text style={{color: '#2563EB', fontSize: 16}}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {fullScreenImage && (
+                 <ImageView
+                    images={[fullScreenImage]}
+                    imageIndex={0}
+                    visible={!!fullScreenImage}
+                    onRequestClose={() => setFullScreenImage(null)}
+                 />
+            )}
+
         </KeyboardAvoidingView>
     );
 };
@@ -530,32 +683,83 @@ const styles = StyleSheet.create({
     messageContainer: {
         flexDirection: 'row',
         marginBottom: 12,
-        alignItems: 'flex-start',
+        alignItems: 'flex-end',
+    },
+    sentMessageContainer: {
+        justifyContent: 'flex-end',
+    },
+    receivedMessageContainer: {
+        justifyContent: 'flex-start',
     },
     messageBubble: {
-        backgroundColor: 'white',
-        borderRadius: 12,
+        borderRadius: 20,
         padding: 12,
-        flex: 1,
-        borderWidth: 1,
-        borderColor: '#F3F4F6',
+        maxWidth: '80%',
+    },
+    sentMessageBubble: {
+        backgroundColor: '#2563EB',
+        marginLeft: 'auto',
+    },
+    receivedMessageBubble: {
+        backgroundColor: '#E5E7EB',
+        marginRight: 'auto',
     },
     messageUser: {
         fontWeight: 'bold',
         fontSize: 12,
-        color: '#1F2937',
         marginBottom: 4,
-    },
-    messageText: {
-        fontSize: 14,
-        color: '#374151',
     },
     messageTimestamp: {
         fontSize: 10,
-        color: '#9CA3AF',
         marginTop: 8,
         textAlign: 'right',
-    }
+    },
+    attachmentModalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+    },
+    attachmentModalView: {
+        width: '80%',
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 35,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5
+    },
+    modalText: {
+        marginBottom: 15,
+        textAlign: 'center',
+        fontSize: 18,
+        fontWeight: 'bold'
+    },
+    attachmentButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        width: '100%'
+    },
+    attachmentButton: {
+        alignItems: 'center'
+    },
+    attachmentButtonText: {
+        marginTop: 5,
+        fontSize: 12,
+        color: '#2563EB'
+    },
+    messageImage: {
+        width: 200,
+        height: 200,
+        borderRadius: 15,
+        marginTop: 5,
+    },
 });
 
 export default NewTaskDetailsScreen;

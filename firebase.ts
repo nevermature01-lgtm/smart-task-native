@@ -30,12 +30,12 @@ if (getApps().length === 0) {
     persistence: getReactNativePersistence(ReactNativeAsyncStorage)
   });
   db = getFirestore(app);
-  storage = getStorage(app);
+  storage = getStorage(app, "gs://smart-task-app-84eef.firebasestorage.app");
 } else {
   app = getApp();
   auth = getAuth(app);
   db = getFirestore(app);
-  storage = getStorage(app);
+  storage = getStorage(app, "gs://smart-task-app-84eef.firebasestorage.app");
 }
 
 // Initialize Analytics
