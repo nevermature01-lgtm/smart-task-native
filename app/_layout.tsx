@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, BackHandler, Alert, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFocusEffect } from "@react-navigation/native";
 import * as NavigationBar from "expo-navigation-bar";
@@ -41,6 +40,35 @@ const InitialLayout = () => {
             router.replace('/login');
         }
     }, [user, segments, initializing]);
+
+    useEffect(() => {
+        if (Platform.OS === 'android') {
+            const backAction = () => {
+                const isAtRoot = segments.length === 0 || (segments.length === 1 && ['home', 'login', 'signup'].includes(segments[0]));
+
+                if (isAtRoot) {
+                    Alert.alert(
+                        "Are you sure?",
+                        "Are you sure you want to exit?",
+                        [
+                            { text: "Cancel", style: "cancel", onPress: () => null },
+                            { text: "Exit", onPress: () => BackHandler.exitApp() }
+                        ]
+                    );
+                    return true; 
+                }
+
+                return false;
+            };
+
+            const backHandler = BackHandler.addEventListener(
+                "hardwareBackPress",
+                backAction
+            );
+
+            return () => backHandler.remove();
+        }
+    }, [segments]);
 
     if (initializing) {
         return (

@@ -4,10 +4,10 @@
     "slug": "vision-ai-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./public/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./public/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
