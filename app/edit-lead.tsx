@@ -39,6 +39,8 @@ const EditLeadScreen = () => {
   const [dispatchImages, setDispatchImages] = useState([]);
   const [workComplete, setWorkComplete] = useState(false);
   const [fullPayment, setFullPayment] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [complaint, setComplaint] = useState('');
 
   useEffect(() => {
     let unsubscribe = () => {};
@@ -59,6 +61,8 @@ const EditLeadScreen = () => {
           setRunningPayment(data.runningPayment || '');
           setWorkComplete(data.workComplete || false);
           setFullPayment(data.fullPayment || '');
+          setFeedback(data.feedback || '');
+          setComplaint(data.complaint || '');
           if (data.measurementImages) {
             setMeasurementImages(data.measurementImages);
           }
@@ -348,6 +352,11 @@ const EditLeadScreen = () => {
       if(leadStage === 'Stage 7'){
         dataToUpdate.workComplete = workComplete;
         dataToUpdate.fullPayment = fullPayment;
+      }
+
+      if(leadStage === 'Stage 8'){
+        dataToUpdate.feedback = feedback;
+        dataToUpdate.complaint = complaint;
       }
 
       await updateDoc(leadRef, dataToUpdate);
@@ -658,6 +667,31 @@ const EditLeadScreen = () => {
                       onChangeText={setFullPayment}
                       placeholder="Enter full payment"
                       keyboardType="numeric"
+                  />
+                </View>
+              </>
+            )}
+
+            {leadStage && leadStage === 'Stage 8' && (
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Feedback</Text>
+                  <TextInput
+                    style={[styles.input, styles.textarea]}
+                    value={feedback}
+                    onChangeText={setFeedback}
+                    placeholder="Enter customer feedback"
+                    multiline
+                  />
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Complaint</Text>
+                  <TextInput
+                    style={[styles.input, styles.textarea]}
+                    value={complaint}
+                    onChangeText={setComplaint}
+                    placeholder="Enter customer complaint"
+                    multiline
                   />
                 </View>
               </>

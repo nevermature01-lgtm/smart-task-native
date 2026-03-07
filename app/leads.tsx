@@ -281,6 +281,7 @@ const LeadsScreen = () => {
     if (stageParam === 'Stage 5') return 'Project deatils form';
     if (stageParam === 'Stage 6') return 'Dispatch';
     if (stageParam === 'Stage 7') return 'Work completed';
+    if (stageParam === 'Stage 8') return 'Feedback and Complaint';
     if (stageParam) return `(${stageParam}) Leads`;
     if (user && user.role !== 'admin') return 'My Leads';
     return 'All Leads';
@@ -294,6 +295,7 @@ const LeadsScreen = () => {
     if (stageParam === 'Stage 5') return 'Project deatils form';
     if (stageParam === 'Stage 6') return 'Dispatch';
     if (stageParam === 'Stage 7') return 'Work completed';
+    if (stageParam === 'Stage 8') return 'Feedback and Complaint';
     if (stageParam) return `Leads in ${stageParam}`;
     return 'All Leads';
   };

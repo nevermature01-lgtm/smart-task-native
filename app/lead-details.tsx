@@ -241,6 +241,18 @@ const LeadDetailsScreen = () => {
                   <Text style={styles.detailValue}>{lead.workComplete ? 'Yes' : 'No'}</Text>
               </View>
             )}
+            {stageNum >= 8 && (
+              <>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Feedback</Text>
+                    <Text style={styles.detailValue}>{lead.feedback || '-'}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Complaint</Text>
+                    <Text style={styles.detailValue}>{lead.complaint || '-'}</Text>
+                </View>
+              </>
+            )}
         </View>
       </ScrollView>
       <ImageView
