@@ -3,9 +3,10 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { db } from '../firebase';
-import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { db, auth } from '../firebase';
+import { doc, onSnapshot, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import ImageView from 'react-native-image-viewing';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LeadDetailsScreen = () => {
   const router = useRouter();
@@ -17,8 +18,34 @@ const LeadDetailsScreen = () => {
   const [viewerImages, setViewerImages] = useState([]);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [userRole, setUserRole] = useState('member');
 
   useEffect(() => {
+    const getUserRole = async () => {
+      const authUser = auth.currentUser;
+      if (!authUser) return;
+
+      const accountJson = await AsyncStorage.getItem('activeAccount');
+      if (accountJson) {
+        const account = JSON.parse(accountJson);
+        if (account.type === 'personal') {
+          setUserRole('admin');
+        } else if (account.id) {
+          const teamMembersQuery = query(
+            collection(db, 'team_members'),
+            where('teamId', '==', account.id),
+            where('userId', '==', authUser.uid)
+          );
+          const memberSnapshot = await getDocs(teamMembersQuery);
+          if (!memberSnapshot.empty) {
+            setUserRole(memberSnapshot.docs[0].data().role);
+          }
+        }
+      }
+    };
+
+    getUserRole();
+
     if (id) {
       setIsLoading(true);
       const leadRef = doc(db, 'leads', id);
@@ -43,16 +70,7 @@ const LeadDetailsScreen = () => {
 
   const handleCall = (phoneNumber) => {
     if (phoneNumber) {
-      const url = `tel:${phoneNumber}`;
-      Linking.canOpenURL(url)
-        .then(supported => {
-          if (supported) {
-            return Linking.openURL(url);
-          } else {
-            Alert.alert("Error", "Unable to make a phone call.");
-          }
-        })
-        .catch(() => Alert.alert("Error", "Unable to make a phone call."));
+      Linking.openURL(`tel:${phoneNumber}`).catch(() => Alert.alert("Error", "Unable to make a phone call."));
     } else {
       Alert.alert("No Contact", "No contact number is available for this lead.");
     }
@@ -64,6 +82,28 @@ const LeadDetailsScreen = () => {
       setViewerIndex(index);
       setIsViewerVisible(true);
   }
+
+  const handleReopen = async () => {
+    if (!lead) return;
+    Alert.alert(
+        "Reopen Lead",
+        `Are you sure you want to reopen this lead? It will be moved back to Stage 8.`,
+        [
+            { text: "Cancel", style: "cancel" },
+            { text: "Reopen", style: "destructive", onPress: async () => {
+                try {
+                    const leadRef = doc(db, 'leads', id);
+                    await updateDoc(leadRef, { stage: 'Stage 8' });
+                    Alert.alert("Success", "Lead has been reopened.");
+                    router.replace(`/leads?stage=Stage 8`);
+                } catch (error) {
+                    console.error("Error reopening lead: ", error);
+                    Alert.alert("Error", "Failed to reopen lead. Please try again.");
+                }
+            }}
+        ]
+    );
+  };
 
   const toggleCompletion = async () => {
     if (!lead) return;
@@ -78,7 +118,7 @@ const LeadDetailsScreen = () => {
             stage: newStage,
         });
         if (newStatus) {
-            router.back();
+            router.push('/all-customers');
         }
     } catch (error) {
         console.error("Error updating completion status: ", error);
@@ -88,23 +128,14 @@ const LeadDetailsScreen = () => {
   };
 
   if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#0a7ea4" />
-      </View>
-    );
+    return <ActivityIndicator size="large" color="#0a7ea4" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }} />;
   }
 
   if (!lead) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Lead not found.</Text>
-      </View>
-    );
+    return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text>Lead not found.</Text></View>;
   }
 
-  const stageNumMatch = lead.stage ? lead.stage.match(/(\d+)/) : null;
-  const stageNum = stageNumMatch ? parseInt(stageNumMatch[1], 10) : 0;
+  const stageNum = lead.stage === 'Completed' ? 8 : (lead.stage?.match(/(\d+)/) ? parseInt(lead.stage.match(/(\d+)/)[1], 10) : 0);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -113,18 +144,23 @@ const LeadDetailsScreen = () => {
           <Feather name="chevron-left" size={24} color="#1F2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Details</Text>
-        <TouchableOpacity style={styles.headerButton} onPress={() => router.push(`/edit-lead?id=${id}`)}>
+        {lead.stage === 'Completed' ? (
+          userRole === 'admin' ? (
+            <TouchableOpacity style={styles.headerButton} onPress={handleReopen}>
+              <Feather name="unlock" size={20} color="#1F2937" />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.headerButton}>
+              <Feather name="lock" size={20} color="#1F2937" />
+            </View>
+          )
+        ) : (
+          <TouchableOpacity style={styles.headerButton} onPress={() => router.push(`/edit-lead?id=${id}`)}>
             <Feather name="edit-2" size={20} color="#1F2937" />
-        </TouchableOpacity>
+          </TouchableOpacity>
+        )}
       </View>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        bounces={true}
-        overScrollMode="never"
-        scrollEventThrottle={16}
-        decelerationRate="fast"
-        contentContainerStyle={[styles.mainContent, { paddingBottom: 40 }]}
-      >
+      <ScrollView contentContainerStyle={[styles.mainContent, { paddingBottom: 40 }]}>
         {stageNum >= 4 && (
             <View style={styles.amountCard}>
                 <View style={styles.amountStat}>
@@ -162,6 +198,7 @@ const LeadDetailsScreen = () => {
                         ios_backgroundColor="#3e3e3e"
                         onValueChange={toggleCompletion}
                         value={isCompleted}
+                        disabled={lead.stage === 'Completed'}
                     />
                 </View>
             </View>
@@ -207,7 +244,7 @@ const LeadDetailsScreen = () => {
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Measurements</Text>
                     {lead.measurementImages && lead.measurementImages.length > 0 ? (
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" scrollEventThrottle={16}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                             {lead.measurementImages.map((uri, index) => (
                                  <TouchableOpacity key={index} onPress={() => openImageViewer(lead.measurementImages, index)}>
                                     <Image source={{ uri }} style={styles.measurementImage} />
@@ -221,11 +258,11 @@ const LeadDetailsScreen = () => {
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Customer Approval Form</Text>
                     {lead.customerApprovalForms && lead.customerApprovalForms.length > 0 ? (
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" scrollEventThrottle={16}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                             {lead.customerApprovalForms.map((form, index) => {
+                                const imageForms = lead.customerApprovalForms.filter(f => f.type === 'image');
+                                const imageIndex = imageForms.findIndex(imgForm => imgForm.url === form.url);
                                 if (form.type === 'image') {
-                                    const imageForms = lead.customerApprovalForms.filter(f => f.type === 'image');
-                                    const imageIndex = imageForms.findIndex(imgForm => imgForm.url === form.url);
                                     return (
                                         <TouchableOpacity key={index} onPress={() => openImageViewer(imageForms, imageIndex, true)}>
                                             <Image source={{ uri: form.url }} style={styles.measurementImage} />
@@ -251,7 +288,7 @@ const LeadDetailsScreen = () => {
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Project Details Form</Text>
                     {lead.projectImages && lead.projectImages.length > 0 ? (
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" scrollEventThrottle={16}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                             {lead.projectImages.map((uri, index) => (
                                  <TouchableOpacity key={index} onPress={() => openImageViewer(lead.projectImages, index)}>
                                     <Image source={{ uri }} style={styles.measurementImage} />
@@ -265,7 +302,7 @@ const LeadDetailsScreen = () => {
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Dispatch</Text>
                     {lead.dispatchImages && lead.dispatchImages.length > 0 ? (
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" scrollEventThrottle={16}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                             {lead.dispatchImages.map((uri, index) => (
                                  <TouchableOpacity key={index} onPress={() => openImageViewer(lead.dispatchImages, index)}>
                                     <Image source={{ uri }} style={styles.measurementImage} />

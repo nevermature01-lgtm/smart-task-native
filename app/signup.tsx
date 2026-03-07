@@ -296,7 +296,7 @@ const SignupScreen = () => {
                 onChangeText={setPassword}
               />
               <TouchableOpacity style={styles.signupButton} onPress={handleSignUp} disabled={loading}>
-                  <Text style={styles.signupButtonText}>Sign Up</Text>
+                  <Text style={styles.signupButtonText}>{loading ? "Please wait..." : "Sign Up"}</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.footer}>

@@ -46,6 +46,14 @@ const TaskDetailsScreen = () => {
         return null; // Or a loading indicator
     }
 
+    const handleBack = () => {
+        if (router.canGoBack()) {
+            router.back();
+        } else {
+            router.replace('/home');
+        }
+    };
+
     const taskCreationDate = task.createdAt?.toDate();
     let formattedTaskDateTime = '';
     let formattedTaskDateOnly = '';
@@ -67,7 +75,7 @@ const TaskDetailsScreen = () => {
     return (
         <View style={{ flex: 1, backgroundColor: '#fff' }}>
             <View style={[styles.header, { paddingTop: insets.top }]}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back" size={24} color="#1F2937" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Task details</Text>

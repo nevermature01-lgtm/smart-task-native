@@ -302,7 +302,7 @@ const LoginScreen = () => {
                   </TouchableOpacity>
                 </View>
                 <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
-                    <Text style={styles.loginButtonText}>Log In</Text>
+                    <Text style={styles.loginButtonText}>{loading ? "Please wait..." : "Log In"}</Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.footer}>

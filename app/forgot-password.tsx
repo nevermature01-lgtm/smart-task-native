@@ -243,7 +243,7 @@ const ForgotPasswordScreen = () => {
                 onChangeText={setEmail}
               />
               <TouchableOpacity style={styles.resetButton} onPress={handleResetPassword} disabled={loading}>
-                <Text style={styles.resetButtonText}>Send Reset Link</Text>
+                <Text style={styles.resetButtonText}>{loading ? "Please wait..." : "Send Reset Link"}</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.footer}>

@@ -698,7 +698,7 @@ const EditLeadScreen = () => {
             )}
 
              <TouchableOpacity style={[styles.saveButton, isLoading && styles.saveButtonDisabled]} onPress={handleUpdateDetails} disabled={isLoading}>
-                {isLoading ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Update Details</Text>}
+                <Text style={styles.saveButtonText}>{isLoading ? "Please wait..." : "Update Details"}</Text>
             </TouchableOpacity>
         </View>
       </ScrollView>

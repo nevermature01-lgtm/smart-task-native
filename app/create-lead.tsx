@@ -4,7 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { addDoc, collection, onSnapshot, query, where, orderBy, doc, getDocs, getDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -29,6 +29,7 @@ const CreateLeadScreen = () => {
   const [teamId, setTeamId] = useState(null);
   const [stages, setStages] = useState([]);
   const [isFetchingUsers, setIsFetchingUsers] = useState(false);
+  const [userRole, setUserRole] = useState('member');
 
   useEffect(() => {
     let unsubscribeStages = () => {};
@@ -39,6 +40,23 @@ const CreateLeadScreen = () => {
         if (activeAccountString) {
             const activeAccount = JSON.parse(activeAccountString);
             setTeamId(activeAccount.id);
+
+            const authUser = auth.currentUser;
+            if (authUser) {
+              if (activeAccount.type === 'personal') {
+                setUserRole('admin');
+              } else if (activeAccount.id) {
+                const teamMembersQuery = query(
+                  collection(db, 'team_members'),
+                  where('teamId', '==', activeAccount.id),
+                  where('userId', '==', authUser.uid)
+                );
+                const memberSnapshot = await getDocs(teamMembersQuery);
+                if (!memberSnapshot.empty) {
+                  setUserRole(memberSnapshot.docs[0].data().role);
+                }
+              }
+            }
 
             // Fetch stages
             const stagesQuery = query(collection(db, "stages"), where("teamId", "==", activeAccount.id), orderBy("order", "asc"));
@@ -107,10 +125,6 @@ const CreateLeadScreen = () => {
         Alert.alert("Missing Information", "Please fill in both Customer Name and Contact Number.");
         return;
     }
-    if (selectedUsers.length === 0) {
-        Alert.alert("Missing Information", "Please assign the lead to at least one user.");
-        return;
-    }
 
     setIsLoading(true);
     try {
@@ -170,13 +184,15 @@ const CreateLeadScreen = () => {
       </View>
       <ScrollView contentContainerStyle={styles.mainContent}>
         <View style={styles.form}>
-            <View style={styles.inputGroup}>
-                <Text style={styles.label}>Assign To</Text>
-                 <TouchableOpacity style={styles.pickerButton} onPress={handleOpenUserPicker}>
-                    <Text style={styles.pickerButtonText} numberOfLines={1}>{selectedUsers.length > 0 ? selectedUsers.map(u => u.name).join(', ') : 'Select users'}</Text>
-                    <Feather name="chevron-down" size={20} color="#9CA3AF" />
-                </TouchableOpacity>
-            </View>
+            {userRole === 'admin' && (
+              <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Assign To</Text>
+                  <TouchableOpacity style={styles.pickerButton} onPress={handleOpenUserPicker}>
+                      <Text style={styles.pickerButtonText} numberOfLines={1}>{selectedUsers.length > 0 ? selectedUsers.map(u => u.name).join(', ') : 'Select users'}</Text>
+                      <Feather name="chevron-down" size={20} color="#9CA3AF" />
+                  </TouchableOpacity>
+              </View>
+            )}
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Customer Name</Text>
                 <TextInput
@@ -241,7 +257,7 @@ const CreateLeadScreen = () => {
             </View>
 
              <TouchableOpacity style={[styles.saveButton, isLoading && styles.saveButtonDisabled]} onPress={handleSaveLead} disabled={isLoading}>
-                {isLoading ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Save Lead</Text>}
+                <Text style={styles.saveButtonText}>{isLoading ? "Please wait..." : "Save Lead"}</Text>
             </TouchableOpacity>
         </View>
       </ScrollView>

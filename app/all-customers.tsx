@@ -4,28 +4,21 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { db, auth } from '../firebase';
-import { collection, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, where, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, where, getDocs } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const LeadsScreen = () => {
+const AllCustomersScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { stage: stageParam } = useLocalSearchParams();
-
   const [leads, setLeads] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredLeads, setFilteredLeads] = useState([]);
-  const [isMenuVisible, setMenuVisible] = useState(false);
-  const [selectedLead, setSelectedLead] = useState(null);
   const [isSortModalVisible, setSortModalVisible] = useState(false);
   const [availableMonths, setAvailableMonths] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [teamId, setTeamId] = useState(null);
   const [user, setUser] = useState(null);
-  const [stages, setStages] = useState([]);
-  const [nextStage, setNextStage] = useState(null);
-  const [prevStage, setPrevStage] = useState(null);
 
   useEffect(() => {
     const getContextAndUserRole = async () => {
@@ -70,11 +63,11 @@ const LeadsScreen = () => {
 
     setIsLoading(true);
 
-    const queryConstraints = [where("teamId", "==", teamId)];
-    if (stageParam) {
-      queryConstraints.push(where("stage", "==", stageParam));
-    }
-    queryConstraints.push(orderBy("followUpDate", "asc"));
+    const queryConstraints = [
+        where("teamId", "==", teamId),
+        where("stage", "==", "Completed"),
+        orderBy("followUpDate", "desc")
+    ];
 
     const leadsQuery = query(collection(db, "leads"), ...queryConstraints);
 
@@ -109,16 +102,8 @@ const LeadsScreen = () => {
       Alert.alert("Error", "Could not fetch leads. Please restart the app.");
     });
 
-    const stagesQuery = query(collection(db, "stages"), where("teamId", "==", teamId), orderBy("order", "asc"));
-    const unsubscribeStages = onSnapshot(stagesQuery, (snapshot) => {
-      setStages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-
-    return () => {
-      unsubscribeLeads();
-      unsubscribeStages();
-    };
-  }, [teamId, user, stageParam, selectedMonth]);
+    return () => unsubscribeLeads();
+  }, [teamId, user, selectedMonth]);
 
   useEffect(() => {
     const currentYear = new Date().getFullYear();
@@ -149,83 +134,6 @@ const LeadsScreen = () => {
       Alert.alert("No Contact", "No contact number is available for this lead.");
     }
   };
-
-  const openMenu = (lead) => {
-    const currentStage = lead.stage;
-    let nextStageObj = null;
-    let prevStageObj = null;
-
-    if (stages.length > 0) {
-        const currentStageIndex = stages.findIndex(s => s.name === currentStage);
-        if (currentStageIndex > 0) {
-            prevStageObj = stages[currentStageIndex - 1];
-        }
-        if (currentStageIndex < stages.length - 1) {
-            nextStageObj = stages[currentStageIndex + 1];
-        }
-    } else {
-        const stageNumMatch = currentStage ? currentStage.match(/Stage (\d+)/) : null;
-        if (stageNumMatch) {
-            const currentNum = parseInt(stageNumMatch[1], 10);
-            if (currentNum > 1) {
-                prevStageObj = { name: `Stage ${currentNum - 1}` };
-            }
-            if (currentNum < 8) { // Assuming 8 stages
-                nextStageObj = { name: `Stage ${currentNum + 1}` };
-            }
-        } else {
-            nextStageObj = { name: 'Stage 1' };
-        }
-    }
-
-    setNextStage(nextStageObj);
-    setPrevStage(prevStageObj);
-    setSelectedLead(lead);
-    setMenuVisible(true);
-  };
-
-  const closeMenu = () => {
-    setMenuVisible(false);
-    setSelectedLead(null);
-    setNextStage(null);
-    setPrevStage(null);
-  }
-
-  const handleRemoveLead = () => {
-    if (!selectedLead) return;
-    Alert.alert("Remove Lead", `Are you sure you want to remove ${selectedLead.customerName}?`,
-        [
-            { text: "Cancel", style: "cancel", onPress: closeMenu },
-            { text: "Remove", style: "destructive", onPress: async () => {
-                try {
-                    await deleteDoc(doc(db, 'leads', selectedLead.id));
-                    Alert.alert("Success", "Lead has been removed.");
-                    closeMenu();
-                } catch (error) {
-                    Alert.alert("Error", "Failed to remove lead.");
-                }
-            }}
-        ]
-    );
-  };
-
-  const handleMoveStage = async (direction) => {
-    if (!selectedLead) return;
-    const stageToMoveTo = direction === 'forward' ? nextStage : prevStage;
-
-    if (!stageToMoveTo) return;
-
-    try {
-        await updateDoc(doc(db, 'leads', selectedLead.id), { stage: stageToMoveTo.name });
-        const message = direction === 'forward' 
-            ? `Lead has been forwarded to ${stageToMoveTo.name}.`
-            : `Lead has been moved back to ${stageToMoveTo.name}.`;
-        Alert.alert("Success", message);
-        closeMenu();
-    } catch (error) {
-        Alert.alert("Error", "Failed to update lead.");
-    }
-  }
   
   const getInitials = (name) => {
       if (!name) return '';
@@ -267,6 +175,16 @@ const LeadsScreen = () => {
                         <Text style={styles.leadStatValue}>{formattedCreationDate}</Text>
                     </View>
                 </View>
+                 <View style={[styles.leadCardBody, { borderTopWidth: 0, paddingTop: 0 }]}>
+                    <View style={styles.leadStat}>
+                        <Text style={styles.leadStatLabel}>Feedback</Text>
+                        <Text style={styles.leadStatValue} numberOfLines={2}>{item.feedback || '-'}</Text>
+                    </View>
+                    <View style={styles.leadStat}>
+                        <Text style={styles.leadStatLabel}>Complaint</Text>
+                        <Text style={styles.leadStatValue} numberOfLines={2}>{item.complaint || '-'}</Text>
+                    </View>
+                </View>
                 <View style={styles.leadCardFooter}>
                     <View style={styles.assigneeInfo}>
                         <Text style={styles.assigneeLabel}>Assigned to:</Text>
@@ -276,41 +194,11 @@ const LeadsScreen = () => {
                         <TouchableOpacity style={[styles.leadActionButton, { backgroundColor: 'rgba(10, 126, 164, 0.1)' }]} onPress={() => handleCall(item.contactNumber)}>
                             <Feather name="phone" size={18} color="#0a7ea4" />
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.leadActionButton} onPress={() => openMenu(item)}>
-                            <Feather name="more-vertical" size={18} color="#4B5563" />
-                        </TouchableOpacity>
                     </View>
                 </View>
             </View>
         </TouchableOpacity>
     )
-  };
-
-  const getHeaderTitle = () => {
-    if (stageParam === 'Stage 1') return 'Leads';
-    if (stageParam === 'Stage 2') return 'Final customer';
-    if (stageParam === 'Stage 3') return 'Site visit';
-    if (stageParam === 'Stage 4') return 'Customer approval form';
-    if (stageParam === 'Stage 5') return 'Project deatils form';
-    if (stageParam === 'Stage 6') return 'Dispatch';
-    if (stageParam === 'Stage 7') return 'Work completed';
-    if (stageParam === 'Stage 8') return 'Feedback and Complaint';
-    if (stageParam) return `(${stageParam}) Leads`;
-    if (user && user.role !== 'admin') return 'My Leads';
-    return 'All Leads';
-  };
-
-  const getListTitle = () => {
-    if (stageParam === 'Stage 1') return 'Leads';
-    if (stageParam === 'Stage 2') return 'Final customers';
-    if (stageParam === 'Stage 3') return 'site visit';
-    if (stageParam === 'Stage 4') return 'customer approval form';
-    if (stageParam === 'Stage 5') return 'Project deatils form';
-    if (stageParam === 'Stage 6') return 'Dispatch';
-    if (stageParam === 'Stage 7') return 'Work completed';
-    if (stageParam === 'Stage 8') return 'Feedback and Complaint';
-    if (stageParam) return `Leads in ${stageParam}`;
-    return 'All Leads';
   };
 
   return (
@@ -319,15 +207,17 @@ const LeadsScreen = () => {
         <TouchableOpacity style={styles.headerButton} onPress={() => router.canGoBack() ? router.back() : router.replace('/home')}>
             <Feather name="chevron-left" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{getHeaderTitle()}</Text>
-        <View style={{width: 36}} />
+        <Text style={styles.headerTitle}>All Customers</Text>
+        <View style={styles.headerButton}>
+            <Feather name="lock" size={20} color="#1F2937" />
+        </View>
       </View>
       <View style={styles.mainContent}>
           <View style={styles.searchSection}>
               <View style={styles.searchInputContainer}>
                   <Feather name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
                   <TextInput
-                      placeholder="Search leads..."
+                      placeholder="Search customers..."
                       style={styles.searchInput}
                       value={searchQuery}
                       onChangeText={setSearchQuery}
@@ -346,18 +236,7 @@ const LeadsScreen = () => {
 
           <View style={styles.leadsListSection}>
               <View style={styles.leadsListHeader}>
-                  <Text style={styles.leadsListTitle}>{getListTitle()} ({filteredLeads.length})</Text>
-                  {stageParam === 'Stage 1' && (
-                    <TouchableOpacity style={styles.createLeadButton} onPress={() => router.push('/create-lead')}>
-                        <Feather name="plus-circle" size={16} color="#0a7ea4" />
-                        <Text style={styles.createLeadButtonText}>Create Lead</Text>
-                    </TouchableOpacity>
-                  )}
-                   {(stageParam === 'Stage 8') && (
-                    <TouchableOpacity style={styles.allCustomersButton} onPress={() => router.push('/all-customers')}>
-                        <Text style={styles.allCustomersButtonText}>All Customers</Text>
-                    </TouchableOpacity>
-                  )}
+                  <Text style={styles.leadsListTitle}>{`All Customers (${filteredLeads.length})`}</Text>
               </View>
 
               {isLoading ? (
@@ -375,14 +254,10 @@ const LeadsScreen = () => {
                       windowSize={10}
                       ListEmptyComponent={() => (
                           <View style={styles.emptyStateContainer}>
-                                <Feather name={user && user.role !== 'admin' ? "user-check" : "briefcase"} size={40} color="#9CA3AF" />
-                                <Text style={styles.emptyStateText}>
-                                    {user && user.role !== 'admin' ? 'No Leads Assigned to You' : 'No Leads Found'}
-                                </Text>
+                                <Feather name={"users"} size={40} color="#9CA3AF" />
+                                <Text style={styles.emptyStateText}>No Customers Found</Text>
                                 <Text style={styles.emptyStateSubText}>
-                                    {user && user.role !== 'admin'
-                                        ? 'When a new lead is assigned to you, it will appear here.'
-                                        : 'There are currently no leads to display for this team or filter.'}
+                                    There are currently no customers to display.
                                 </Text>
                           </View>
                       )}
@@ -390,33 +265,6 @@ const LeadsScreen = () => {
               )}
           </View>
       </View>
-      <Modal animationType="fade" transparent={true} visible={isMenuVisible} onRequestClose={closeMenu}>
-        <TouchableOpacity style={styles.modalOverlay} onPress={closeMenu} activeOpacity={1}>
-            <View style={styles.menuContainer}>
-                 {prevStage && (
-                    <TouchableOpacity style={styles.menuItem} onPress={() => handleMoveStage('backward')}>
-                        <Feather name="arrow-left" size={20} color="#4B5563" />
-                        <Text style={styles.menuItemText}>Back to {prevStage.name}</Text>
-                    </TouchableOpacity>
-                )}
-                 {nextStage && (
-                    <TouchableOpacity style={styles.menuItem} onPress={() => handleMoveStage('forward')}>
-                        <Feather name="send" size={20} color="#4B5563" />
-                        <Text style={styles.menuItemText}>Forward to {nextStage.name}</Text>
-                    </TouchableOpacity>
-                )}
-                <TouchableOpacity style={styles.menuItem} onPress={() => { router.push(`/edit-lead?id=${selectedLead.id}`); closeMenu(); }}>
-                    <Feather name="edit" size={20} color="#4B5563" />
-                    <Text style={styles.menuItemText}>Edit Details</Text>
-                </TouchableOpacity>
-                <View style={styles.menuDivider} />
-                <TouchableOpacity style={[styles.menuItem]} onPress={handleRemoveLead}>
-                    <Feather name="trash-2" size={20} color="#DC2626" />
-                    <Text style={[styles.menuItemText, {color: '#DC2626'}]}>Remove Lead</Text>
-                </TouchableOpacity>
-            </View>
-        </TouchableOpacity>
-      </Modal>
       <Modal animationType="slide" transparent={true} visible={isSortModalVisible} onRequestClose={() => setSortModalVisible(false)}>
         <TouchableOpacity style={styles.modalOverlay} onPress={() => setSortModalVisible(false)} activeOpacity={1}>
             <View style={styles.sortModalContainer}>
@@ -484,32 +332,6 @@ const styles = StyleSheet.create({
   leadsListSection: { flex: 1, marginTop: 24 },
   leadsListHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   leadsListTitle: { color: '#6B7280', fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase' },
-  createLeadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(10, 126, 164, 0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  createLeadButtonText: {
-    color: '#0a7ea4',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  allCustomersButton: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 16,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-  },
-  allCustomersButtonText: {
-    fontSize: 12,
-    color: '#374151',
-    fontWeight: '600',
-  },
   leadCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E5E7EB' },
   leadCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   leadAvatar: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
@@ -536,34 +358,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  menuContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 10,
-    width: '70%',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 10
-  },
-  menuItemText: {
-      fontSize: 16,
-      color: '#374151',
-      marginLeft: 15,
-      fontWeight: '500'
-  },
-  menuDivider: {
-      height: 1,
-      backgroundColor: '#F3F4F6',
-      marginHorizontal: 10,
-  },
   sortModalContainer: {
     backgroundColor: 'white',
     borderRadius: 12,
@@ -588,4 +382,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LeadsScreen;
+export default AllCustomersScreen;
