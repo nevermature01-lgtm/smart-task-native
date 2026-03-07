@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, FlatList, Linking, Alert, Modal } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, where } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,6 +10,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const LeadsScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { stage: stageParam } = useLocalSearchParams();
+
   const [leads, setLeads] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,33 +22,55 @@ const LeadsScreen = () => {
   const [availableMonths, setAvailableMonths] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [teamId, setTeamId] = useState(null);
+  const [user, setUser] = useState(null);
   const [stages, setStages] = useState([]);
   const [nextStage, setNextStage] = useState(null);
 
   useEffect(() => {
-    const getTeamId = async () => {
-        const activeAccount = await AsyncStorage.getItem('activeAccount');
-        if (activeAccount) {
-            setTeamId(JSON.parse(activeAccount).id);
+    const getContext = async () => {
+      const accountJson = await AsyncStorage.getItem('activeAccount');
+      if (accountJson) {
+        const account = JSON.parse(accountJson);
+        setTeamId(account.id);
+        if (account.currentUser && account.currentUser.id) {
+          setUser(account.currentUser);
         } else {
-            setIsLoading(false);
+          setUser({ role: 'admin' });
         }
+      } else {
+        setIsLoading(false);
+      }
     };
-    getTeamId();
+    getContext();
   }, []);
 
   useEffect(() => {
-    if (!teamId) return;
+    if (!teamId || !user) {
+      setIsLoading(true);
+      return;
+    }
+
     setIsLoading(true);
 
-    const leadsQuery = query(collection(db, "leads"), where("teamId", "==", teamId), orderBy("followUpDate", "desc"));
-    const unsubscribeLeads = onSnapshot(leadsQuery, (querySnapshot) => {
-      const leadsData = [];
-      querySnapshot.forEach((doc) => {
-        leadsData.push({ ...doc.data(), id: doc.id });
-      });
+    const queryConstraints = [where("teamId", "==", teamId)];
+    if (stageParam) {
+      queryConstraints.push(where("stage", "==", stageParam));
+    }
+    queryConstraints.push(orderBy("followUpDate", "desc"));
 
-      let monthFilteredLeads = leadsData;
+    const leadsQuery = query(collection(db, "leads"), ...queryConstraints);
+
+    const unsubscribeLeads = onSnapshot(leadsQuery, (querySnapshot) => {
+      const allTeamLeads = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+
+      let finalLeads = allTeamLeads;
+      if (user.id) {
+        finalLeads = allTeamLeads.filter(lead =>
+          Array.isArray(lead.assignedTo) && lead.assignedTo.some(assignee => assignee.id === user.id)
+        );
+      }
+
+      let monthFilteredLeads = finalLeads;
       if (selectedMonth) {
         const [year, monthStr] = selectedMonth.split('-');
         const month = parseInt(monthStr, 10);
@@ -54,7 +78,7 @@ const LeadsScreen = () => {
         const nextMonthDate = new Date(year, month, 1);
         const endDate = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
 
-        monthFilteredLeads = leadsData.filter(lead => {
+        monthFilteredLeads = finalLeads.filter(lead => {
           return lead.followUpDate >= startDate && lead.followUpDate < endDate;
         });
       }
@@ -62,22 +86,21 @@ const LeadsScreen = () => {
       setLeads(monthFilteredLeads);
       setIsLoading(false);
     }, (error) => {
-        console.error("Error fetching leads: ", error);
-        setIsLoading(false);
-        Alert.alert("Error", "Could not fetch leads.");
+      console.error("Fatal error fetching leads: ", error);
+      setIsLoading(false);
+      Alert.alert("Error", "Could not fetch leads. Please restart the app.");
     });
 
     const stagesQuery = query(collection(db, "stages"), where("teamId", "==", teamId), orderBy("order", "asc"));
     const unsubscribeStages = onSnapshot(stagesQuery, (snapshot) => {
-        const stagesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setStages(stagesData);
+      setStages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
     return () => {
-        unsubscribeLeads();
-        unsubscribeStages();
+      unsubscribeLeads();
+      unsubscribeStages();
     };
-  }, [selectedMonth, teamId]);
+  }, [selectedMonth, teamId, user, stageParam]);
 
   useEffect(() => {
     const currentYear = new Date().getFullYear();
@@ -94,8 +117,8 @@ const LeadsScreen = () => {
     let tempLeads = [...leads];
     if (searchQuery.trim() !== '') {
       tempLeads = tempLeads.filter(lead => 
-        lead.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        lead.address.toLowerCase().includes(searchQuery.toLowerCase())
+        (lead.customerName && lead.customerName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (lead.address && lead.address.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
     setFilteredLeads(tempLeads);
@@ -103,73 +126,75 @@ const LeadsScreen = () => {
 
   const handleCall = (phoneNumber) => {
     if (phoneNumber) {
-      const url = `tel:${phoneNumber}`;
-      Linking.canOpenURL(url)
-        .then((supported) => {
-          if (!supported) {
-            Alert.alert("Error", "Unable to make a phone call.");
-          } else {
-            return Linking.openURL(url);
-          }
-        })
-        .catch(() => Alert.alert("Error", "Unable to make a phone call."));
+      Linking.openURL(`tel:${phoneNumber}`).catch(() => Alert.alert("Error", "Unable to make a phone call."));
     } else {
-        Alert.alert("No Contact", "No contact number is available for this lead.");
+      Alert.alert("No Contact", "No contact number is available for this lead.");
     }
   };
 
   const openMenu = (lead) => {
-      const currentStageIndex = stages.findIndex(s => s.name === lead.stage);
-      if (currentStageIndex !== -1 && currentStageIndex < stages.length - 1) {
-          setNextStage(stages[currentStageIndex + 1]);
-      } else {
-          setNextStage(null);
-      }
-      setSelectedLead(lead);
-      setMenuVisible(true);
-  }
+    const currentStage = lead.stage;
+    let nextStageObj = null;
+
+    if (stages.length > 0) {
+        const currentStageIndex = stages.findIndex(s => s.name === currentStage);
+        if (currentStageIndex === -1) {
+            nextStageObj = stages[0];
+        } else if (currentStageIndex < stages.length - 1) {
+            nextStageObj = stages[currentStageIndex + 1];
+        }
+    } else {
+        if (!currentStage) {
+            nextStageObj = { name: 'Stage 1' };
+        } else {
+            const stageNumMatch = currentStage.match(/Stage (\d+)/);
+            if (stageNumMatch) {
+                const currentNum = parseInt(stageNumMatch[1], 10);
+                nextStageObj = { name: `Stage ${currentNum + 1}` };
+            } else {
+                nextStageObj = { name: 'Stage 1' };
+            }
+        }
+    }
+
+    setNextStage(nextStageObj);
+    setSelectedLead(lead);
+    setMenuVisible(true);
+  };
 
   const closeMenu = () => {
-      setMenuVisible(false);
-      setSelectedLead(null);
-      setNextStage(null);
+    setMenuVisible(false);
+    setSelectedLead(null);
+    setNextStage(null);
   }
 
   const handleRemoveLead = () => {
     if (!selectedLead) return;
-
-    Alert.alert(
-        "Remove Lead",
-        `Are you sure you want to remove ${selectedLead.customerName}?`,
+    Alert.alert("Remove Lead", `Are you sure you want to remove ${selectedLead.customerName}?`,
         [
             { text: "Cancel", style: "cancel", onPress: closeMenu },
-            { 
-                text: "Remove", 
-                style: "destructive", 
-                onPress: async () => {
-                    try {
-                        await deleteDoc(doc(db, 'leads', selectedLead.id));
-                        Alert.alert("Success", "Lead has been removed.");
-                        closeMenu();
-                    } catch (error) {
-                        Alert.alert("Error", "Failed to remove lead. Please try again.");
-                    }
+            { text: "Remove", style: "destructive", onPress: async () => {
+                try {
+                    await deleteDoc(doc(db, 'leads', selectedLead.id));
+                    Alert.alert("Success", "Lead has been removed.");
+                    closeMenu();
+                } catch (error) {
+                    Alert.alert("Error", "Failed to remove lead.");
                 }
-            }
+            }}
         ]
     );
   };
 
   const handleMoveToNextStage = async () => {
-      if (!selectedLead || !nextStage) return;
-      try {
-          const leadRef = doc(db, 'leads', selectedLead.id);
-          await updateDoc(leadRef, { stage: nextStage.name });
-          Alert.alert("Success", `Lead has been forwarded to ${nextStage.name}.`);
-          closeMenu();
-      } catch (error) {
-          Alert.alert("Error", "Failed to update lead. Please try again.");
-      }
+    if (!selectedLead || !nextStage) return;
+    try {
+        await updateDoc(doc(db, 'leads', selectedLead.id), { stage: nextStage.name });
+        Alert.alert("Success", `Lead has been forwarded to ${nextStage.name}.`);
+        closeMenu();
+    } catch (error) {
+        Alert.alert("Error", "Failed to update lead.");
+    }
   }
   
   const getInitials = (name) => {
@@ -237,24 +262,26 @@ const LeadsScreen = () => {
         <TouchableOpacity style={styles.headerButton} onPress={() => router.canGoBack() ? router.back() : router.replace('/home')}>
             <Feather name="chevron-left" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Leads</Text>
+        <Text style={styles.headerTitle}>{stageParam ? `(${stageParam}) Leads` : (user && user.id ? 'My Leads' : 'All Leads')}</Text>
         <View style={{width: 36}} />
       </View>
       <View style={styles.mainContent}>
-          <View style={styles.searchSection}>
-              <View style={styles.searchInputContainer}>
-                  <Feather name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
-                  <TextInput
-                      placeholder="Search by name or address..."
-                      style={styles.searchInput}
-                      value={searchQuery}
-                      onChangeText={setSearchQuery}
-                  />
-              </View>
-              <TouchableOpacity style={styles.filterButton} onPress={() => setSortModalVisible(true)}>
-                  <Feather name="sliders" size={24} color="#4B5563" />
-              </TouchableOpacity>
-          </View>
+          {stageParam !== 'Stage 3' && (
+            <View style={styles.searchSection}>
+                <View style={styles.searchInputContainer}>
+                    <Feather name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
+                    <TextInput
+                        placeholder="Search leads..."
+                        style={styles.searchInput}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                    />
+                </View>
+                <TouchableOpacity style={styles.filterButton} onPress={() => setSortModalVisible(true)}>
+                    <Feather name="sliders" size={24} color="#4B5563" />
+                </TouchableOpacity>
+            </View>
+          )}
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickFilters}>
               <TouchableOpacity style={[styles.filterChip, styles.activeFilterChip]}>
@@ -264,11 +291,13 @@ const LeadsScreen = () => {
 
           <View style={styles.leadsListSection}>
               <View style={styles.leadsListHeader}>
-                  <Text style={styles.leadsListTitle}>All Leads ({filteredLeads.length})</Text>
-                  <TouchableOpacity style={styles.createLeadButton} onPress={() => router.push('/create-lead')}>
-                      <Feather name="plus-circle" size={16} color="#0a7ea4" />
-                      <Text style={styles.createLeadButtonText}>Create Lead</Text>
-                  </TouchableOpacity>
+                  <Text style={styles.leadsListTitle}>{stageParam ? `Leads in ${stageParam}` : 'All Leads'} ({filteredLeads.length})</Text>
+                  {(user && user.role === 'admin') && (
+                    <TouchableOpacity style={styles.createLeadButton} onPress={() => router.push('/create-lead')}>
+                        <Feather name="plus-circle" size={16} color="#0a7ea4" />
+                        <Text style={styles.createLeadButtonText}>Create Lead</Text>
+                    </TouchableOpacity>
+                  )}
               </View>
 
               {isLoading ? (
@@ -282,20 +311,22 @@ const LeadsScreen = () => {
                       contentContainerStyle={{ paddingBottom: 150 }}
                       ListEmptyComponent={() => (
                           <View style={styles.emptyStateContainer}>
-                              <Text style={styles.emptyStateText}>No leads found for this period.</Text>
-                              <Text style={styles.emptyStateSubText}>Try selecting a different month or create a new lead.</Text>
+                                <Feather name={user && user.id ? "user-check" : "briefcase"} size={40} color="#9CA3AF" />
+                                <Text style={styles.emptyStateText}>
+                                    {user && user.id ? 'No Leads Assigned to You' : 'No Leads Found'}
+                                </Text>
+                                <Text style={styles.emptyStateSubText}>
+                                    {user && user.id
+                                        ? 'When a new lead is assigned to you, it will appear here.'
+                                        : 'There are currently no leads to display for this team or filter.'}
+                                </Text>
                           </View>
                       )}
                   />
               )}
           </View>
       </View>
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={isMenuVisible}
-        onRequestClose={closeMenu}
-      >
+      <Modal animationType="fade" transparent={true} visible={isMenuVisible} onRequestClose={closeMenu}>
         <TouchableOpacity style={styles.modalOverlay} onPress={closeMenu} activeOpacity={1}>
             <View style={styles.menuContainer}>
                  {nextStage && (
@@ -309,19 +340,14 @@ const LeadsScreen = () => {
                     <Text style={styles.menuItemText}>Edit Details</Text>
                 </TouchableOpacity>
                 <View style={styles.menuDivider} />
-                <TouchableOpacity style={[styles.menuItem, styles.destructiveMenuItem]} onPress={handleRemoveLead}>
+                <TouchableOpacity style={[styles.menuItem]} onPress={handleRemoveLead}>
                     <Feather name="trash-2" size={20} color="#DC2626" />
-                    <Text style={[styles.menuItemText, styles.destructiveMenuItemText]}>Remove Lead</Text>
+                    <Text style={[styles.menuItemText, {color: '#DC2626'}]}>Remove Lead</Text>
                 </TouchableOpacity>
             </View>
         </TouchableOpacity>
       </Modal>
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isSortModalVisible}
-        onRequestClose={() => setSortModalVisible(false)}
-      >
+      <Modal animationType="slide" transparent={true} visible={isSortModalVisible} onRequestClose={() => setSortModalVisible(false)}>
         <TouchableOpacity style={styles.modalOverlay} onPress={() => setSortModalVisible(false)} activeOpacity={1}>
             <View style={styles.sortModalContainer}>
                 <Text style={styles.sortModalTitle}>Sort by Month</Text>
@@ -413,9 +439,9 @@ const styles = StyleSheet.create({
   assigneeName: { fontSize: 12, fontWeight: 'bold', color: '#374151' },
   leadActions: { flexDirection: 'row', gap: 8 },
   leadActionButton: { width: 32, height: 32, borderRadius: 12, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
-  emptyStateContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 100 },
-  emptyStateText: { fontSize: 18, fontWeight: '600', color: '#4B5563' },
-  emptyStateSubText: { fontSize: 14, color: '#9CA3AF', marginTop: 8 },
+  emptyStateContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 80, paddingHorizontal: 20 },
+  emptyStateText: { fontSize: 18, fontWeight: '600', color: '#4B5563', textAlign: 'center', marginTop: 16 },
+  emptyStateSubText: { fontSize: 14, color: '#9CA3AF', marginTop: 8, textAlign: 'center' },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -449,9 +475,6 @@ const styles = StyleSheet.create({
       height: 1,
       backgroundColor: '#F3F4F6',
       marginHorizontal: 10,
-  },
-  destructiveMenuItemText: {
-      color: '#DC2626'
   },
   sortModalContainer: {
     backgroundColor: 'white',

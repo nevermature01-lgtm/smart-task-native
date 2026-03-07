@@ -28,6 +28,7 @@ const CreateLeadScreen = () => {
   const [isUserModalVisible, setUserModalVisible] = useState(false);
   const [teamId, setTeamId] = useState(null);
   const [stages, setStages] = useState([]);
+  const [isFetchingUsers, setIsFetchingUsers] = useState(false);
 
   useEffect(() => {
     let unsubscribeStages = () => {};
@@ -45,9 +46,29 @@ const CreateLeadScreen = () => {
                 const stagesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setStages(stagesData);
             }, (error) => console.error("Error fetching stages:", error));
+        }
+      } catch (error) {
+        console.error("Error fetching team data: ", error);
+        Alert.alert("Error", "There was an error loading team data.");
+      }
+    };
 
+    fetchData();
 
-            // Fetch team members using the confirmed working logic from manage-members.tsx
+    return () => {
+      unsubscribeStages();
+    };
+  }, []);
+
+  const fetchTeamMembers = async () => {
+    setIsFetchingUsers(true);
+    setUsers([]);
+    try {
+        const activeAccountString = await AsyncStorage.getItem('activeAccount');
+        if (activeAccountString) {
+            const activeAccount = JSON.parse(activeAccountString);
+            setTeamId(activeAccount.id);
+
             const teamMembersQuery = query(collection(db, 'team_members'), where('teamId', '==', activeAccount.id));
             const teamMembersSnapshot = await getDocs(teamMembersQuery);
 
@@ -65,18 +86,18 @@ const CreateLeadScreen = () => {
             const usersData = (await Promise.all(memberPromises)).filter(user => user !== null);
             setUsers(usersData);
         }
-      } catch (error) {
-        console.error("Error fetching team data: ", error);
-        Alert.alert("Error", "There was an error loading team data.");
-      }
-    };
+    } catch (error) {
+        console.error("Error fetching team members: ", error);
+        Alert.alert("Error", "There was an error loading team members.");
+    } finally {
+        setIsFetchingUsers(false);
+    }
+  };
 
-    fetchData();
-
-    return () => {
-      unsubscribeStages();
-    };
-  }, []);
+  const handleOpenUserPicker = () => {
+      fetchTeamMembers();
+      setUserModalVisible(true);
+  }
 
   const handleSaveLead = async () => {
     if (!customerName.trim() || !contactNumber.trim()) {
@@ -148,7 +169,7 @@ const CreateLeadScreen = () => {
         <View style={styles.form}>
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Assign To</Text>
-                 <TouchableOpacity style={styles.pickerButton} onPress={() => setUserModalVisible(true)}>
+                 <TouchableOpacity style={styles.pickerButton} onPress={handleOpenUserPicker}>
                     <Text style={styles.pickerButtonText} numberOfLines={1}>{selectedUsers.length > 0 ? selectedUsers.map(u => `${u.firstName} ${u.lastName}`).join(', ') : 'Select users'}</Text>
                     <Feather name="chevron-down" size={20} color="#9CA3AF" />
                 </TouchableOpacity>
@@ -247,17 +268,23 @@ const CreateLeadScreen = () => {
             visible={isUserModalVisible}
             onRequestClose={() => setUserModalVisible(false)}
         >
-            <TouchableOpacity style={styles.modalOverlay} activeOpacity={1}>
+            <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPressOut={() => setUserModalVisible(false)}>
                 <View style={styles.modalContent}>
                     <Text style={styles.modalTitle}>Assign to</Text>
-                    <ScrollView>
-                        {users.map((item, index) => (
-                            <TouchableOpacity key={index} style={styles.modalItem} onPress={() => handleSelectUser(item)}>
-                                <Text style={styles.modalItemText}>{`${item.firstName} ${item.lastName}`}</Text>
-                                {selectedUsers.find(u => u.id === item.id) && <Feather name="check" size={20} color="#0a7ea4" />} 
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
+                    {isFetchingUsers ? (
+                        <ActivityIndicator size="large" color="#0a7ea4" style={{paddingVertical: 20}}/>
+                    ) : (
+                        <ScrollView>
+                            {users.length === 0 ? (
+                                <Text style={{textAlign: 'center', paddingVertical: 20, color: '#6B7280'}}>No members found in this team.</Text>
+                            ) : users.map((item, index) => (
+                                <TouchableOpacity key={index} style={styles.modalItem} onPress={() => handleSelectUser(item)}>
+                                    <Text style={styles.modalItemText}>{`${item.firstName} ${item.lastName}`}</Text>
+                                    {selectedUsers.find(u => u.id === item.id) && <Feather name="check" size={20} color="#0a7ea4" />} 
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    )}
                      <TouchableOpacity style={styles.doneButton} onPress={() => setUserModalVisible(false)}>
                         <Text style={styles.doneButtonText}>Done</Text>
                     </TouchableOpacity>
