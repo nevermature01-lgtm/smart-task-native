@@ -277,6 +277,7 @@ const LeadsScreen = () => {
     if (stageParam === 'Stage 1') return 'Leads';
     if (stageParam === 'Stage 2') return 'Final customer';
     if (stageParam === 'Stage 3') return 'Site visit';
+    if (stageParam === 'Stage 4') return 'Customer approval form';
     if (stageParam) return `(${stageParam}) Leads`;
     if (user && user.role !== 'admin') return 'My Leads';
     return 'All Leads';
@@ -286,6 +287,7 @@ const LeadsScreen = () => {
     if (stageParam === 'Stage 1') return 'Leads';
     if (stageParam === 'Stage 2') return 'Final customers';
     if (stageParam === 'Stage 3') return 'site visit';
+    if (stageParam === 'Stage 4') return 'customer approval form';
     if (stageParam) return `Leads in ${stageParam}`;
     return 'All Leads';
   };
