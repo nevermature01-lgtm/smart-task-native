@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Linking, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Linking, Alert, Image, Switch } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { db } from '../firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import ImageView from 'react-native-image-viewing';
 
 const LeadDetailsScreen = () => {
@@ -16,6 +16,7 @@ const LeadDetailsScreen = () => {
   const [isViewerVisible, setIsViewerVisible] = useState(false);
   const [viewerImages, setViewerImages] = useState([]);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -23,7 +24,9 @@ const LeadDetailsScreen = () => {
       const leadRef = doc(db, 'leads', id);
       const unsubscribe = onSnapshot(leadRef, (docSnap) => {
         if (docSnap.exists()) {
-          setLead({ id: docSnap.id, ...docSnap.data() });
+          const leadData = { id: docSnap.id, ...docSnap.data() };
+          setLead(leadData);
+          setIsCompleted(leadData.isCompleted || false);
         } else {
           Alert.alert("Error", "Lead not found.");
         }
@@ -61,6 +64,23 @@ const LeadDetailsScreen = () => {
       setViewerIndex(index);
       setIsViewerVisible(true);
   }
+
+  const toggleCompletion = async () => {
+    if (!lead) return;
+    const newStatus = !isCompleted;
+    setIsCompleted(newStatus);
+
+    try {
+        const leadRef = doc(db, 'leads', id);
+        await updateDoc(leadRef, {
+            isCompleted: newStatus
+        });
+    } catch (error) {
+        console.error("Error updating completion status: ", error);
+        setIsCompleted(!newStatus);
+        Alert.alert("Error", "Failed to update status. Please try again.");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -125,6 +145,21 @@ const LeadDetailsScreen = () => {
                 <Text style={styles.amountValue}>{`₹${lead.fullPayment || '0'}`}</Text>
             </View>
           </View>
+        )}
+        {stageNum >= 8 && (
+             <View style={styles.completeButtonCard}>
+                <Text style={styles.customerNameText}>{lead.customerName}</Text>
+                <View style={styles.switchContainer}>
+                    <Text style={styles.switchLabel}>Mark as Complete</Text>
+                    <Switch
+                        trackColor={{ false: "#767577", true: "#81b0ff" }}
+                        thumbColor={isCompleted ? "#f5dd4b" : "#f4f3f4"}
+                        ios_backgroundColor="#3e3e3e"
+                        onValueChange={toggleCompletion}
+                        value={isCompleted}
+                    />
+                </View>
+            </View>
         )}
         <View style={styles.detailCard}>
             <View style={styles.detailRow}>
@@ -244,12 +279,12 @@ const LeadDetailsScreen = () => {
             {stageNum >= 8 && (
               <>
                 <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Feedback</Text>
-                    <Text style={styles.detailValue}>{lead.feedback || '-'}</Text>
+                  <Text style={styles.detailLabel}>Feedback</Text>
+                  <Text style={styles.detailValue}>{lead.feedback || '-'}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Complaint</Text>
-                    <Text style={styles.detailValue}>{lead.complaint || '-'}</Text>
+                  <Text style={styles.detailLabel}>Complaint</Text>
+                  <Text style={styles.detailValue}>{lead.complaint || '-'}</Text>
                 </View>
               </>
             )}
@@ -321,6 +356,33 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
         color: '#1F2937',
+    },
+    completeButtonCard: {
+        backgroundColor: 'white',
+        borderRadius: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        marginBottom: 20,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 3,
+    },
+    customerNameText: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#1F2937',
+        marginBottom: 10,
+    },
+    switchContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    switchLabel: {
+        fontSize: 16,
+        color: '#374151',
     },
     detailCard: {
         backgroundColor: 'white',

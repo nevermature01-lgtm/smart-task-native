@@ -340,6 +340,11 @@ const LeadsScreen = () => {
                         <Text style={styles.createLeadButtonText}>Create Lead</Text>
                     </TouchableOpacity>
                   )}
+                   {(stageParam === 'Stage 8') && (
+                    <TouchableOpacity style={styles.allCustomersButton} >
+                        <Text style={styles.allCustomersButtonText}>All Customers</Text>
+                    </TouchableOpacity>
+                  )}
               </View>
 
               {isLoading ? (
@@ -474,6 +479,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 12,
   },
+   allCustomersButton: {
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderRadius: 16,
+        paddingVertical: 4,
+        paddingHorizontal: 12,
+    },
+    allCustomersButtonText: {
+        fontSize: 12,
+        color: '#374151',
+        fontWeight: '600',
+    },
   leadCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E5E7EB' },
   leadCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   leadAvatar: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
