@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { db, auth } from '../firebase';
-import { collection, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const MemberCard = ({ member, onMorePress, currentUserId }) => (
@@ -66,62 +66,85 @@ const ManageMembersScreen = () => {
     const [actionToConfirm, setActionToConfirm] = useState(null);
 
     useEffect(() => {
-        const fetchCurrentUser = async () => {
-            const user = auth.currentUser;
-            if (user) {
-                const userDocRef = doc(db, 'users', user.uid);
-                const userDoc = await getDoc(userDocRef);
+        const user = auth.currentUser;
+        if (user) {
+            const userDocRef = doc(db, 'users', user.uid);
+            getDoc(userDocRef).then(userDoc => {
                 if (userDoc.exists()) {
                     setCurrentUser({id: user.uid, ...userDoc.data()});
                 }
-            }
-        };
-        fetchCurrentUser();
-        
-        const fetchTeamMembers = async () => {
+            });
+        }
+
+        let unsubscribeFromTeamMembers = () => {};
+
+        const setupTeamListener = async () => {
+            setLoading(true);
             try {
                 const activeAccountString = await AsyncStorage.getItem('activeAccount');
-                if (activeAccountString) {
-                    const activeAccount = JSON.parse(activeAccountString);
-                     if (activeAccount.type === 'team') {
-                        setActiveTeamId(activeAccount.id);
-                        const teamMembersRef = collection(db, 'team_members');
-                        const q = query(teamMembersRef, where("teamId", "==", activeAccount.id));
-                        const querySnapshot = await getDocs(q);
-                        const members = [];
-                        let userRole = 'member';
-                        for (const teamMemberDoc of querySnapshot.docs) {
-                            const memberData = teamMemberDoc.data();
-                            if(memberData.userId === auth.currentUser.uid) {
-                                userRole = memberData.role;
-                            }
-                            const userDocRef = doc(db, 'users', memberData.userId);
-                            const userDoc = await getDoc(userDocRef);
-                            if (userDoc.exists()) {
-                                members.push({ 
-                                    id: userDoc.id, 
-                                    name: userDoc.data().firstName, 
-                                    role: memberData.role 
-                                });
-                            }
-                        }
-                        members.sort((a, b) => {
-                            if (a.role === 'admin' && b.role !== 'admin') return -1;
-                            if (a.role !== 'admin' && b.role === 'admin') return 1;
-                            return 0;
-                        });
-                        setTeamMembers(members);
-                         setCurrentUser(prev => ({...prev, role: userRole}));
-                    }
+                if (!activeAccountString) {
+                    setLoading(false);
+                    return;
                 }
+
+                const activeAccount = JSON.parse(activeAccountString);
+                if (activeAccount.type !== 'team' || !activeAccount.id) {
+                    setLoading(false);
+                    return;
+                }
+
+                setActiveTeamId(activeAccount.id);
+                const teamMembersQuery = query(collection(db, 'team_members'), where("teamId", "==", activeAccount.id));
+
+                unsubscribeFromTeamMembers = onSnapshot(teamMembersQuery, async (snapshot) => {
+                    const memberPromises = snapshot.docs.map(async (teamMemberDoc) => {
+                        const memberData = teamMemberDoc.data();
+                        const memberUserDocRef = doc(db, 'users', memberData.userId);
+                        const userDoc = await getDoc(memberUserDocRef);
+                        if (userDoc.exists()) {
+                            const userData = userDoc.data();
+                            return {
+                                id: userDoc.id,
+                                name: `${userData.firstName} ${userData.lastName || ''}`.trim(),
+                                role: memberData.role
+                            };
+                        }
+                        return null;
+                    });
+
+                    const members = (await Promise.all(memberPromises)).filter(m => m !== null);
+                    
+                    members.sort((a, b) => {
+                        if (a.role === 'admin' && b.role !== 'admin') return -1;
+                        if (a.role !== 'admin' && b.role === 'admin') return 1;
+                        return a.name.localeCompare(b.name);
+                    });
+
+                    setTeamMembers(members);
+
+                    if (user) {
+                        const currentUserInTeam = snapshot.docs.find(d => d.data().userId === user.uid);
+                        if (currentUserInTeam) {
+                            setCurrentUser(prev => ({...prev, role: currentUserInTeam.data().role}));
+                        }
+                    }
+                    setLoading(false);
+                }, (error) => {
+                    console.error("Error fetching team members: ", error);
+                    setLoading(false);
+                });
+
             } catch (error) {
-                console.error("Error fetching team members: ", error);
-            } finally {
+                console.error("Error setting up team listener: ", error);
                 setLoading(false);
             }
         };
 
-        fetchTeamMembers();
+        setupTeamListener();
+
+        return () => {
+            unsubscribeFromTeamMembers();
+        };
     }, []);
 
     const handleMorePress = (member) => {
@@ -159,11 +182,6 @@ const ManageMembersScreen = () => {
         if(!memberSnapshot.empty) {
             const memberDocRef = memberSnapshot.docs[0].ref;
             await updateDoc(memberDocRef, { role: 'admin' });
-            setTeamMembers(prev => prev.map(m => m.id === selectedMember.id ? {...m, role: 'admin'} : m).sort((a, b) => {
-                if (a.role === 'admin' && b.role !== 'admin') return -1;
-                if (a.role !== 'admin' && b.role === 'admin') return 1;
-                return 0;
-            }));
         }
     };
 
@@ -175,11 +193,6 @@ const ManageMembersScreen = () => {
         if(!memberSnapshot.empty) {
             const memberDocRef = memberSnapshot.docs[0].ref;
             await updateDoc(memberDocRef, { role: 'member' });
-            setTeamMembers(prev => prev.map(m => m.id === selectedMember.id ? {...m, role: 'member'} : m).sort((a, b) => {
-                if (a.role === 'admin' && b.role !== 'admin') return -1;
-                if (a.role !== 'admin' && b.role === 'admin') return 1;
-                return 0;
-            }));
         }
     };
 
@@ -191,7 +204,6 @@ const ManageMembersScreen = () => {
         if(!memberSnapshot.empty) {
             const memberDocRef = memberSnapshot.docs[0].ref;
             await deleteDoc(memberDocRef);
-            setTeamMembers(prev => prev.filter(m => m.id !== selectedMember.id));
         }
     };
 

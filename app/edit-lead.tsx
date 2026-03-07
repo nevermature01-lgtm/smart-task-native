@@ -4,10 +4,10 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { db, storage } from '../firebase';
-import { doc, getDoc, updateDoc, collection, onSnapshot, query } from 'firebase/firestore';
+import { db } from '../firebase';
+import { doc, getDoc, updateDoc, collection, onSnapshot, query, where } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
-import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const sources = ["Social Media", "Walk-in", "Random"];
 
@@ -29,21 +29,14 @@ const EditLeadScreen = () => {
   const [users, setUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [isUserModalVisible, setUserModalVisible] = useState(false);
+  const [measurementImages, setMeasurementImages] = useState([]);
+  const [customerApprovalForms, setCustomerApprovalForms] = useState([]);
+  const [leadStage, setLeadStage] = useState('');
+  const [tokenAmount, setTokenAmount] = useState('');
+  const [totalAmount, setTotalAmount] = useState('');
 
   useEffect(() => {
-    const q = query(collection(db, "users"));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const usersData = [];
-      querySnapshot.forEach((doc) => {
-        usersData.push({ ...doc.data(), id: doc.id });
-      });
-      setUsers(usersData);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
+    let unsubscribe = () => {};
     if (id) {
       const leadRef = doc(db, 'leads', id);
       getDoc(leadRef).then(docSnap => {
@@ -55,6 +48,15 @@ const EditLeadScreen = () => {
           setDate(new Date(data.followUpDate));
           setRemark(data.remark);
           setSource(data.source);
+          setLeadStage(data.stage);
+          setTokenAmount(data.tokenAmount || '');
+          setTotalAmount(data.totalAmount || '');
+          if (data.measurementImages) {
+            setMeasurementImages(data.measurementImages);
+          }
+          if (data.customerApprovalForms) {
+            setCustomerApprovalForms(data.customerApprovalForms);
+          }
           if (data.assignedTo) {
             const assignedUsers = data.assignedTo.map(assigned => ({
                 id: assigned.id,
@@ -62,12 +64,153 @@ const EditLeadScreen = () => {
                 lastName: assigned.name.split(' ').slice(1).join(' ')
             }));
             setSelectedUsers(assignedUsers);
-        }
+          }
+
+          if (data.teamId) {
+            const teamMembersQuery = query(collection(db, 'team_members'), where("teamId", "==", data.teamId));
+            unsubscribe = onSnapshot(teamMembersQuery, async (snapshot) => {
+              const memberPromises = snapshot.docs.map(async (teamMemberDoc) => {
+                const memberData = teamMemberDoc.data();
+                const userDocRef = doc(db, 'users', memberData.userId);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                  return { ...userDoc.data(), id: userDoc.id };
+                }
+                return null;
+              });
+              const usersData = (await Promise.all(memberPromises)).filter(u => u !== null);
+              setUsers(usersData);
+            });
+          } else {
+            setUsers([]);
+          }
         }
         setIsFetching(false);
       });
     }
+
+    return () => {
+      unsubscribe();
+    };
   }, [id]);
+
+  const handleMeasurementImagePicker = async (useCamera) => {
+    const action = useCamera ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync;
+    const options = {
+      mediaTypes: 'Images',
+      allowsEditing: false,
+      quality: 1,
+    };
+
+    let result;
+    try {
+      if (useCamera) {
+          const permission = await ImagePicker.requestCameraPermissionsAsync();
+          if (permission.granted === false) {
+              Alert.alert("Permission Required", "Camera permission is required to take photos.");
+              return;
+          }
+          result = await action(options);
+      } else {
+          const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (permission.granted === false) {
+              Alert.alert("Permission Required", "Media library permission is required to choose photos.");
+              return;
+          }
+          result = await action(options);
+      }
+
+      if (!result.canceled) {
+        setMeasurementImages(prev => [...prev, result.assets[0].uri]);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to pick image.");
+    }
+  };
+
+  const handleApprovalImagePicker = async (useCamera) => {
+    const action = useCamera ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync;
+    const options = {
+      mediaTypes: 'Images',
+      allowsEditing: false,
+      quality: 1,
+    };
+    let result;
+    try {
+      if (useCamera) {
+          const permission = await ImagePicker.requestCameraPermissionsAsync();
+          if (!permission.granted) {
+              Alert.alert("Permission Required", "Camera permission is required.");
+              return;
+          }
+          result = await action(options);
+      } else {
+          const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!permission.granted) {
+              Alert.alert("Permission Required", "Media library permission is required.");
+              return;
+          }
+          result = await action(options);
+      }
+
+      if (!result.canceled) {
+        const uri = result.assets[0].uri;
+        const name = uri.split('/').pop();
+        setCustomerApprovalForms(prev => [...prev, { uri, name, type: 'image' }]);
+      }
+    } catch (error) {
+       Alert.alert("Error", "Failed to pick image.");
+    }
+  };
+
+  const uriToBlob = (uri) => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = function () {
+        resolve(xhr.response);
+      };
+      xhr.onerror = function () {
+        reject(new Error("Blob conversion failed"));
+      };
+      xhr.responseType = "blob";
+      xhr.open("GET", uri, true);
+      xhr.send(null);
+    });
+  };
+
+  const uploadImage = async (fileUri) => {
+    const storage = getStorage(undefined, "gs://smart-task-app-84eef.firebasestorage.app");
+    try {
+        const blob = await uriToBlob(fileUri);
+        const fileName = `images/${Date.now()}.jpg`;
+        const storageRef = ref(storage, fileName);
+        await uploadBytes(storageRef, blob, { contentType: "image/jpeg" });
+        blob.close();
+        return await getDownloadURL(storageRef);
+    } catch(error){
+        console.error("Image upload error:", error);
+        throw error;
+    }
+  };
+
+  const uploadApprovalFile = async (file) => {
+    const storage = getStorage(undefined, "gs://smart-task-app-84eef.firebasestorage.app");
+    try {
+        const blob = await uriToBlob(file.uri);
+        const contentType = 'image/jpeg';
+        const fileName = `customer_approvals/${id}/${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, fileName);
+
+        await uploadBytes(storageRef, blob, { contentType });
+        blob.close();
+
+        const downloadURL = await getDownloadURL(storageRef);
+        return { url: downloadURL, name: file.name, type: 'image' };
+    } catch (error) {
+        console.error("Approval file upload error:", error);
+        throw error;
+    }
+  };
 
   const handleUpdateDetails = async () => {
     if (!customerName.trim() || !contactNumber.trim()) {
@@ -81,6 +224,14 @@ const EditLeadScreen = () => {
 
     setIsLoading(true);
     try {
+      const imageUrls = await Promise.all(
+          measurementImages.map(img => img.startsWith('http') ? Promise.resolve(img) : uploadImage(img))
+      );
+      
+      const approvalFormUrls = await Promise.all(
+          customerApprovalForms.map(form => form.url ? Promise.resolve(form) : uploadApprovalFile(form))
+      );
+      
       const leadRef = doc(db, 'leads', id);
       let dataToUpdate = {
         customerName,
@@ -90,13 +241,20 @@ const EditLeadScreen = () => {
         remark,
         source,
         assignedTo: selectedUsers.map(user => ({ id: user.id, name: `${user.firstName} ${user.lastName}`})),
+        measurementImages: imageUrls,
+        customerApprovalForms: approvalFormUrls,
       };
+
+      if(leadStage === 'Stage 4'){
+          dataToUpdate.tokenAmount = tokenAmount;
+          dataToUpdate.totalAmount = totalAmount;
+      }
 
       await updateDoc(leadRef, dataToUpdate);
       Alert.alert("Success", "Lead details have been updated successfully.");
       router.back();
     } catch (error) {
-      console.error("Error updating document: ", error);
+      console.error("Update error:", error);
       Alert.alert("Error", "There was an error updating the lead details. Please try again.");
     } finally {
       setIsLoading(false);
@@ -124,6 +282,14 @@ const EditLeadScreen = () => {
         }
     });
   }
+
+  const handleRemoveImage = (indexToRemove) => {
+    setMeasurementImages(prevImages => prevImages.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleRemoveApprovalForm = (indexToRemove) => {
+    setCustomerApprovalForms(prevForms => prevForms.filter((_, index) => index !== indexToRemove));
+  };
 
   if (isFetching) {
     return <ActivityIndicator style={{flex: 1, justifyContent: 'center', alignItems: 'center'}} size="large" color="#0a7ea4" />
@@ -209,6 +375,86 @@ const EditLeadScreen = () => {
                     <Feather name="chevron-down" size={20} color="#9CA3AF" />
                 </TouchableOpacity>
             </View>
+
+            {leadStage && leadStage === 'Stage 3' && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Measurements</Text>
+                <View style={styles.imageButtonsContainer}>
+                  <TouchableOpacity style={styles.imageButton} onPress={() => handleMeasurementImagePicker(false)}>
+                    <Feather name="image" size={20} color="#374151" />
+                    <Text style={styles.imageButtonText}>Gallery</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.imageButton} onPress={() => handleMeasurementImagePicker(true)}>
+                    <Feather name="camera" size={20} color="#374151" />
+                    <Text style={styles.imageButtonText}>Camera</Text>
+                  </TouchableOpacity>
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewContainer}>
+                  {measurementImages.map((uri, index) => (
+                    <View key={index} style={styles.imagePreview}>
+                      <Image source={{ uri }} style={styles.image} />
+                      <TouchableOpacity 
+                        style={styles.removeImageButton} 
+                        onPress={() => handleRemoveImage(index)}
+                      >
+                        <Feather name="x" size={16} color="white" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {leadStage && leadStage === 'Stage 4' && (
+              <>
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Token Amount</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={tokenAmount}
+                        onChangeText={setTokenAmount}
+                        placeholder="Enter token amount"
+                        keyboardType="numeric"
+                    />
+                </View>
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Total Amount</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={totalAmount}
+                        onChangeText={setTotalAmount}
+                        placeholder="Enter total amount"
+                        keyboardType="numeric"
+                    />
+                </View>
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Customer Approval Form</Text>
+                    <View style={styles.imageButtonsContainer}>
+                    <TouchableOpacity style={styles.imageButton} onPress={() => handleApprovalImagePicker(false)}>
+                        <Feather name="image" size={20} color="#374151" />
+                        <Text style={styles.imageButtonText}>Gallery</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.imageButton} onPress={() => handleApprovalImagePicker(true)}>
+                        <Feather name="camera" size={20} color="#374151" />
+                        <Text style={styles.imageButtonText}>Camera</Text>
+                    </TouchableOpacity>
+                    </View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewContainer}>
+                    {customerApprovalForms.map((form, index) => (
+                        <View key={index} style={styles.imagePreview}>
+                            <Image source={{ uri: form.uri || form.url }} style={styles.image} />
+                        <TouchableOpacity 
+                            style={styles.removeImageButton} 
+                            onPress={() => handleRemoveApprovalForm(index)}
+                        >
+                            <Feather name="x" size={16} color="white" />
+                        </TouchableOpacity>
+                        </View>
+                    ))}
+                    </ScrollView>
+                </View>
+              </>
+            )}
 
              <TouchableOpacity style={[styles.saveButton, isLoading && styles.saveButtonDisabled]} onPress={handleUpdateDetails} disabled={isLoading}>
                 {isLoading ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Update Details</Text>}
@@ -423,6 +669,48 @@ const styles = StyleSheet.create({
       color: 'white',
       fontSize: 16,
       fontWeight: 'bold',
+  },
+  imageButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 16,
+  },
+  imageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    flex: 1,
+    marginHorizontal: 4,
+    justifyContent: 'center'
+  },
+  imageButtonText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '600'
+  },
+  imagePreviewContainer: {
+    flexDirection: 'row',
+  },
+  imagePreview: {
+    position: 'relative',
+    marginRight: 10,
+  },
+  image: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 12,
+    padding: 2,
   },
 });
 

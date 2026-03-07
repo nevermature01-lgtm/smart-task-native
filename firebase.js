@@ -5,8 +5,8 @@ import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAXxwZeWLUtRNP0q5ZzQKZLSEVq9iow4",
-  authDomain: "quickly-1e2ee.firebaseapp.com",
-  projectId: "quickly-1e2ee",
+  authDomain: "smart-task-app-84eef.firebaseapp.com",
+  projectId: "smart-task-app-84eef",
   storageBucket: "smart-task-app-84eef.appspot.com",
   messagingSenderId: "793585881297",
   appId: "1:793585881297:web:da4300767c9be22723f5f0"

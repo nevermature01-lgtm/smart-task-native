@@ -266,22 +266,20 @@ const LeadsScreen = () => {
         <View style={{width: 36}} />
       </View>
       <View style={styles.mainContent}>
-          {stageParam !== 'Stage 3' && (
-            <View style={styles.searchSection}>
-                <View style={styles.searchInputContainer}>
-                    <Feather name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
-                    <TextInput
-                        placeholder="Search leads..."
-                        style={styles.searchInput}
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                    />
-                </View>
-                <TouchableOpacity style={styles.filterButton} onPress={() => setSortModalVisible(true)}>
-                    <Feather name="sliders" size={24} color="#4B5563" />
-                </TouchableOpacity>
-            </View>
-          )}
+          <View style={styles.searchSection}>
+              <View style={styles.searchInputContainer}>
+                  <Feather name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
+                  <TextInput
+                      placeholder="Search leads..."
+                      style={styles.searchInput}
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                  />
+              </View>
+              <TouchableOpacity style={styles.filterButton} onPress={() => setSortModalVisible(true)}>
+                  <Feather name="sliders" size={24} color="#4B5563" />
+              </TouchableOpacity>
+          </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickFilters}>
               <TouchableOpacity style={[styles.filterChip, styles.activeFilterChip]}>

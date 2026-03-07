@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import ImageView from 'react-native-image-viewing';
 
 const LeadDetailsScreen = () => {
   const router = useRouter();
@@ -12,6 +13,9 @@ const LeadDetailsScreen = () => {
   const { id } = useLocalSearchParams();
   const [lead, setLead] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isViewerVisible, setIsViewerVisible] = useState(false);
+  const [viewerImages, setViewerImages] = useState([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   useEffect(() => {
     if (id) {
@@ -50,6 +54,13 @@ const LeadDetailsScreen = () => {
       Alert.alert("No Contact", "No contact number is available for this lead.");
     }
   };
+  
+  const openImageViewer = (images, index, isApprovalForm = false) => {
+      const formattedImages = images.map(img => ({ uri: isApprovalForm ? img.url : img }));
+      setViewerImages(formattedImages);
+      setViewerIndex(index);
+      setIsViewerVisible(true);
+  }
 
   if (isLoading) {
     return (
@@ -79,6 +90,18 @@ const LeadDetailsScreen = () => {
         </TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={styles.mainContent}>
+        {lead.stage === 'Stage 4' && (
+            <View style={styles.amountCard}>
+                <View style={styles.amountStat}>
+                    <Text style={styles.amountLabel}>Token Amount</Text>
+                    <Text style={styles.amountValue}>{`₹${lead.tokenAmount || '0'}`}</Text>
+                </View>
+                <View style={styles.amountStat}>
+                    <Text style={styles.amountLabel}>Total Amount</Text>
+                    <Text style={styles.amountValue}>{`₹${lead.totalAmount || '0'}`}</Text>
+                </View>
+            </View>
+        )}
         <View style={styles.detailCard}>
             <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Customer Name</Text>
@@ -116,8 +139,54 @@ const LeadDetailsScreen = () => {
                     <Text style={styles.detailValue}>{lead.assignedTo.map(u => u.name).join(', ')}</Text>
                 </View>
             )}
+            {lead.stage && lead.stage !== 'Stage 1' && lead.stage !== 'Stage 2' && lead.measurementImages && lead.measurementImages.length > 0 && (
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Measurements</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        {lead.measurementImages.map((uri, index) => (
+                             <TouchableOpacity key={index} onPress={() => openImageViewer(lead.measurementImages, index)}>
+                                <Image source={{ uri }} style={styles.measurementImage} />
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
+            )}
+            {lead.stage === 'Stage 4' && lead.customerApprovalForms && lead.customerApprovalForms.length > 0 && (
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Customer Approval Form</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        {lead.customerApprovalForms.map((form, index) => {
+                            if (form.type === 'image') {
+                                const imageForms = lead.customerApprovalForms.filter(f => f.type === 'image');
+                                const imageIndex = imageForms.findIndex(imgForm => imgForm.url === form.url);
+                                return (
+                                    <TouchableOpacity key={index} onPress={() => openImageViewer(imageForms, imageIndex, true)}>
+                                        <Image source={{ uri: form.url }} style={styles.measurementImage} />
+                                    </TouchableOpacity>
+                                );
+                            } else if (form.type === 'pdf') {
+                                return (
+                                    <TouchableOpacity key={index} onPress={() => Linking.openURL(form.url)}>
+                                        <View style={[styles.measurementImage, styles.pdfPreview]}>
+                                            <Feather name="file-text" size={40} color="#374151" />
+                                            <Text style={styles.pdfName} numberOfLines={2}>{form.name}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                );
+                            }
+                            return null;
+                        })}
+                    </ScrollView>
+                </View>
+            )}
         </View>
       </ScrollView>
+      <ImageView
+        images={viewerImages}
+        imageIndex={viewerIndex}
+        visible={isViewerVisible}
+        onRequestClose={() => setIsViewerVisible(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -151,6 +220,34 @@ const styles = StyleSheet.create({
     mainContent: {
         padding: 20,
     },
+    amountCard: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        backgroundColor: 'white',
+        borderRadius: 12,
+        paddingVertical: 15,
+        paddingHorizontal: 20,
+        marginBottom: 20,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 3,
+    },
+    amountStat: {
+        alignItems: 'center',
+    },
+    amountLabel: {
+        fontSize: 12,
+        color: '#6B7280',
+        textTransform: 'uppercase',
+        marginBottom: 6,
+    },
+    amountValue: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#1F2937',
+    },
     detailCard: {
         backgroundColor: 'white',
         borderRadius: 12,
@@ -178,6 +275,23 @@ const styles = StyleSheet.create({
         color: '#0a7ea4',
         textDecorationLine: 'underline',
     },
+    measurementImage: {
+        width: 100,
+        height: 100,
+        borderRadius: 8,
+        marginRight: 10,
+    },
+    pdfPreview: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#F3F4F6',
+        padding: 5,
+    },
+    pdfName: {
+        fontSize: 12,
+        textAlign: 'center',
+        marginTop: 5,
+    }
 });
 
 export default LeadDetailsScreen;
