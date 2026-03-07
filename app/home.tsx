@@ -208,7 +208,7 @@ const HomeScreen = () => {
   };
 
   const handleTaskPress = (taskId) => {
-    router.push(`/details?taskId=${taskId}`);
+    router.push(`/new-task-details?taskId=${taskId}`);
   };
 
   return (
