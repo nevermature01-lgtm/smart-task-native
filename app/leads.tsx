@@ -276,6 +276,7 @@ const LeadsScreen = () => {
   const getHeaderTitle = () => {
     if (stageParam === 'Stage 1') return 'Leads';
     if (stageParam === 'Stage 2') return 'Final customer';
+    if (stageParam === 'Stage 3') return 'Site visit';
     if (stageParam) return `(${stageParam}) Leads`;
     if (user && user.role !== 'admin') return 'My Leads';
     return 'All Leads';
@@ -284,6 +285,7 @@ const LeadsScreen = () => {
   const getListTitle = () => {
     if (stageParam === 'Stage 1') return 'Leads';
     if (stageParam === 'Stage 2') return 'Final customers';
+    if (stageParam === 'Stage 3') return 'site visit';
     if (stageParam) return `Leads in ${stageParam}`;
     return 'All Leads';
   };
