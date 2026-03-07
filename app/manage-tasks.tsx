@@ -158,6 +158,10 @@ const ManageTasksScreen = () => {
             data={completedTasks}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
+            decelerationRate="fast"
+            scrollEventThrottle={16}
+            removeClippedSubviews={true}
+            windowSize={10}
             style={{ flex: 1, marginTop: 20 }}
             contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
             ListEmptyComponent={() => (

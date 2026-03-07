@@ -78,7 +78,14 @@ const WorkCompleteDetailsScreen = () => {
             <Feather name="edit-2" size={20} color="#1F2937" />
         </TouchableOpacity>
       </View>
-      <ScrollView contentContainerStyle={styles.mainContent}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+        overScrollMode="never"
+        scrollEventThrottle={16}
+        decelerationRate="fast"
+        contentContainerStyle={[styles.mainContent, { paddingBottom: 40 }]}
+      >
         <View style={styles.detailCard}>
             <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Customer Name</Text>

@@ -79,7 +79,12 @@ const TaskDetailsScreen = () => {
             >
                 <ScrollView
                     style={styles.container}
-                    contentContainerStyle={{ flexGrow: 1 }}
+                    showsVerticalScrollIndicator={false}
+                    bounces={true}
+                    overScrollMode="never"
+                    scrollEventThrottle={16}
+                    decelerationRate="fast"
+                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.taskInfoContainer}>

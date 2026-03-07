@@ -251,7 +251,15 @@ const ManageMembersScreen = () => {
                 <Text style={styles.headerTitle}>Manage Members</Text>
                 <View style={{width: 36}} />
             </View>
-            <ScrollView style={styles.content}>
+            <ScrollView
+                style={styles.content}
+                showsVerticalScrollIndicator={false}
+                bounces={true}
+                overScrollMode="never"
+                scrollEventThrottle={16}
+                decelerationRate="fast"
+                contentContainerStyle={{ paddingBottom: 40 }}
+            >
                 {loading ? (
                     <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 20 }}/>
                 ) : (

@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Activi
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { db } from '../firebase';
-import { collection, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, where } from 'firebase/firestore';
+import { db, auth } from '../firebase';
+import { collection, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, where, getDocs } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LeadsScreen = () => {
@@ -27,26 +27,43 @@ const LeadsScreen = () => {
   const [nextStage, setNextStage] = useState(null);
 
   useEffect(() => {
-    const getContext = async () => {
+    const getContextAndUserRole = async () => {
+      const authUser = auth.currentUser;
+      if (!authUser) {
+        setIsLoading(false);
+        return;
+      }
+
       const accountJson = await AsyncStorage.getItem('activeAccount');
       if (accountJson) {
         const account = JSON.parse(accountJson);
         setTeamId(account.id);
-        if (account.currentUser && account.currentUser.id) {
-          setUser(account.currentUser);
-        } else {
-          setUser({ role: 'admin' });
+
+        let userRole = 'member'; // Default role
+        if (account.type === 'personal') {
+          userRole = 'admin';
+        } else if (account.id) {
+          const teamMembersQuery = query(
+            collection(db, 'team_members'),
+            where('teamId', '==', account.id),
+            where('userId', '==', authUser.uid)
+          );
+          const memberSnapshot = await getDocs(teamMembersQuery);
+          if (!memberSnapshot.empty) {
+            userRole = memberSnapshot.docs[0].data().role;
+          }
         }
+        setUser({ id: authUser.uid, role: userRole });
       } else {
         setIsLoading(false);
       }
     };
-    getContext();
+
+    getContextAndUserRole();
   }, []);
 
   useEffect(() => {
     if (!teamId || !user) {
-      setIsLoading(true);
       return;
     }
 
@@ -62,9 +79,9 @@ const LeadsScreen = () => {
 
     const unsubscribeLeads = onSnapshot(leadsQuery, (querySnapshot) => {
       const allTeamLeads = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-
       let finalLeads = allTeamLeads;
-      if (user.id) {
+
+      if (user && user.role !== 'admin') {
         finalLeads = allTeamLeads.filter(lead =>
           Array.isArray(lead.assignedTo) && lead.assignedTo.some(assignee => assignee.id === user.id)
         );
@@ -100,7 +117,7 @@ const LeadsScreen = () => {
       unsubscribeLeads();
       unsubscribeStages();
     };
-  }, [selectedMonth, teamId, user, stageParam]);
+  }, [teamId, user, stageParam, selectedMonth]);
 
   useEffect(() => {
     const currentYear = new Date().getFullYear();
@@ -262,7 +279,7 @@ const LeadsScreen = () => {
         <TouchableOpacity style={styles.headerButton} onPress={() => router.canGoBack() ? router.back() : router.replace('/home')}>
             <Feather name="chevron-left" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{stageParam ? `(${stageParam}) Leads` : (user && user.id ? 'My Leads' : 'All Leads')}</Text>
+        <Text style={styles.headerTitle}>{stageParam === 'Stage 1' ? 'Leads' : (stageParam ? `(${stageParam}) Leads` : (user && user.role !== 'admin' ? 'My Leads' : 'All Leads'))}</Text>
         <View style={{width: 36}} />
       </View>
       <View style={styles.mainContent}>
@@ -281,7 +298,7 @@ const LeadsScreen = () => {
               </TouchableOpacity>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickFilters}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickFilters} decelerationRate="fast" scrollEventThrottle={16}>
               <TouchableOpacity style={[styles.filterChip, styles.activeFilterChip]}>
                   <Text style={[styles.filterChipText, styles.activeFilterChipText]}>{selectedMonth ? availableMonths.find(m => m.value === selectedMonth)?.label.split(' ')[0] : 'All'}</Text>
               </TouchableOpacity>
@@ -289,7 +306,7 @@ const LeadsScreen = () => {
 
           <View style={styles.leadsListSection}>
               <View style={styles.leadsListHeader}>
-                  <Text style={styles.leadsListTitle}>{stageParam ? `Leads in ${stageParam}` : 'All Leads'} ({filteredLeads.length})</Text>
+                  <Text style={styles.leadsListTitle}>{stageParam === 'Stage 1' ? 'Leads' : (stageParam ? `Leads in ${stageParam}` : 'All Leads')} ({filteredLeads.length})</Text>
                   {(user && user.role === 'admin') && (
                     <TouchableOpacity style={styles.createLeadButton} onPress={() => router.push('/create-lead')}>
                         <Feather name="plus-circle" size={16} color="#0a7ea4" />
@@ -307,14 +324,18 @@ const LeadsScreen = () => {
                       keyExtractor={item => item.id}
                       showsVerticalScrollIndicator={false}
                       contentContainerStyle={{ paddingBottom: 150 }}
+                      decelerationRate="fast"
+                      scrollEventThrottle={16}
+                      removeClippedSubviews={true}
+                      windowSize={10}
                       ListEmptyComponent={() => (
                           <View style={styles.emptyStateContainer}>
-                                <Feather name={user && user.id ? "user-check" : "briefcase"} size={40} color="#9CA3AF" />
+                                <Feather name={user && user.role !== 'admin' ? "user-check" : "briefcase"} size={40} color="#9CA3AF" />
                                 <Text style={styles.emptyStateText}>
-                                    {user && user.id ? 'No Leads Assigned to You' : 'No Leads Found'}
+                                    {user && user.role !== 'admin' ? 'No Leads Assigned to You' : 'No Leads Found'}
                                 </Text>
                                 <Text style={styles.emptyStateSubText}>
-                                    {user && user.id
+                                    {user && user.role !== 'admin'
                                         ? 'When a new lead is assigned to you, it will appear here.'
                                         : 'There are currently no leads to display for this team or filter.'}
                                 </Text>
@@ -349,13 +370,19 @@ const LeadsScreen = () => {
         <TouchableOpacity style={styles.modalOverlay} onPress={() => setSortModalVisible(false)} activeOpacity={1}>
             <View style={styles.sortModalContainer}>
                 <Text style={styles.sortModalTitle}>Sort by Month</Text>
-                <ScrollView>
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  bounces={true}
+                  overScrollMode="never"
+                  scrollEventThrottle={16}
+                  decelerationRate="fast"
+                >
                     <TouchableOpacity style={styles.sortOption} onPress={() => { setSelectedMonth(null); setSortModalVisible(false); }}>
                         <Text style={styles.sortOptionText}>All Months</Text>
                     </TouchableOpacity>
                     {availableMonths.map(month => (
                         <TouchableOpacity key={month.value} style={styles.sortOption} onPress={() => { setSelectedMonth(month.value); setSortModalVisible(false); }}>
-                            <Text style={styles.sortOptionText}>{month.label}</Text>
+                            <Text style={styles.sortOptionText}>{month.label}</Text
                         </TouchableOpacity>
                     ))}
                 </ScrollView>

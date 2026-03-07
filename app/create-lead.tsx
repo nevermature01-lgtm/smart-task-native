@@ -61,41 +61,44 @@ const CreateLeadScreen = () => {
   }, []);
 
   const fetchTeamMembers = async () => {
+    if (!teamId) return;
     setIsFetchingUsers(true);
-    setUsers([]);
     try {
-        const activeAccountString = await AsyncStorage.getItem('activeAccount');
-        if (activeAccountString) {
-            const activeAccount = JSON.parse(activeAccountString);
-            setTeamId(activeAccount.id);
+      const teamMembersQuery = query(collection(db, 'team_members'), where('teamId', '==', teamId));
+      const teamMembersSnapshot = await getDocs(teamMembersQuery);
 
-            const teamMembersQuery = query(collection(db, 'team_members'), where('teamId', '==', activeAccount.id));
-            const teamMembersSnapshot = await getDocs(teamMembersQuery);
+      const memberPromises = teamMembersSnapshot.docs.map(async (memberDoc) => {
+        const memberData = memberDoc.data();
+        if (!memberData.userId) return null;
 
-            const memberPromises = teamMembersSnapshot.docs.map(async (memberDoc) => {
-                const memberData = memberDoc.data();
-                if (!memberData.userId) return null;
-                const userDocRef = doc(db, 'users', memberData.userId);
-                const userDoc = await getDoc(userDocRef);
-                if (userDoc.exists()) {
-                    return { id: userDoc.id, ...userDoc.data() };
-                }
-                return null;
-            });
-            
-            const usersData = (await Promise.all(memberPromises)).filter(user => user !== null);
-            setUsers(usersData);
+        const userDocRef = doc(db, 'users', memberData.userId);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          return { 
+            id: userDoc.id, 
+            name: `${userData.firstName} ${userData.lastName || ''}`.trim(),
+            ...userData
+          };
         }
+        return null;
+      });
+      
+      const usersData = (await Promise.all(memberPromises)).filter(user => user !== null);
+      setUsers(usersData);
     } catch (error) {
-        console.error("Error fetching team members: ", error);
-        Alert.alert("Error", "There was an error loading team members.");
+      console.error("Error fetching team members: ", error);
+      Alert.alert("Error", "There was an error loading team members.");
     } finally {
-        setIsFetchingUsers(false);
+      setIsFetchingUsers(false);
     }
   };
 
   const handleOpenUserPicker = () => {
-      fetchTeamMembers();
+      if(users.length === 0) { // Fetch only if not already fetched
+          fetchTeamMembers();
+      }
       setUserModalVisible(true);
   }
 
@@ -120,7 +123,7 @@ const CreateLeadScreen = () => {
         remark,
         source,
         createdAt: new Date(),
-        assignedTo: selectedUsers.map(user => ({ id: user.id, name: `${user.firstName} ${user.lastName}`})),
+        assignedTo: selectedUsers.map(user => ({ id: user.id, name: user.name})),
         stage: initialStage,
         teamId,
       });
@@ -147,7 +150,7 @@ const CreateLeadScreen = () => {
 
   const handleSelectUser = (user) => {
       setSelectedUsers(prevSelectedUsers => {
-          const isSelected = prevSelectedUsers.find(u => u.id === user.id);
+          const isSelected = prevSelectedUsers.some(u => u.id === user.id);
           if (isSelected) {
               return prevSelectedUsers.filter(u => u.id !== user.id);
           } else {
@@ -170,7 +173,7 @@ const CreateLeadScreen = () => {
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Assign To</Text>
                  <TouchableOpacity style={styles.pickerButton} onPress={handleOpenUserPicker}>
-                    <Text style={styles.pickerButtonText} numberOfLines={1}>{selectedUsers.length > 0 ? selectedUsers.map(u => `${u.firstName} ${u.lastName}`).join(', ') : 'Select users'}</Text>
+                    <Text style={styles.pickerButtonText} numberOfLines={1}>{selectedUsers.length > 0 ? selectedUsers.map(u => u.name).join(', ') : 'Select users'}</Text>
                     <Feather name="chevron-down" size={20} color="#9CA3AF" />
                 </TouchableOpacity>
             </View>
@@ -279,7 +282,7 @@ const CreateLeadScreen = () => {
                                 <Text style={{textAlign: 'center', paddingVertical: 20, color: '#6B7280'}}>No members found in this team.</Text>
                             ) : users.map((item, index) => (
                                 <TouchableOpacity key={index} style={styles.modalItem} onPress={() => handleSelectUser(item)}>
-                                    <Text style={styles.modalItemText}>{`${item.firstName} ${item.lastName}`}</Text>
+                                    <Text style={styles.modalItemText}>{item.name}</Text>
                                     {selectedUsers.find(u => u.id === item.id) && <Feather name="check" size={20} color="#0a7ea4" />} 
                                 </TouchableOpacity>
                             ))}

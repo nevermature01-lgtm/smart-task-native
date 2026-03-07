@@ -92,7 +92,14 @@ const LeadDetailsScreen = () => {
             <Feather name="edit-2" size={20} color="#1F2937" />
         </TouchableOpacity>
       </View>
-      <ScrollView contentContainerStyle={styles.mainContent}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+        overScrollMode="never"
+        scrollEventThrottle={16}
+        decelerationRate="fast"
+        contentContainerStyle={[styles.mainContent, { paddingBottom: 40 }]}
+      >
         {stageNum >= 4 && (
             <View style={styles.amountCard}>
                 <View style={styles.amountStat}>
@@ -160,7 +167,7 @@ const LeadDetailsScreen = () => {
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Measurements</Text>
                     {lead.measurementImages && lead.measurementImages.length > 0 ? (
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" scrollEventThrottle={16}>
                             {lead.measurementImages.map((uri, index) => (
                                  <TouchableOpacity key={index} onPress={() => openImageViewer(lead.measurementImages, index)}>
                                     <Image source={{ uri }} style={styles.measurementImage} />
@@ -174,7 +181,7 @@ const LeadDetailsScreen = () => {
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Customer Approval Form</Text>
                     {lead.customerApprovalForms && lead.customerApprovalForms.length > 0 ? (
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" scrollEventThrottle={16}>
                             {lead.customerApprovalForms.map((form, index) => {
                                 if (form.type === 'image') {
                                     const imageForms = lead.customerApprovalForms.filter(f => f.type === 'image');
@@ -204,7 +211,7 @@ const LeadDetailsScreen = () => {
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Project Details Form</Text>
                     {lead.projectImages && lead.projectImages.length > 0 ? (
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" scrollEventThrottle={16}>
                             {lead.projectImages.map((uri, index) => (
                                  <TouchableOpacity key={index} onPress={() => openImageViewer(lead.projectImages, index)}>
                                     <Image source={{ uri }} style={styles.measurementImage} />
@@ -218,7 +225,7 @@ const LeadDetailsScreen = () => {
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Dispatch</Text>
                     {lead.dispatchImages && lead.dispatchImages.length > 0 ? (
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" scrollEventThrottle={16}>
                             {lead.dispatchImages.map((uri, index) => (
                                  <TouchableOpacity key={index} onPress={() => openImageViewer(lead.dispatchImages, index)}>
                                     <Image source={{ uri }} style={styles.measurementImage} />

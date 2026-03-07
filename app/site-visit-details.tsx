@@ -78,7 +78,14 @@ const SiteVisitDetailsScreen = () => {
             <Feather name="edit-2" size={20} color="#1F2937" />
         </TouchableOpacity>
       </View>
-      <ScrollView contentContainerStyle={styles.mainContent}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+        overScrollMode="never"
+        scrollEventThrottle={16}
+        decelerationRate="fast"
+        contentContainerStyle={[styles.mainContent, { paddingBottom: 40 }]}
+      >
         <View style={styles.detailCard}>
             <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Customer Name</Text>
@@ -113,11 +120,11 @@ const SiteVisitDetailsScreen = () => {
             {visit.measurementImages && visit.measurementImages.length > 0 && (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Measurement Photos</Text>
-                <View style={styles.imageContainer}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" scrollEventThrottle={16}>
                   {visit.measurementImages.map((uri, index) => (
                     <Image key={index} source={{ uri }} style={styles.image} />
                   ))}
-                </View>
+                </ScrollView>
               </View>
             )}
         </View>
@@ -181,11 +188,6 @@ const styles = StyleSheet.create({
     linkValue: {
         color: '#0a7ea4',
         textDecorationLine: 'underline',
-    },
-    imageContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      marginTop: 10,
     },
     image: {
       width: 100,
