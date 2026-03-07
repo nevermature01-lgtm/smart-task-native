@@ -87,7 +87,7 @@ const LeadDetailsScreen = () => {
         <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
           <Feather name="chevron-left" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lead Details</Text>
+        <Text style={styles.headerTitle}>Details</Text>
         <TouchableOpacity style={styles.headerButton} onPress={() => router.push(`/edit-lead?id=${id}`)}>
             <Feather name="edit-2" size={20} color="#1F2937" />
         </TouchableOpacity>
