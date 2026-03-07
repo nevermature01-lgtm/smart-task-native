@@ -78,6 +78,9 @@ const LeadDetailsScreen = () => {
     );
   }
 
+  const stageNumMatch = lead.stage ? lead.stage.match(/(\d+)/) : null;
+  const stageNum = stageNumMatch ? parseInt(stageNumMatch[1], 10) : 0;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
@@ -90,17 +93,31 @@ const LeadDetailsScreen = () => {
         </TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={styles.mainContent}>
-        {lead.stage === 'Stage 4' && (
+        {stageNum >= 4 && (
             <View style={styles.amountCard}>
                 <View style={styles.amountStat}>
                     <Text style={styles.amountLabel}>Token Amount</Text>
                     <Text style={styles.amountValue}>{`₹${lead.tokenAmount || '0'}`}</Text>
                 </View>
+                {stageNum >= 5 && (
+                    <View style={styles.amountStat}>
+                        <Text style={styles.amountLabel}>Running Payment</Text>
+                        <Text style={styles.amountValue}>{`₹${lead.runningPayment || '0'}`}</Text>
+                    </View>
+                )}
                 <View style={styles.amountStat}>
                     <Text style={styles.amountLabel}>Total Amount</Text>
                     <Text style={styles.amountValue}>{`₹${lead.totalAmount || '0'}`}</Text>
                 </View>
             </View>
+        )}
+        {stageNum >= 7 && (
+          <View style={styles.amountCard}>
+            <View style={styles.amountStat}>
+                <Text style={styles.amountLabel}>Full Payment</Text>
+                <Text style={styles.amountValue}>{`₹${lead.fullPayment || '0'}`}</Text>
+            </View>
+          </View>
         )}
         <View style={styles.detailCard}>
             <View style={styles.detailRow}>
@@ -139,45 +156,83 @@ const LeadDetailsScreen = () => {
                     <Text style={styles.detailValue}>{lead.assignedTo.map(u => u.name).join(', ')}</Text>
                 </View>
             )}
-            {lead.stage && lead.stage !== 'Stage 1' && lead.stage !== 'Stage 2' && lead.measurementImages && lead.measurementImages.length > 0 && (
+            {stageNum >= 3 && (
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Measurements</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {lead.measurementImages.map((uri, index) => (
-                             <TouchableOpacity key={index} onPress={() => openImageViewer(lead.measurementImages, index)}>
-                                <Image source={{ uri }} style={styles.measurementImage} />
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
+                    {lead.measurementImages && lead.measurementImages.length > 0 ? (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            {lead.measurementImages.map((uri, index) => (
+                                 <TouchableOpacity key={index} onPress={() => openImageViewer(lead.measurementImages, index)}>
+                                    <Image source={{ uri }} style={styles.measurementImage} />
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    ) : <Text style={styles.detailValue}>-</Text>}
                 </View>
             )}
-            {lead.stage === 'Stage 4' && lead.customerApprovalForms && lead.customerApprovalForms.length > 0 && (
+            {stageNum >= 4 && (
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Customer Approval Form</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {lead.customerApprovalForms.map((form, index) => {
-                            if (form.type === 'image') {
-                                const imageForms = lead.customerApprovalForms.filter(f => f.type === 'image');
-                                const imageIndex = imageForms.findIndex(imgForm => imgForm.url === form.url);
-                                return (
-                                    <TouchableOpacity key={index} onPress={() => openImageViewer(imageForms, imageIndex, true)}>
-                                        <Image source={{ uri: form.url }} style={styles.measurementImage} />
-                                    </TouchableOpacity>
-                                );
-                            } else if (form.type === 'pdf') {
-                                return (
-                                    <TouchableOpacity key={index} onPress={() => Linking.openURL(form.url)}>
-                                        <View style={[styles.measurementImage, styles.pdfPreview]}>
-                                            <Feather name="file-text" size={40} color="#374151" />
-                                            <Text style={styles.pdfName} numberOfLines={2}>{form.name}</Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                );
-                            }
-                            return null;
-                        })}
-                    </ScrollView>
+                    {lead.customerApprovalForms && lead.customerApprovalForms.length > 0 ? (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            {lead.customerApprovalForms.map((form, index) => {
+                                if (form.type === 'image') {
+                                    const imageForms = lead.customerApprovalForms.filter(f => f.type === 'image');
+                                    const imageIndex = imageForms.findIndex(imgForm => imgForm.url === form.url);
+                                    return (
+                                        <TouchableOpacity key={index} onPress={() => openImageViewer(imageForms, imageIndex, true)}>
+                                            <Image source={{ uri: form.url }} style={styles.measurementImage} />
+                                        </TouchableOpacity>
+                                    );
+                                } else if (form.type === 'pdf') {
+                                    return (
+                                        <TouchableOpacity key={index} onPress={() => Linking.openURL(form.url)}>
+                                            <View style={[styles.measurementImage, styles.pdfPreview]}>
+                                                <Feather name="file-text" size={40} color="#374151" />
+                                                <Text style={styles.pdfName} numberOfLines={2}>{form.name}</Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    );
+                                }
+                                return null;
+                            })}
+                        </ScrollView>
+                    ) : <Text style={styles.detailValue}>-</Text>}
                 </View>
+            )}
+            {stageNum >= 5 && (
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Project Details Form</Text>
+                    {lead.projectImages && lead.projectImages.length > 0 ? (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            {lead.projectImages.map((uri, index) => (
+                                 <TouchableOpacity key={index} onPress={() => openImageViewer(lead.projectImages, index)}>
+                                    <Image source={{ uri }} style={styles.measurementImage} />
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    ) : <Text style={styles.detailValue}>-</Text>}
+                </View>
+            )}
+            {stageNum >= 6 && (
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Dispatch</Text>
+                    {lead.dispatchImages && lead.dispatchImages.length > 0 ? (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            {lead.dispatchImages.map((uri, index) => (
+                                 <TouchableOpacity key={index} onPress={() => openImageViewer(lead.dispatchImages, index)}>
+                                    <Image source={{ uri }} style={styles.measurementImage} />
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    ) : <Text style={styles.detailValue}>-</Text>}
+                </View>
+            )}
+            {stageNum >= 7 && (
+              <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Work Complete</Text>
+                  <Text style={styles.detailValue}>{lead.workComplete ? 'Yes' : 'No'}</Text>
+              </View>
             )}
         </View>
       </ScrollView>

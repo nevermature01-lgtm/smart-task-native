@@ -34,6 +34,11 @@ const EditLeadScreen = () => {
   const [leadStage, setLeadStage] = useState('');
   const [tokenAmount, setTokenAmount] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
+  const [runningPayment, setRunningPayment] = useState('');
+  const [projectImages, setProjectImages] = useState([]);
+  const [dispatchImages, setDispatchImages] = useState([]);
+  const [workComplete, setWorkComplete] = useState(false);
+  const [fullPayment, setFullPayment] = useState('');
 
   useEffect(() => {
     let unsubscribe = () => {};
@@ -51,11 +56,20 @@ const EditLeadScreen = () => {
           setLeadStage(data.stage);
           setTokenAmount(data.tokenAmount || '');
           setTotalAmount(data.totalAmount || '');
+          setRunningPayment(data.runningPayment || '');
+          setWorkComplete(data.workComplete || false);
+          setFullPayment(data.fullPayment || '');
           if (data.measurementImages) {
             setMeasurementImages(data.measurementImages);
           }
           if (data.customerApprovalForms) {
             setCustomerApprovalForms(data.customerApprovalForms);
+          }
+          if (data.projectImages) {
+            setProjectImages(data.projectImages);
+          }
+          if (data.dispatchImages) {
+            setDispatchImages(data.dispatchImages);
           }
           if (data.assignedTo) {
             const assignedUsers = data.assignedTo.map(assigned => ({
@@ -97,8 +111,7 @@ const EditLeadScreen = () => {
   const handleMeasurementImagePicker = async (useCamera) => {
     const action = useCamera ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync;
     const options = {
-      mediaTypes: 'Images',
-      allowsEditing: false,
+      mediaTypes: 'Images',      allowsEditing: false,
       quality: 1,
     };
 
@@ -131,8 +144,7 @@ const EditLeadScreen = () => {
   const handleApprovalImagePicker = async (useCamera) => {
     const action = useCamera ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync;
     const options = {
-      mediaTypes: 'Images',
-      allowsEditing: false,
+      mediaTypes: 'Images',      allowsEditing: false,
       quality: 1,
     };
     let result;
@@ -160,6 +172,72 @@ const EditLeadScreen = () => {
       }
     } catch (error) {
        Alert.alert("Error", "Failed to pick image.");
+    }
+  };
+
+  const handleProjectImagePicker = async (useCamera) => {
+    const action = useCamera ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync;
+    const options = {
+      mediaTypes: 'Images',      allowsEditing: false,
+      quality: 1,
+    };
+
+    let result;
+    try {
+      if (useCamera) {
+          const permission = await ImagePicker.requestCameraPermissionsAsync();
+          if (permission.granted === false) {
+              Alert.alert("Permission Required", "Camera permission is required to take photos.");
+              return;
+          }
+          result = await action(options);
+      } else {
+          const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (permission.granted === false) {
+              Alert.alert("Permission Required", "Media library permission is required to choose photos.");
+              return;
+          }
+          result = await action(options);
+      }
+
+      if (!result.canceled) {
+        setProjectImages(prev => [...prev, result.assets[0].uri]);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to pick image.");
+    }
+  };
+
+  const handleDispatchImagePicker = async (useCamera) => {
+    const action = useCamera ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync;
+    const options = {
+      mediaTypes: 'Images',      allowsEditing: false,
+      quality: 1,
+    };
+
+    let result;
+    try {
+      if (useCamera) {
+          const permission = await ImagePicker.requestCameraPermissionsAsync();
+          if (permission.granted === false) {
+              Alert.alert("Permission Required", "Camera permission is required to take photos.");
+              return;
+          }
+          result = await action(options);
+      } else {
+          const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (permission.granted === false) {
+              Alert.alert("Permission Required", "Media library permission is required to choose photos.");
+              return;
+          }
+          result = await action(options);
+      }
+
+      if (!result.canceled) {
+        setDispatchImages(prev => [...prev, result.assets[0].uri]);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to pick image.");
     }
   };
 
@@ -232,6 +310,14 @@ const EditLeadScreen = () => {
           customerApprovalForms.map(form => form.url ? Promise.resolve(form) : uploadApprovalFile(form))
       );
       
+      const projectImageUrls = await Promise.all(
+        projectImages.map(img => img.startsWith('http') ? Promise.resolve(img) : uploadImage(img))
+      );
+
+      const dispatchImageUrls = await Promise.all(
+        dispatchImages.map(img => img.startsWith('http') ? Promise.resolve(img) : uploadImage(img))
+      );
+
       const leadRef = doc(db, 'leads', id);
       let dataToUpdate = {
         customerName,
@@ -248,6 +334,20 @@ const EditLeadScreen = () => {
       if(leadStage === 'Stage 4'){
           dataToUpdate.tokenAmount = tokenAmount;
           dataToUpdate.totalAmount = totalAmount;
+      }
+
+      if(leadStage === 'Stage 5'){
+          dataToUpdate.runningPayment = runningPayment;
+          dataToUpdate.projectImages = projectImageUrls;
+      }
+
+      if(leadStage === 'Stage 6'){
+          dataToUpdate.dispatchImages = dispatchImageUrls;
+      }
+
+      if(leadStage === 'Stage 7'){
+        dataToUpdate.workComplete = workComplete;
+        dataToUpdate.fullPayment = fullPayment;
       }
 
       await updateDoc(leadRef, dataToUpdate);
@@ -289,6 +389,14 @@ const EditLeadScreen = () => {
 
   const handleRemoveApprovalForm = (indexToRemove) => {
     setCustomerApprovalForms(prevForms => prevForms.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleRemoveProjectImage = (indexToRemove) => {
+    setProjectImages(prevImages => prevImages.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleRemoveDispatchImage = (indexToRemove) => {
+    setDispatchImages(prevImages => prevImages.filter((_, index) => index !== indexToRemove));
   };
 
   if (isFetching) {
@@ -452,6 +560,105 @@ const EditLeadScreen = () => {
                         </View>
                     ))}
                     </ScrollView>
+                </View>
+              </>
+            )}
+
+            {leadStage && leadStage === 'Stage 5' && (
+              <>
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Running Payment</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={runningPayment}
+                        onChangeText={setRunningPayment}
+                        placeholder="Enter running payment"
+                        keyboardType="numeric"
+                    />
+                </View>
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Project Details Form</Text>
+                    <View style={styles.imageButtonsContainer}>
+                        <TouchableOpacity style={styles.imageButton} onPress={() => handleProjectImagePicker(false)}>
+                            <Feather name="image" size={20} color="#374151" />
+                            <Text style={styles.imageButtonText}>Gallery</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.imageButton} onPress={() => handleProjectImagePicker(true)}>
+                            <Feather name="camera" size={20} color="#374151" />
+                            <Text style={styles.imageButtonText}>Camera</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewContainer}>
+                        {projectImages.map((uri, index) => (
+                            <View key={index} style={styles.imagePreview}>
+                                <Image source={{ uri: uri.url || uri }} style={styles.image} />
+                                <TouchableOpacity
+                                    style={styles.removeImageButton}
+                                    onPress={() => handleRemoveProjectImage(index)}>
+                                    <Feather name="x" size={16} color="white" />
+                                </TouchableOpacity>
+                            </View>
+                        ))}
+                    </ScrollView>
+                </View>
+              </>
+            )}
+
+            {leadStage && leadStage === 'Stage 6' && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Dispatch</Text>
+                <View style={styles.imageButtonsContainer}>
+                  <TouchableOpacity style={styles.imageButton} onPress={() => handleDispatchImagePicker(false)}>
+                    <Feather name="image" size={20} color="#374151" />
+                    <Text style={styles.imageButtonText}>Gallery</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.imageButton} onPress={() => handleDispatchImagePicker(true)}>
+                    <Feather name="camera" size={20} color="#374151" />
+                    <Text style={styles.imageButtonText}>Camera</Text>
+                  </TouchableOpacity>
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewContainer}>
+                  {dispatchImages.map((uri, index) => (
+                    <View key={index} style={styles.imagePreview}>
+                      <Image source={{ uri: uri.url || uri }} style={styles.image} />
+                      <TouchableOpacity 
+                        style={styles.removeImageButton} 
+                        onPress={() => handleRemoveDispatchImage(index)}
+                      >
+                        <Feather name="x" size={16} color="white" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {leadStage && leadStage === 'Stage 7' && (
+              <>
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Work Complete</Text>
+                    <View style={styles.imageButtonsContainer}>
+                        <TouchableOpacity 
+                            style={[styles.imageButton, workComplete && styles.activeButton]} 
+                            onPress={() => setWorkComplete(true)}>
+                            <Text style={[styles.imageButtonText, workComplete && styles.activeButtonText]}>Yes</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={[styles.imageButton, !workComplete && styles.activeButton]} 
+                            onPress={() => setWorkComplete(false)}>
+                            <Text style={[styles.imageButtonText, !workComplete && styles.activeButtonText]}>No</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Full Payment</Text>
+                  <TextInput
+                      style={styles.input}
+                      value={fullPayment}
+                      onChangeText={setFullPayment}
+                      placeholder="Enter full payment"
+                      keyboardType="numeric"
+                  />
                 </View>
               </>
             )}
@@ -712,6 +919,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 2,
   },
+  activeButton: {
+    backgroundColor: '#0a7ea4',
+  },
+  activeButtonText: {
+    color: 'white',
+  }
 });
 
 export default EditLeadScreen;
