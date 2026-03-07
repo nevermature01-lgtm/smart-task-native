@@ -322,7 +322,7 @@ const LeadsScreen = () => {
           <View style={styles.leadsListSection}>
               <View style={styles.leadsListHeader}>
                   <Text style={styles.leadsListTitle}>{getListTitle()} ({filteredLeads.length})</Text>
-                  {(user && user.role === 'admin') && (
+                  {(user && user.role === 'admin' && stageParam === 'Stage 1') && (
                     <TouchableOpacity style={styles.createLeadButton} onPress={() => router.push('/create-lead')}>
                         <Feather name="plus-circle" size={16} color="#0a7ea4" />
                         <Text style={styles.createLeadButtonText}>Create Lead</Text>
