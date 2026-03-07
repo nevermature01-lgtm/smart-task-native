@@ -273,13 +273,28 @@ const LeadsScreen = () => {
     )
   };
 
+  const getHeaderTitle = () => {
+    if (stageParam === 'Stage 1') return 'Leads';
+    if (stageParam === 'Stage 2') return 'Final customer';
+    if (stageParam) return `(${stageParam}) Leads`;
+    if (user && user.role !== 'admin') return 'My Leads';
+    return 'All Leads';
+  };
+
+  const getListTitle = () => {
+    if (stageParam === 'Stage 1') return 'Leads';
+    if (stageParam === 'Stage 2') return 'Final customers';
+    if (stageParam) return `Leads in ${stageParam}`;
+    return 'All Leads';
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.headerButton} onPress={() => router.canGoBack() ? router.back() : router.replace('/home')}>
             <Feather name="chevron-left" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{stageParam === 'Stage 1' ? 'Leads' : (stageParam ? `(${stageParam}) Leads` : (user && user.role !== 'admin' ? 'My Leads' : 'All Leads'))}</Text>
+        <Text style={styles.headerTitle}>{getHeaderTitle()}</Text>
         <View style={{width: 36}} />
       </View>
       <View style={styles.mainContent}>
@@ -306,7 +321,7 @@ const LeadsScreen = () => {
 
           <View style={styles.leadsListSection}>
               <View style={styles.leadsListHeader}>
-                  <Text style={styles.leadsListTitle}>{stageParam === 'Stage 1' ? 'Leads' : (stageParam ? `Leads in ${stageParam}` : 'All Leads')} ({filteredLeads.length})</Text>
+                  <Text style={styles.leadsListTitle}>{getListTitle()} ({filteredLeads.length})</Text>
                   {(user && user.role === 'admin') && (
                     <TouchableOpacity style={styles.createLeadButton} onPress={() => router.push('/create-lead')}>
                         <Feather name="plus-circle" size={16} color="#0a7ea4" />
@@ -382,7 +397,7 @@ const LeadsScreen = () => {
                     </TouchableOpacity>
                     {availableMonths.map(month => (
                         <TouchableOpacity key={month.value} style={styles.sortOption} onPress={() => { setSelectedMonth(month.value); setSortModalVisible(false); }}>
-                            <Text style={styles.sortOptionText}>{month.label}</Text
+                            <Text style={styles.sortOptionText}>{month.label}</Text>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
