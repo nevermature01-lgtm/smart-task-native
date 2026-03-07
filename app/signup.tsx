@@ -105,7 +105,8 @@ const SignupScreen = () => {
           setDoc(doc(db, "users", user.uid), {
             firstName: firstName,
             lastName: lastName,
-            email: email
+            email: email,
+            role: 'user' // Add default role
           });
           router.replace({ pathname: '/login', params: { from: 'signup' } });
         });

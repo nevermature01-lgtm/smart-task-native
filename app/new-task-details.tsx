@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image,
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, where, getDocs, deleteField } from 'firebase/firestore';
 import { db, auth, storage } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
@@ -38,55 +40,113 @@ const NewTaskDetailsScreen = () => {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [currentUserName, setCurrentUserName] = useState('');
-    const currentUser = auth.currentUser;
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [currentUser, setCurrentUser] = useState(auth.currentUser);
     const [attachmentModalVisible, setAttachmentModalVisible] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [fullScreenImage, setFullScreenImage] = useState(null);
+    const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isLocked, setIsLocked] = useState(false);
+    const [reopenModalVisible, setReopenModalVisible] = useState(false);
+    const [isReopening, setIsReopening] = useState(false);
 
     const translateX = useSharedValue(0);
 
     useEffect(() => {
-        let unsubscribe = () => {};
-        const fetchTaskAndMessages = async () => {
-            if (taskId) {
-                const docRef = doc(db, 'tasks', taskId);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setTask({ id: docSnap.id, ...docSnap.data() });
-                } else {
-                    console.log("No such document!");
-                }
-
-                const messagesRef = collection(db, 'tasks', taskId, 'messages');
-                const q = query(messagesRef, orderBy('createdAt', 'asc'));
-                unsubscribe = onSnapshot(q, (snapshot) => {
-                    const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    setMessages(msgs);
-                });
-            }
-            setLoading(false);
-        };
-
-        const fetchCurrentUserData = async () => {
-            if (auth.currentUser) {
-                const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+        const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+            setCurrentUser(user);
+            if (user) {
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
                     const fullName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
-                    setCurrentUserName(fullName || auth.currentUser.displayName || 'User');
+                    setCurrentUserName(fullName || user.displayName || 'User');
                 } else {
-                    setCurrentUserName(auth.currentUser.displayName || 'User');
+                    setCurrentUserName(user.displayName || 'User');
                 }
+
+                try {
+                    const activeAccountString = await AsyncStorage.getItem('activeAccount');
+                    if (activeAccountString) {
+                        const activeAccount = JSON.parse(activeAccountString);
+                        if (activeAccount.type === 'personal') {
+                            setIsAdmin(true);
+                        } else if (activeAccount.type === 'team' && activeAccount.id) {
+                            const teamMembersRef = collection(db, 'team_members');
+                            const q = query(teamMembersRef, where("teamId", "==", activeAccount.id), where("userId", "==", user.uid));
+                            const querySnapshot = await getDocs(q);
+                            if (!querySnapshot.empty) {
+                                const role = querySnapshot.docs[0].data().role.toLowerCase();
+                                setIsAdmin(role === 'admin');
+                            } else {
+                                setIsAdmin(false);
+                            }
+                        } else {
+                            setIsAdmin(false);
+                        }
+                    } else {
+                        setIsAdmin(false);
+                    }
+                } catch (e) {
+                    console.error("Error fetching user role from storage/firestore", e);
+                    setIsAdmin(false);
+                }
+            } else {
+                setIsAdmin(false);
+                setCurrentUserName('');
             }
+        });
+        return () => unsubscribeAuth();
+    }, []);
+
+    useEffect(() => {
+        if (!taskId) return;
+
+        let unsubscribeMessages = () => {};
+        const fetchTaskAndMessages = async () => {
+            setLoading(true);
+            const docRef = doc(db, 'tasks', taskId);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const taskData = { id: docSnap.id, ...docSnap.data() };
+                setTask(taskData);
+                if (taskData.status === 'completed') {
+                    setIsLocked(true);
+                }
+            } else {
+                console.log("No such document!");
+            }
+
+            const messagesRef = collection(db, 'tasks', taskId, 'messages');
+            const q = query(messagesRef, orderBy('createdAt', 'asc'));
+            unsubscribeMessages = onSnapshot(q, (snapshot) => {
+                const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setMessages(msgs);
+            });
+            setLoading(false);
         };
 
         fetchTaskAndMessages();
-        fetchCurrentUserData();
         
-        return () => unsubscribe();
+        return () => unsubscribeMessages();
     }, [taskId]);
 
+    const handleDeleteTask = async () => {
+        setIsDeleting(true);
+        try {
+            await deleteDoc(doc(db, 'tasks', taskId));
+            router.back();
+        } catch (error) {
+            console.error("Error deleting task: ", error);
+        } finally {
+            setIsDeleting(false);
+            setDeleteModalVisible(false);
+        }
+    };
+
     const handleCompleteTask = async () => {
+        if (isLocked) return;
         try {
             const taskRef = doc(db, 'tasks', taskId);
             await updateDoc(taskRef, {
@@ -99,11 +159,31 @@ const NewTaskDetailsScreen = () => {
         }
     };
 
+    const handleReopenTask = async () => {
+        setIsReopening(true);
+        try {
+            const taskRef = doc(db, 'tasks', taskId);
+            await updateDoc(taskRef, {
+                status: 'pending',
+                completedAt: deleteField()
+            });
+            setTask(prevTask => ({ ...prevTask, status: 'pending', completedAt: null }));
+            setIsLocked(false);
+        } catch (error) {
+            console.error("Error reopening task: ", error);
+        } finally {
+            setIsReopening(false);
+            setReopenModalVisible(false);
+        }
+    };
+
     const pan = Gesture.Pan()
         .onUpdate((event) => {
+            if (isLocked) return;
             translateX.value = event.translationX;
         })
         .onEnd(() => {
+            if (isLocked) return;
             if (translateX.value > SWIPE_THRESHOLD) {
                 runOnJS(handleCompleteTask)();
             } else {
@@ -117,6 +197,7 @@ const NewTaskDetailsScreen = () => {
 
 
     const handleToggleStep = async (stepIndex) => {
+        if (isLocked) return;
         const newSteps = [...task.steps];
         newSteps[stepIndex].completed = !newSteps[stepIndex].completed;
 
@@ -127,7 +208,7 @@ const NewTaskDetailsScreen = () => {
     };
 
     const handleSendMessage = async (imageUrl = null) => {
-        if (!currentUser || !currentUserName) return;
+        if (isLocked || !currentUser || !currentUserName) return;
         if (newMessage.trim() === '' && !imageUrl) return;
 
         const { uid, photoURL } = currentUser;
@@ -152,6 +233,7 @@ const NewTaskDetailsScreen = () => {
     };
 
     const pickImage = async (useCamera) => {
+        if (isLocked) return;
         const { status } = useCamera 
             ? await ImagePicker.requestCameraPermissionsAsync() 
             : await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -197,6 +279,7 @@ const NewTaskDetailsScreen = () => {
     };
 
     const handleReassignPress = () => {
+        if (isLocked) return;
         router.push({ pathname: '/assign-task', params: { taskId: task.id } });
     };
 
@@ -238,159 +321,180 @@ const NewTaskDetailsScreen = () => {
                     <MaterialIcons name="arrow-back" size={24} color="#1F2937" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle} numberOfLines={1}>{task.name}</Text>
-                <TouchableOpacity style={styles.headerButton}>
-                    <MaterialIcons name="delete" size={24} color="#1F2937" />
-                </TouchableOpacity>
+                {isLocked ? (
+                    isAdmin ? (
+                        <TouchableOpacity style={styles.headerButton} onPress={() => setReopenModalVisible(true)}>
+                            <MaterialIcons name="lock" size={24} color="#1F2937" />
+                        </TouchableOpacity>
+                    ) : (
+                        <View style={styles.headerButton}>
+                            <MaterialIcons name="lock" size={24} color="#1F2937" />
+                        </View>
+                    )
+                ) : isAdmin ? (
+                    <TouchableOpacity style={styles.headerButton} onPress={() => setDeleteModalVisible(true)}>
+                        <MaterialIcons name="delete" size={24} color="#EF4444" />
+                    </TouchableOpacity>
+                ) : (
+                    <View style={styles.headerButton} />
+                )}
             </View>
 
             <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={styles.scrollContainer}
                 keyboardShouldPersistTaps="handled"
+                scrollEnabled={!isLocked}
             >
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Description</Text>
-                    <Text style={styles.descriptionText}>{task.description}</Text>
-                </View>
+                <View pointerEvents={isLocked ? 'none' : 'auto'}>
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Description</Text>
+                        <Text style={styles.descriptionText}>{task.description}</Text>
+                    </View>
 
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Steps Flow</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {task.steps && task.steps.map((step, index) => {
-                            const isActive = index === currentStepIndex;
-                            const isCompleted = currentStepIndex === -1 || index < currentStepIndex;
-                            const iconName = isActive ? 'architecture' : isCompleted ? 'check-circle' : 'arrow-forward';
-                            
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Steps Flow</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            {task.steps && task.steps.map((step, index) => {
+                                const isActive = index === currentStepIndex;
+                                const isCompleted = currentStepIndex === -1 || index < currentStepIndex;
+                                const iconName = isActive ? 'architecture' : isCompleted ? 'check-circle' : 'arrow-forward';
+                                
+                                return (
+                                    <View key={index} style={[styles.step, isActive && styles.activeStep]}>
+                                        <MaterialIcons name={iconName} size={20} color={isActive ? "white" : (isCompleted ? '#10B981' : '#6B7280')} />
+                                        <Text style={isActive ? styles.activeStepText : styles.stepText}>{step.text}</Text>
+                                    </View>
+                                );
+                            })}
+                        </ScrollView>
+                    </View>
+
+                    <View style={styles.section}>
+                        <View style={styles.assignmentContainer}>
+                            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start'}}>
+                                <View>
+                                    <View style={styles.assignee}>
+                                        <Image source={{ uri: task.assignedByPhotoURL || 'https://via.placeholder.com/40' }} style={styles.avatar} />
+                                        <View>
+                                            <Text style={styles.assigneeLabel}>Assigned By</Text>
+                                            <Text style={styles.assigneeName}>{task.assignedByName}</Text>
+                                        </View>
+                                    </View>
+                                    <View style={{alignItems: 'center', paddingVertical: 8}}>
+                                       <MaterialIcons name="arrow-downward" size={24} color="#6B7280" />
+                                    </View>
+                                    <View style={styles.assignee}>
+                                        <Image source={{ uri: task.assignedToPhotoURL || 'https://via.placeholder.com/40' }} style={styles.avatar} />
+                                        <View>
+                                            <Text style={styles.assigneeLabel}>Assigned To</Text>
+                                            <Text style={styles.assigneeName}>{task.assignedToName}</Text>
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {isAdmin && (
+                                    <TouchableOpacity style={styles.reassignButton} onPress={handleReassignPress} disabled={isLocked}>
+                                        <MaterialIcons name="cached" size={16} color="#2563EB" />
+                                        <Text style={styles.reassignButtonText}>Reassign</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        </View>
+                    </View>
+
+                    <View style={styles.grid}>
+                        <View style={styles.gridItem}>
+                            <Text style={styles.gridLabel}>Priority</Text>
+                            <View style={[styles.priorityBadge, priorityDetails.badge]}>
+                                <MaterialIcons name={priorityDetails.icon} size={16} color={priorityDetails.text.color} />
+                                <Text style={[styles.priorityText, priorityDetails.text]}>P{task.priority}</Text>
+                            </View>
+                        </View>
+                        <View style={styles.gridItem}>
+                            <Text style={styles.gridLabel}>Created At</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <MaterialIcons name="calendar-today" size={16} color="#1F2937" />
+                                <Text style={styles.deadlineText}>{formatDate(task.createdAt)}</Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Task Checklist</Text>
+                        {task.steps && task.steps.map((step, index) => (
+                            <TouchableOpacity key={index} onPress={() => handleToggleStep(index)} style={styles.checklistItem} disabled={isLocked}>
+                                <View style={[styles.checkbox, step.completed && styles.checkboxCompleted]}>
+                                    {step.completed && <MaterialIcons name="check" size={16} color="white" />}
+                                </View>
+                                <Text style={[styles.checklistText, step.completed && styles.completedChecklistText]}>{step.text}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Messages</Text>
+                        {messages.map((msg) => {
+                            const isCurrentUser = msg.userId === currentUser?.uid;
                             return (
-                                <View key={index} style={[styles.step, isActive && styles.activeStep]}>
-                                    <MaterialIcons name={iconName} size={20} color={isActive ? "white" : (isCompleted ? '#10B981' : '#6B7280')} />
-                                    <Text style={isActive ? styles.activeStepText : styles.stepText}>{step.text}</Text>
+                                <View 
+                                    key={msg.id} 
+                                    style={[
+                                        styles.messageContainer, 
+                                        isCurrentUser ? styles.sentMessageContainer : styles.receivedMessageContainer
+                                    ]}
+                                >
+                                    {!isCurrentUser && msg.userPhotoURL && <Image source={{ uri: msg.userPhotoURL }} style={styles.avatar} />}
+                                    <View 
+                                        style={[
+                                            styles.messageBubble,
+                                            isCurrentUser ? styles.sentMessageBubble : styles.receivedMessageBubble
+                                        ]}
+                                    >
+                                        <Text 
+                                            style={[
+                                                styles.messageUser,
+                                                { color: isCurrentUser ? 'white' : '#1F2937' }
+                                            ]}
+                                        >
+                                            {msg.userName}
+                                        </Text>
+                                        {msg.text ? (
+                                            <Text style={{color: isCurrentUser ? 'white' : '#374151'}}>{msg.text}</Text>
+                                        ) : msg.imageUrl ? (
+                                            <TouchableOpacity onPress={() => setFullScreenImage({ uri: msg.imageUrl })} disabled={isLocked}>
+                                                <Image source={{ uri: msg.imageUrl }} style={styles.messageImage} />
+                                            </TouchableOpacity>
+                                        ) : null}
+                                        <Text style={[styles.messageTimestamp, { color: isCurrentUser ? '#A5B4FC' : '#9CA3AF' }]}>{formatDate(msg.createdAt)}</Text>
+                                    </View>
                                 </View>
                             );
                         })}
-                    </ScrollView>
+                    </View>
                 </View>
 
-                <View style={styles.section}>
-                    <View style={styles.assignmentContainer}>
-                        <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start'}}>
-                            <View>
-                                <View style={styles.assignee}>
-                                    <Image source={{ uri: task.assignedByPhotoURL || 'https://via.placeholder.com/40' }} style={styles.avatar} />
-                                    <View>
-                                        <Text style={styles.assigneeLabel}>Assigned By</Text>
-                                        <Text style={styles.assigneeName}>{task.assignedByName}</Text>
-                                    </View>
-                                </View>
-                                <View style={{alignItems: 'center', paddingVertical: 8}}>
-                                   <MaterialIcons name="arrow-downward" size={24} color="#6B7280" />
-                                </View>
-                                <View style={styles.assignee}>
-                                    <Image source={{ uri: task.assignedToPhotoURL || 'https://via.placeholder.com/40' }} style={styles.avatar} />
-                                    <View>
-                                        <Text style={styles.assigneeLabel}>Assigned To</Text>
-                                        <Text style={styles.assigneeName}>{task.assignedToName}</Text>
-                                    </View>
-                                </View>
-                            </View>
-
-                            <TouchableOpacity style={styles.reassignButton} onPress={handleReassignPress}>
-                                <MaterialIcons name="cached" size={16} color="#2563EB" />
-                                <Text style={styles.reassignButtonText}>Reassign</Text>
-                            </TouchableOpacity>
+                {!isLocked && (
+                    <View style={styles.swipeSection}>
+                        <View style={styles.swipeContainer}>
+                            <GestureDetector gesture={pan}>
+                                <Animated.View style={[styles.swipeButton, animatedStyle]}>
+                                    <MaterialIcons name="double-arrow" size={24} color="white" />
+                                </Animated.View>
+                            </GestureDetector>
+                            <Text style={styles.swipeText}>Swipe to complete</Text>
                         </View>
                     </View>
-                </View>
-
-                <View style={styles.grid}>
-                    <View style={styles.gridItem}>
-                        <Text style={styles.gridLabel}>Priority</Text>
-                        <View style={[styles.priorityBadge, priorityDetails.badge]}>
-                            <MaterialIcons name={priorityDetails.icon} size={16} color={priorityDetails.text.color} />
-                            <Text style={[styles.priorityText, priorityDetails.text]}>P{task.priority}</Text>
-                        </View>
-                    </View>
-                    <View style={styles.gridItem}>
-                        <Text style={styles.gridLabel}>Created At</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <MaterialIcons name="calendar-today" size={16} color="#1F2937" />
-                            <Text style={styles.deadlineText}>{formatDate(task.createdAt)}</Text>
-                        </View>
-                    </View>
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Task Checklist</Text>
-                    {task.steps && task.steps.map((step, index) => (
-                        <TouchableOpacity key={index} onPress={() => handleToggleStep(index)} style={styles.checklistItem}>
-                            <View style={[styles.checkbox, step.completed && styles.checkboxCompleted]}>
-                                {step.completed && <MaterialIcons name="check" size={16} color="white" />}
-                            </View>
-                            <Text style={[styles.checklistText, step.completed && styles.completedChecklistText]}>{step.text}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Messages</Text>
-                    {messages.map((msg) => {
-                        const isCurrentUser = msg.userId === currentUser?.uid;
-                        return (
-                            <View 
-                                key={msg.id} 
-                                style={[
-                                    styles.messageContainer, 
-                                    isCurrentUser ? styles.sentMessageContainer : styles.receivedMessageContainer
-                                ]}
-                            >
-                                {!isCurrentUser && <Image source={{ uri: msg.userPhotoURL }} style={styles.avatar} />}
-                                <View 
-                                    style={[
-                                        styles.messageBubble,
-                                        isCurrentUser ? styles.sentMessageBubble : styles.receivedMessageBubble
-                                    ]}
-                                >
-                                    <Text 
-                                        style={[
-                                            styles.messageUser,
-                                            { color: isCurrentUser ? 'white' : '#1F2937' }
-                                        ]}
-                                    >
-                                        {msg.userName}
-                                    </Text>
-                                    {msg.text ? (
-                                        <Text style={{color: isCurrentUser ? 'white' : '#374151'}}>{msg.text}</Text>
-                                    ) : msg.imageUrl ? (
-                                        <TouchableOpacity onPress={() => setFullScreenImage({ uri: msg.imageUrl })}>
-                                            <Image source={{ uri: msg.imageUrl }} style={styles.messageImage} />
-                                        </TouchableOpacity>
-                                    ) : null}
-                                    <Text style={[styles.messageTimestamp, { color: isCurrentUser ? '#A5B4FC' : '#9CA3AF' }]}>{formatDate(msg.createdAt)}</Text>
-                                </View>
-                            </View>
-                        );
-                    })}
-                </View>
-
-                 <View style={styles.swipeSection}>
-                     <View style={styles.swipeContainer}>
-                        <GestureDetector gesture={pan}>
-                            <Animated.View style={[styles.swipeButton, animatedStyle]}>
-                                <MaterialIcons name="double-arrow" size={24} color="white" />
-                            </Animated.View>
-                        </GestureDetector>
-                        <Text style={styles.swipeText}>Swipe to complete</Text>
-                    </View>
-                </View>
+                )}
             </ScrollView>
 
-            <View style={[styles.bottomBar, { paddingBottom: insets.bottom }]}>
+            <View style={[styles.bottomBar, { paddingBottom: insets.bottom }]} pointerEvents={isLocked ? 'none' : 'auto'}>
                 <View style={styles.messageBar}>
-                    <TouchableOpacity onPress={() => setAttachmentModalVisible(true)}>
+                    <TouchableOpacity onPress={() => setAttachmentModalVisible(true)} disabled={isLocked}>
                         <MaterialIcons name="attach-file" size={24} color="#6B7280" />
                     </TouchableOpacity>
-                    <TextInput style={styles.messageInput} placeholder="Add a comment..." value={newMessage} onChangeText={setNewMessage} />
-                    <TouchableOpacity onPress={() => handleSendMessage()}>
+                    <TextInput style={styles.messageInput} placeholder="Add a comment..." value={newMessage} onChangeText={setNewMessage} editable={!isLocked} />
+                    <TouchableOpacity onPress={() => handleSendMessage()} disabled={isLocked}>
                         <MaterialIcons name="send" size={24} color="#2563EB" />
                     </TouchableOpacity>
                 </View>
@@ -404,19 +508,51 @@ const NewTaskDetailsScreen = () => {
                             <ActivityIndicator size="large" color="#2563EB" />
                         ) : (
                             <View style={styles.attachmentButtons}>
-                                <TouchableOpacity style={styles.attachmentButton} onPress={() => pickImage(true)}>
+                                <TouchableOpacity style={styles.attachmentButton} onPress={() => pickImage(true)} disabled={isLocked}>
                                     <Feather name="camera" size={30} color="#2563EB" />
                                     <Text style={styles.attachmentButtonText}>Camera</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity style={styles.attachmentButton} onPress={() => pickImage(false)}>
+                                <TouchableOpacity style={styles.attachmentButton} onPress={() => pickImage(false)} disabled={isLocked}>
                                     <Feather name="image" size={30} color="#2563EB" />
                                     <Text style={styles.attachmentButtonText}>Gallery</Text>
                                 </TouchableOpacity>
                             </View>
                         )}
-                        <TouchableOpacity style={{marginTop: 20}} onPress={() => setAttachmentModalVisible(false)}>
+                        <TouchableOpacity style={{marginTop: 20}} onPress={() => setAttachmentModalVisible(false)} disabled={isLocked}>
                             <Text style={{color: '#2563EB', fontSize: 16}}>Cancel</Text>
                         </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            <Modal transparent={true} visible={deleteModalVisible} onRequestClose={() => setDeleteModalVisible(false)}>
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalView}>
+                        <Text style={styles.modalText}>Are you sure you want to delete this task?</Text>
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity style={[styles.modalButton, {backgroundColor: '#999'}]} onPress={() => setDeleteModalVisible(false)} disabled={isDeleting}>
+                                <Text style={styles.modalButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.modalButton, {backgroundColor: '#EF4444'}]} onPress={handleDeleteTask} disabled={isDeleting}>
+                                {isDeleting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalButtonText}>Delete</Text>}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            <Modal transparent={true} visible={reopenModalVisible} onRequestClose={() => setReopenModalVisible(false)}>
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalView}>
+                        <Text style={styles.modalText}>Are you sure you want to reopen this task?</Text>
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity style={[styles.modalButton, {backgroundColor: '#999'}]} onPress={() => setReopenModalVisible(false)} disabled={isReopening}>
+                                <Text style={styles.modalButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.modalButton, {backgroundColor: '#2563EB'}]} onPress={handleReopenTask} disabled={isReopening}>
+                                {isReopening ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalButtonText}>Reopen</Text>}
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
             </Modal>
@@ -702,7 +838,6 @@ const styles = StyleSheet.create({
     },
     receivedMessageBubble: {
         backgroundColor: '#E5E7EB',
-        marginRight: 'auto',
     },
     messageUser: {
         fontWeight: 'bold',
@@ -759,6 +894,44 @@ const styles = StyleSheet.create({
         height: 200,
         borderRadius: 15,
         marginTop: 5,
+    },
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalView: {
+        width: '80%',
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 35,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        width: '100%',
+    },
+    modalButton: {
+        borderRadius: 20,
+        padding: 10,
+        elevation: 2,
+        width: '40%',
+        alignItems: 'center',
+    },
+    modalButtonText: {
+        color: 'white',
+        fontWeight: 'bold',
+        textAlign: 'center',
     },
 });
 
