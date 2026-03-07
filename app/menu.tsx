@@ -12,6 +12,7 @@ const menuItems = [
   { href: '/home', icon: 'home', text: 'Home', color: '#2563EB' },
   { href: '/switch-account', icon: 'users', text: 'Switch Account', color: '#10B981' },
   { href: '/attendance', icon: 'calendar', text: 'Attendance', color: '#8B5CF6' },
+  { href: '/attendance-details', icon: 'file-text', text: 'Attendance Details', color: '#F59E0B' },
   { href: '/settings', icon: 'settings', text: 'Settings', color: '#6366F1' },
 ];
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Image, ActivityIndicator, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -20,6 +20,8 @@ const AttendanceScreen = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [attendanceRecord, setAttendanceRecord] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [attendanceHistory, setAttendanceHistory] = useState({});
+    const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -34,39 +36,80 @@ const AttendanceScreen = () => {
 
     useEffect(() => {
         if (user) {
-            const today = new Date().toISOString().split('T')[0];
-            const newMarkedDates = {
-                [today]: { selected: true, selectedColor: '#8B5CF6', disableTouchEvent: true },
-            };
-            setMarkedDates(newMarkedDates);
-            setSelectedDate(today);
-            checkAttendance(today);
+            fetchAttendanceHistory();
         }
     }, [user]);
 
-    const checkAttendance = async (date) => {
+    useEffect(() => {
+        if (user) {
+            updateMarkedDates();
+            if (selectedDate) {
+                checkAttendance(selectedDate);
+            }
+        }
+    }, [attendanceHistory, selectedDate]);
+    
+    useEffect(() => {
+        const today = new Date().toISOString().split('T')[0];
+        setSelectedDate(today);
+        // Initial check, will be re-checked when history is loaded
+        checkAttendance(today);
+    },[user])
+
+    const fetchAttendanceHistory = async () => {
         if (!user) return;
         setIsLoading(true);
         try {
             const attendanceQuery = query(
                 collection(db, 'attendance'),
-                where('userId', '==', user.uid),
-                where('date', '==', date)
+                where('userId', '==', user.uid)
             );
             const querySnapshot = await getDocs(attendanceQuery);
-            if (!querySnapshot.empty) {
-                const docData = querySnapshot.docs[0].data();
-                setAttendanceRecord(docData);
-                setImage(docData.photoURL);
-            } else {
-                setAttendanceRecord(null);
-                setImage(null);
-            }
+            const history = {};
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                history[data.date] = data;
+            });
+            setAttendanceHistory(history);
         } catch (error) {
-            console.error("Error checking attendance: ", error);
-            Alert.alert("Error", "Could not check attendance status.");
+            console.error("Error fetching attendance history: ", error);
+            Alert.alert("Error", "Could not fetch attendance history.");
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const updateMarkedDates = () => {
+        const newMarkedDates = {};
+        
+        for (const date in attendanceHistory) {
+            newMarkedDates[date] = {
+                customStyles: {
+                    container: { backgroundColor: '#10B981', borderRadius: 5 },
+                    text: { color: 'white', fontWeight: 'bold' },
+                },
+            };
+        }
+        
+        if (selectedDate) {
+            newMarkedDates[selectedDate] = {
+                ...newMarkedDates[selectedDate],
+                selected: true,
+                selectedColor: '#8B5CF6',
+            };
+        }
+
+        setMarkedDates(newMarkedDates);
+    };
+
+    const checkAttendance = (date) => {
+        if (attendanceHistory[date]) {
+            const docData = attendanceHistory[date];
+            setAttendanceRecord(docData);
+            setImage(docData.photoURL);
+        } else {
+            setAttendanceRecord(null);
+            setImage(null);
         }
     };
 
@@ -108,14 +151,19 @@ const AttendanceScreen = () => {
         setIsSubmitting(true);
         try {
             const photoURL = await uploadImage(image);
-            await addDoc(collection(db, 'attendance'), {
+            const newAttendance = {
                 userId: user.uid,
                 date: selectedDate,
                 photoURL,
                 timestamp: serverTimestamp(),
-            });
+            };
+            await addDoc(collection(db, 'attendance'), newAttendance);
+            
+            const newAttendanceForState = { ...newAttendance, timestamp: new Date() };
+            setAttendanceRecord(newAttendanceForState);
+            setAttendanceHistory(prev => ({...prev, [selectedDate]: newAttendanceForState}));
+
             Alert.alert('Success', 'Your attendance has been marked successfully.');
-            checkAttendance(selectedDate);
         } catch (error) {
             console.error("Error submitting attendance: ", error);
             Alert.alert('Error', 'There was an error submitting your attendance. Please try again.');
@@ -125,6 +173,11 @@ const AttendanceScreen = () => {
     };
     
     const today = new Date().toISOString().split('T')[0];
+    
+    const onDayPress = (day) => {
+        setSelectedDate(day.dateString);
+        checkAttendance(day.dateString);
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -138,22 +191,17 @@ const AttendanceScreen = () => {
             <ScrollView contentContainerStyle={styles.mainContent}>
                 <View style={styles.calendarContainer}>
                     <Calendar
+                        markingType={'custom'}
                         current={today}
                         markedDates={markedDates}
-                        minDate={today}
-                        maxDate={today}
-                        onDayPress={(day) => {
-                            if (day.dateString === today) {
-                                setSelectedDate(day.dateString);
-                                checkAttendance(day.dateString)
-                            }
+                        onDayPress={onDayPress}
+                        onMonthChange={(month) => {
+                            setCurrentMonth(month.dateString.slice(0, 7));
                         }}
                         theme={{
                             selectedDayBackgroundColor: '#8B5CF6',
                             todayTextColor: '#8B5CF6',
                             arrowColor: '#8B5CF6',
-                            dotColor: '#8B5CF6',
-                            selectedDotColor: '#ffffff'
                         }}
                     />
                 </View>
@@ -164,47 +212,58 @@ const AttendanceScreen = () => {
                         <Text style={styles.cardTitle}>Attendance for {selectedDate}</Text>
                         {attendanceRecord ? (
                              <View style={styles.previewContainer}>
-                                <Text style={styles.recordText}>Attendance marked at: {new Date(attendanceRecord.timestamp?.toDate()).toLocaleTimeString()}</Text>
+                                <Text style={styles.recordText}>Attendance marked at: {new Date(attendanceRecord.timestamp?.toDate ? attendanceRecord.timestamp.toDate() : attendanceRecord.timestamp).toLocaleTimeString()}</Text>
                                 <Image source={{ uri: image }} style={styles.imagePreview} />
                                 <View style={styles.doneButton}>
                                     <Text style={styles.submitButtonText}>Attendance Marked</Text>
                                 </View>
                             </View>
                         ) : (
-                            <View style={styles.uploadSection}>
-                                {image ? (
-                                    <View style={styles.previewContainer}>
-                                        <Image source={{ uri: image }} style={styles.imagePreview} />
-                                        <View style={styles.retakeButtonContainer}>
-                                            <TouchableOpacity style={styles.retakeButton} onPress={() => setImage(null)}>
-                                                 <Feather name="x" size={20} color="#EF4444" />
-                                                 <Text style={[styles.retakeButtonText, {color: '#EF4444'}]}>Remove</Text>
-                                            </TouchableOpacity>
-                                            <TouchableOpacity style={styles.retakeButton} onPress={handleTakePhoto}>
-                                                 <Feather name="camera" size={20} color="#3B82F6" />
-                                                 <Text style={[styles.retakeButtonText, {color: '#3B82F6'}]}>Retake</Text>
-                                            </TouchableOpacity>
+                            selectedDate === today ? (
+                                <View style={styles.uploadSection}>
+                                    {image ? (
+                                        <View style={styles.previewContainer}>
+                                            <Image source={{ uri: image }} style={styles.imagePreview} />
+                                            <View style={styles.retakeButtonContainer}>
+                                                <TouchableOpacity style={styles.retakeButton} onPress={() => setImage(null)}>
+                                                     <Feather name="x" size={20} color="#EF4444" />
+                                                     <Text style={[styles.retakeButtonText, {color: '#EF4444'}]}>Remove</Text>
+                                                </TouchableOpacity>
+                                                <TouchableOpacity style={styles.retakeButton} onPress={handleTakePhoto}>
+                                                     <Feather name="camera" size={20} color="#3B82F6" />
+                                                     <Text style={[styles.retakeButtonText, {color: '#3B82F6'}]}>Retake</Text>
+                                                </TouchableOpacity>
+                                            </View>
                                         </View>
-                                    </View>
-                                ) : (
-                                    <TouchableOpacity style={styles.uploadButton} onPress={handleTakePhoto}>
-                                        <Feather name="camera" size={30} color="#8B5CF6" />
-                                        <Text style={styles.uploadButtonText}>Take a Photo</Text>
-                                    </TouchableOpacity>
-                                )}
-
-                                <TouchableOpacity
-                                    style={[styles.submitButton, (!image || isSubmitting) && styles.submitButtonDisabled]}
-                                    onPress={handleSubmitAttendance}
-                                    disabled={!image || isSubmitting}
-                                >
-                                    {isSubmitting ? (
-                                        <ActivityIndicator color="white" />
                                     ) : (
-                                        <Text style={styles.submitButtonText}>Mark Attendance</Text>
+                                        <TouchableOpacity style={styles.uploadButton} onPress={handleTakePhoto}>
+                                            <Feather name="camera" size={30} color="#8B5CF6" />
+                                            <Text style={styles.uploadButtonText}>Take a Photo</Text>
+                                        </TouchableOpacity>
                                     )}
-                                </TouchableOpacity>
-                            </View>
+
+                                    <TouchableOpacity
+                                        style={[styles.submitButton, (!image || isSubmitting || attendanceRecord) && styles.submitButtonDisabled]}
+                                        onPress={handleSubmitAttendance}
+                                        disabled={!image || isSubmitting || !!attendanceRecord}
+                                    >
+                                        {isSubmitting ? (
+                                            <ActivityIndicator color="white" />
+                                        ) : (
+                                            <Text style={styles.submitButtonText}>Mark Attendance</Text>
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+                            ) : (
+                                <View style={styles.previewContainer}>
+                                    <Text style={styles.recordText}>
+                                        { new Date(selectedDate) > new Date()
+                                            ? "You can't mark attendance for a future date."
+                                            : "You did not mark attendance for this date."
+                                        }
+                                    </Text>
+                                </View>
+                            )
                         )}
                     </View>
                 )}
@@ -342,6 +401,7 @@ const styles = StyleSheet.create({
     color: '#4B5563',
     marginBottom: 10,
     fontWeight: '500',
+    textAlign: 'center',
   }
 });
 
